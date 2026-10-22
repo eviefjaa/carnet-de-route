@@ -137,7 +137,18 @@ function onInput(e) {
     nameTimer = setTimeout(save, 400);
     return;
   }
-  if (e.target.closest("form[data-form]")) refreshComputed();
+  const f = e.target.closest("form[data-form]");
+  if (f) {
+    keepEndAfterStart(f);
+    refreshComputed();
+  }
+}
+
+// La fin (départ de l'étape, arrivée du trajet) ne peut pas être avant le début
+function keepEndAfterStart(f) {
+  const [start, end] = f.dataset.form === "stop" ? [f.arrive, f.depart] : [f.dep, f.arr];
+  end.min = start.value;
+  if (start.value && end.value && end.value < start.value) end.value = start.value;
 }
 
 // Nuits et durée calculées en direct dans les formulaires

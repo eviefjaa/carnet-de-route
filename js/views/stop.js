@@ -45,7 +45,7 @@ export function stopForm(it, isNew) {
     <div class="grid">
       <label class="f full">Lieu<input name="place" id="f-place-${it.id}" value="${esc(it.place)}" placeholder="Ex. Rio de Janeiro" required></label>
       <label class="f">Arrivée<input type="date" name="arrive" id="f-arr-${it.id}" value="${esc(it.arrive)}"></label>
-      <label class="f">Départ<input type="date" name="depart" id="f-dep-${it.id}" value="${esc(it.depart)}"></label>
+      <label class="f">Départ<input type="date" name="depart" id="f-dep-${it.id}" value="${esc(it.depart)}" min="${esc(it.arrive)}"></label>
       <label class="f full">Adresse de l'hébergement<input name="address" id="f-addr-${it.id}" value="${esc(it.address)}" placeholder="Optionnel : sert aussi à placer l'étape sur la carte"></label>
     </div>
     <div class="computed" data-nights></div>

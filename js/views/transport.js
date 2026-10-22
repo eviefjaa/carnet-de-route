@@ -41,7 +41,7 @@ export function transportForm(it, isNew) {
       <label class="f">Lieu de départ<input name="from" id="t-from-${it.id}" value="${esc(it.from)}" placeholder="Ex. Terminal Tietê"></label>
       <label class="f">Lieu d'arrivée<input name="to" id="t-to-${it.id}" value="${esc(it.to)}" placeholder="Ex. Rodoviária Novo Rio"></label>
       <label class="f">Départ (date et heure)<input type="datetime-local" name="dep" id="t-dep-${it.id}" value="${esc(it.dep)}"></label>
-      <label class="f">Arrivée (date et heure)<input type="datetime-local" name="arr" id="t-arr-${it.id}" value="${esc(it.arr)}"></label>
+      <label class="f">Arrivée (date et heure)<input type="datetime-local" name="arr" id="t-arr-${it.id}" value="${esc(it.arr)}" min="${esc(it.dep)}"></label>
       <div class="computed full" data-duration></div>
       <label class="f">N° de réservation<input name="ref" id="t-ref-${it.id}" value="${esc(it.ref)}"></label>
       <label class="f">Lien de réservation<input name="url" id="t-url-${it.id}" value="${esc(it.url)}" placeholder="https://…" inputmode="url"></label>
