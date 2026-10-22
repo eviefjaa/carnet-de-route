@@ -11,6 +11,11 @@ export function bindEvents() {
   document.addEventListener("click", onClick);
   document.addEventListener("submit", onSubmit);
   document.addEventListener("input", onInput);
+  // Safari ne signale pas toujours les changements de date par "input" : on écoute aussi "change"
+  document.addEventListener("change", (e) => {
+    const f = e.target.closest("form[data-form]");
+    if (f) { keepEndAfterStart(f); refreshComputed(); }
+  });
   document.getElementById("tripSelect").addEventListener("change", (e) => {
     selectTrip(e.target.value);
     render();
@@ -109,6 +114,15 @@ function onSubmit(e) {
   const f = e.target.closest("form[data-form]");
   if (!f) return;
   e.preventDefault();
+
+  // Dernière vérification avant d'enregistrer
+  const [start, end] = f.dataset.form === "stop" ? [f.arrive, f.depart] : [f.dep, f.arr];
+  if (start.value && end.value && end.value < start.value) {
+    toast(f.dataset.form === "stop" ? "Le départ ne peut pas être avant l'arrivée." : "L'arrivée ne peut pas être avant le départ.");
+    end.focus();
+    return;
+  }
+
   const t = currentTrip();
   const item = f.dataset.form === "stop" ? readStopForm(f) : readTransportForm(f);
 
