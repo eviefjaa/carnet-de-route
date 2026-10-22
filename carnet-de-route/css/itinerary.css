@@ -1,0 +1,47 @@
+/* Itinéraire : ligne de route, étapes et trajets */
+
+.route { position: relative; display: flex; flex-direction: column; padding-left: 34px; }
+.route::before {
+  content: ""; position: absolute; left: 11px; top: 14px; bottom: 14px; width: 3px; border-radius: 2px;
+  background: repeating-linear-gradient(var(--route) 0 10px, transparent 10px 16px);
+}
+.item { position: relative; }
+
+/* Étape */
+.stop { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.stop::before { content: ""; position: absolute; left: -31px; top: 18px; width: 17px; height: 17px; border-radius: 50%; background: var(--surface); border: 4px solid var(--route); }
+.stop-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.stop-head h2 { font-size: 22px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.day { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--accent); }
+.dates { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.nights { display: inline-block; font-family: var(--mono); font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--bg); color: var(--ink); }
+.addr { font-size: 14px; color: var(--muted); }
+.notes { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.links { display: flex; flex-direction: column; gap: 6px; }
+.link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; color: var(--ink); min-width: 0; }
+.link:hover { border-color: var(--accent); }
+.link .src { font-family: var(--mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); flex: none; min-width: 64px; }
+.link .lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link .go { margin-left: auto; color: var(--muted); flex: none; }
+
+.row-actions { display: flex; gap: 2px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* Trajet, présenté comme un billet */
+.transport { margin: 10px 0; background: var(--ticket); border: 1px dashed var(--route); border-radius: 10px; padding: 12px 14px; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: start; }
+.transport::before { content: ""; position: absolute; left: -27px; top: 50%; width: 9px; height: 9px; transform: translateY(-50%) rotate(45deg); background: var(--route); }
+.transport .row-actions { grid-column: 1 / -1; }
+.mode { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; background: var(--ink); color: var(--bg); padding: 3px 8px; border-radius: 4px; }
+.leg { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.leg-places { font-weight: 600; overflow-wrap: anywhere; }
+.leg-times { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: 2px 14px; color: var(--muted); }
+.leg-times b { color: var(--ink); font-weight: 600; }
+.dur { color: var(--ink); font-weight: 600; }
+.leg-extra { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.leg-extra a { color: var(--accent); }
+
+/* Boutons d'insertion entre les éléments */
+.insert { display: flex; gap: 6px; padding: 6px 0; opacity: .55; transition: opacity .15s; }
+.insert:hover, .insert:focus-within { opacity: 1; }
+.insert .btn { font-size: 12px; padding: 3px 9px; border-style: dashed; background: transparent; }
+@media (hover: none) { .insert { opacity: 1; } }

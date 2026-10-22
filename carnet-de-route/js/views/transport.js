@@ -1,0 +1,65 @@
+// Affichage et formulaire d'un trajet (moyen de transport, lieux, horaires, durée)
+
+import { esc, uid, safeUrl, MODES, duration, fmtDateTime } from "../utils.js";
+import { itemActions } from "./actions.js";
+
+export function transportCard(it, trip, idx) {
+  const d = duration(it.dep, it.arr);
+  const u = safeUrl(it.url);
+  const hasExtra = it.company || it.ref || u || it.notes;
+
+  return `<article class="item transport">
+    <span class="mode">${esc(MODES[it.mode] || "Trajet")}</span>
+    <div class="leg">
+      <div class="leg-places">${esc(it.from || "Départ ?")} → ${esc(it.to || "Arrivée ?")}</div>
+      <div class="leg-times">
+        <span>Départ <b>${esc(fmtDateTime(it.dep))}</b></span>
+        <span>Arrivée <b>${esc(fmtDateTime(it.arr))}</b></span>
+        ${d ? `<span class="dur">${esc(d)}</span>` : ""}
+      </div>
+      ${hasExtra ? `<div class="leg-extra">
+        ${it.company ? `<span>${esc(it.company)}</span>` : ""}
+        ${it.ref ? `<span>Réf. ${esc(it.ref)}</span>` : ""}
+        ${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">Réservation ↗</a>` : ""}
+        ${it.notes ? `<span>${esc(it.notes)}</span>` : ""}
+      </div>` : ""}
+    </div>
+    ${itemActions(it, idx, trip)}
+  </article>`;
+}
+
+export function transportForm(it, isNew) {
+  const modes = Object.entries(MODES)
+    .map(([k, v]) => `<option value="${k}"${it.mode === k ? " selected" : ""}>${v}</option>`)
+    .join("");
+
+  return `<form class="form" data-form="transport" data-id="${it.id}" data-new="${isNew ? 1 : 0}">
+    <h3>${isNew ? "Nouveau trajet" : "Modifier le trajet"}</h3>
+    <div class="grid">
+      <label class="f">Moyen de transport<select name="mode" id="t-mode-${it.id}">${modes}</select></label>
+      <label class="f">Compagnie<input name="company" id="t-comp-${it.id}" value="${esc(it.company)}" placeholder="Ex. 1001, LATAM"></label>
+      <label class="f">Lieu de départ<input name="from" id="t-from-${it.id}" value="${esc(it.from)}" placeholder="Ex. Terminal Tietê"></label>
+      <label class="f">Lieu d'arrivée<input name="to" id="t-to-${it.id}" value="${esc(it.to)}" placeholder="Ex. Rodoviária Novo Rio"></label>
+      <label class="f">Départ (date et heure)<input type="datetime-local" name="dep" id="t-dep-${it.id}" value="${esc(it.dep)}"></label>
+      <label class="f">Arrivée (date et heure)<input type="datetime-local" name="arr" id="t-arr-${it.id}" value="${esc(it.arr)}"></label>
+      <div class="computed full" data-duration></div>
+      <label class="f">N° de réservation<input name="ref" id="t-ref-${it.id}" value="${esc(it.ref)}"></label>
+      <label class="f">Lien de réservation<input name="url" id="t-url-${it.id}" value="${esc(it.url)}" placeholder="https://…" inputmode="url"></label>
+      <label class="f full">Notes<input name="notes" id="t-notes-${it.id}" value="${esc(it.notes)}" placeholder="Quai, siège, bagages…"></label>
+    </div>
+    <div class="form-actions">
+      <button class="btn" data-act="cancel" type="button">Annuler</button>
+      <button class="btn primary" type="submit">Enregistrer</button>
+    </div>
+  </form>`;
+}
+
+export function readTransportForm(f) {
+  const o = { id: f.dataset.id, type: "transport" };
+  ["mode", "from", "to", "dep", "arr", "company", "ref", "url", "notes"].forEach((k) => (o[k] = f[k].value.trim()));
+  return o;
+}
+
+export function newTransport(from = "", to = "", dep = "") {
+  return { id: uid(), type: "transport", mode: "bus", from, to, dep, arr: "", company: "", ref: "", url: "", notes: "" };
+}

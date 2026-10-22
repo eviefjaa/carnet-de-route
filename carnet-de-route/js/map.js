@@ -1,0 +1,96 @@
+// Carte du voyage (Leaflet + OpenStreetMap) : étapes numérotées reliées dans l'ordre
+
+import { esc, MODES, duration, fmtDay, nights, plural } from "./utils.js";
+import { currentTrip } from "./store.js";
+import { renderGeoNote } from "./geocode.js";
+
+let map = null, layer = null, mapEl = null, lastFit = "";
+
+const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+function ensureMap() {
+  if (!window.L) return false;
+  if (!map) {
+    mapEl = document.createElement("div");
+    mapEl.id = "map";
+    map = L.map(mapEl, { scrollWheelZoom: false });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "&copy; OpenStreetMap",
+    }).addTo(map);
+    layer = L.layerGroup().addTo(map);
+    map.setView([20, 0], 2);
+  }
+  return true;
+}
+
+export function drawMap() {
+  const t = currentTrip();
+  if (!t) return;
+
+  // La carte est créée une seule fois puis déplacée dans la page à chaque affichage
+  const slot = document.getElementById("mapSlot");
+  if (slot) {
+    if (!ensureMap()) {
+      slot.innerHTML = `<p class="note">Carte indisponible : vérifiez votre connexion internet.</p>`;
+      return;
+    }
+    slot.replaceWith(mapEl);
+  } else if (!mapEl || !mapEl.isConnected) {
+    return;
+  }
+
+  layer.clearLayers();
+  const color = cssVar("--route") || "#e8a800";
+  const points = [];
+  let n = 0, prev = null, leg = null;
+
+  t.items.forEach((it) => {
+    if (it.type === "transport") { leg = it; return; }
+    n++;
+    if (it.geo && typeof it.geo.lat === "number") {
+      const ll = [it.geo.lat, it.geo.lng];
+      layer.addLayer(marker(it, n, ll));
+      if (prev) layer.addLayer(segment(prev, ll, leg, color));
+      prev = ll;
+      points.push(ll);
+    }
+    leg = null;
+  });
+
+  // Recadre la carte seulement si les points ont changé
+  const key = JSON.stringify(points);
+  setTimeout(() => {
+    map.invalidateSize();
+    if (key === lastFit) return;
+    lastFit = key;
+    if (points.length > 1) map.fitBounds(points, { padding: [36, 36] });
+    else if (points.length === 1) map.setView(points[0], 10);
+  }, 0);
+
+  renderGeoNote();
+}
+
+function marker(it, n, ll) {
+  const nb = nights(it.arrive, it.depart);
+  const dates = `${it.arrive ? esc(fmtDay(it.arrive)) : ""}${it.depart ? " → " + esc(fmtDay(it.depart)) : ""}`;
+  const popup = `<b>${n}. ${esc(it.place)}</b><br>${dates}${nb ? " · " + plural(nb, "nuit") : ""}`;
+  return L.marker(ll, {
+    title: it.place,
+    icon: L.divIcon({ className: "pin", html: `<span>${n}</span>`, iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14] }),
+  }).bindPopup(popup);
+}
+
+function segment(from, to, leg, color) {
+  const line = L.polyline([from, to], {
+    color,
+    weight: 4,
+    opacity: 0.9,
+    dashArray: leg && leg.mode === "avion" ? "6 9" : null, // vols en pointillés
+  });
+  if (leg) {
+    const d = duration(leg.dep, leg.arr);
+    line.bindTooltip(`${esc(MODES[leg.mode] || "Trajet")}${d ? " · " + esc(d) : ""}`, { sticky: true });
+  }
+  return line;
+}
