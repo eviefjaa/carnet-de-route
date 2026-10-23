@@ -29,7 +29,7 @@ export function checklist(stop) {
     ${adding ? `<form class="cl-form" data-todo-form="${stop.id}">
       <input name="text" id="todo-new-${stop.id}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" required>
       <button class="btn primary small" type="submit">Ajouter</button>
-      <button class="btn ghost small" data-act="todo-cancel" type="button">Terminer</button>
+      <button class="btn ghost small" data-act="todo-close" type="button">Fermer</button>
     </form>` : ""}
   </section>`;
 }

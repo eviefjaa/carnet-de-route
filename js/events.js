@@ -139,6 +139,15 @@ function findTodo(stopId, todoId) {
   const s = findStop(stopId);
   return s && (s.todos || []).find((x) => x.id === todoId);
 }
+// Ajoute un élément à la checklist d'une étape ; renvoie false si rien à ajouter
+function addTodo(stopId, text) {
+  text = text.trim();
+  const s = findStop(stopId);
+  if (!text || !s) return false;
+  s.todos = [...(s.todos || []), { id: uid(), text, done: false }];
+  save();
+  return true;
+}
 function focusTodoInput() {
   const input = document.querySelector("form[data-todo-form] input[name=text]");
   if (input) input.focus();
@@ -152,10 +161,14 @@ function onPageClick(act, b) {
       render();
       focusTodoInput();
       return true;
-    case "todo-cancel":
+    case "todo-close": {
+      // Ce qui est tapé est enregistré aussi, pour ne pas le perdre
+      const form = b.closest("form[data-todo-form]");
+      if (form) addTodo(form.dataset.todoForm, form.text.value);
       state.todoAdding = null;
       render();
       return true;
+    }
     case "todo-del": {
       const s = findStop(b.dataset.stop);
       if (s) {
@@ -336,11 +349,7 @@ function onSubmit(e) {
   const todoForm = e.target.closest("form[data-todo-form]");
   if (todoForm) {
     e.preventDefault();
-    const text = todoForm.text.value.trim();
-    const s = findStop(todoForm.dataset.todoForm);
-    if (text && s) {
-      s.todos = [...(s.todos || []), { id: uid(), text, done: false }];
-      save();
+    if (addTodo(todoForm.dataset.todoForm, todoForm.text.value)) {
       render();
       focusTodoInput(); // on peut enchaîner plusieurs ajouts
     }
