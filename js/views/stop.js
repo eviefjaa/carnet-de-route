@@ -64,6 +64,11 @@ export function stopForm(it, isNew) {
       <div class="links-edit" data-links>${links.map(linkRow).join("")}</div>
     </div>
     <div><button class="btn small" data-act="add-link" type="button">+ Ajouter un lien</button></div>
+    <div class="f-label">
+      À faire et à réserver (cochez ce qui est déjà réservé)
+      <div class="todos-edit" data-todos>${(it.todos || []).map(todoRow).join("")}</div>
+    </div>
+    <div><button class="btn small" data-act="add-todo-row" type="button">+ Ajouter une activité</button></div>
     <label class="f">Notes<textarea name="notes" id="f-notes-${it.id}" placeholder="Code d'accès, heure de check-in, idées de visites…">${esc(it.notes)}</textarea></label>
     <div class="form-actions">
       <button class="btn" data-act="cancel" type="button">Annuler</button>
@@ -77,6 +82,17 @@ export function linkRow(l) {
     <input name="lbl" id="l-lbl-${l.id}" value="${esc(l.label)}" placeholder="Nom (ex. Pousada Azul)" aria-label="Nom du lien">
     <input name="url" id="l-url-${l.id}" value="${esc(l.url)}" placeholder="https://www.airbnb.fr/rooms/…" aria-label="Adresse du lien" inputmode="url">
     <button class="btn ghost small" data-act="rm-link" type="button" aria-label="Retirer ce lien">✕</button>
+  </div>`;
+}
+
+// Une activité dans le formulaire : case « réservé », texte, retrait
+export function todoRow(t) {
+  const n = (t.tickets || []).length;
+  return `<div class="todo-edit" data-todo-row="${esc(t.id)}">
+    <input type="checkbox" name="todoDone" id="td-done-${esc(t.id)}"${t.done ? " checked" : ""} aria-label="Déjà réservé ou fait">
+    <input name="todoText" id="td-text-${esc(t.id)}" value="${esc(t.text)}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" aria-label="Activité">
+    ${n ? `<span class="todo-tk" title="Billets gérés depuis la checklist de l'étape">${n} billet${n > 1 ? "s" : ""}</span>` : ""}
+    <button class="btn ghost small" data-act="rm-todo-row" type="button" aria-label="Retirer cette activité">✕</button>
   </div>`;
 }
 
@@ -98,9 +114,17 @@ export function readStopForm(f) {
       url: r.querySelector('[name="url"]').value.trim(),
     }))
     .filter((l) => l.url);
+  // Checklist : les billets des activités sont repris à l'enregistrement (events.js)
+  o.todos = [...f.querySelectorAll("[data-todo-row]")]
+    .map((r) => ({
+      id: r.dataset.todoRow,
+      text: r.querySelector('[name="todoText"]').value.trim(),
+      done: r.querySelector('[name="todoDone"]').checked,
+    }))
+    .filter((t) => t.text);
   return o;
 }
 
 export function newStop(place = "", arrive = "") {
-  return { id: uid(), type: "stop", place, arrive, depart: "", address: "", notes: "", links: [], price: null };
+  return { id: uid(), type: "stop", place, arrive, depart: "", address: "", notes: "", links: [], price: null, todos: [] };
 }

@@ -43,7 +43,7 @@ js/
   cloud.js            Firebase : comptes et enregistrement des voyages
   account.js          Connexion, déconnexion, import des voyages de l'appareil
   share.js            Invitations par e-mail, voyageurs, quitter un voyage
-  tickets.js          Billets des trajets : envoi, ouverture, suppression
+  tickets.js          Billets des trajets et des activités : envoi, ouverture, suppression
   data/
     countries.js      Fiches pays (ajoutez-en en copiant une ligne)
     country-details.js  Frise historique et incontournables détaillés de chaque pays
@@ -56,7 +56,7 @@ js/
     budget.js         Section Budget (tableau des coûts)
     checklist.js      Checklist « À faire et à réserver » de chaque étape
     share.js          Section Voyageurs d'un voyage
-    tickets.js        Billets affichés dans un trajet
+    tickets.js        Billets affichés dans un trajet, une activité ou un formulaire
     auth.js           Écran de connexion et bouton de compte
     sidebar.js        Menu de gauche
     explore.js        Destinations, fiche pays, favoris
@@ -81,7 +81,7 @@ Après toute modification de `firestore.rules`, copiez son contenu dans la conso
 
 ## Billets des trajets
 
-Chaque trajet a une zone « Billets » pour y ranger des PDF ou des photos (billets de train, d'avion, de bus…). Il faut être connecté : les billets sont enregistrés dans le compte et visibles par tous les voyageurs du voyage.
+Chaque trajet a une zone « Billets » pour y ranger des PDF ou des photos (billets de train, d'avion, de bus…), dès sa création dans le formulaire ou plus tard. Chaque activité de la checklist d'une étape peut aussi avoir ses billets (musée, excursion…). Il faut être connecté : les billets sont enregistrés dans le compte et visibles par tous les voyageurs du voyage.
 
 Les billets sont stockés dans Firestore (`trips/{id}/files/{idDuBillet}`), encodés en base64, sans Firebase Storage (qui demande le forfait payant Blaze). Un document Firestore ne dépassant pas 1 Mo, chaque fichier est limité à 700 Ko ; les photos sont réduites automatiquement avant l'envoi.
 

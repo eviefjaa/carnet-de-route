@@ -2,7 +2,7 @@
 
 import { state, currentTrip, save, flush, createTrip, deleteTrip, neighbours, isOwner } from "./store.js";
 import { render } from "./views/trip.js";
-import { linkRow, newStop, readStopForm } from "./views/stop.js";
+import { linkRow, todoRow, newStop, readStopForm } from "./views/stop.js";
 import { newTransport, readTransportForm } from "./views/transport.js";
 import { uid, nights, duration, plural } from "./utils.js";
 import { toast } from "./toast.js";
@@ -14,7 +14,7 @@ import { favButton, filterCountries } from "./views/explore.js";
 import { renderSidebar } from "./views/sidebar.js";
 import { countryByCode } from "./data/countries.js";
 import { inviteFromForm, resendInvite, cancelInvite, removeMember, leaveTrip } from "./share.js";
-import { addTickets, openTicket, deleteTicket, deleteLegTickets } from "./tickets.js";
+import { addTickets, openTicket, deleteTicket, deleteTicketFiles, allTickets, resetFormTickets, pickFormTickets, removeFormTicket, commitFormTickets } from "./tickets.js";
 
 export function bindEvents() {
   document.addEventListener("click", onClick);
@@ -23,11 +23,19 @@ export function bindEvents() {
   // Safari ne signale pas toujours les changements de date par "input" : on écoute aussi "change"
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeMenu();
+    // Entrée dans une activité du formulaire d'étape : nouvelle activité plutôt qu'enregistrer
+    if (e.key === "Enter" && e.target.name === "todoText") {
+      e.preventDefault();
+      addTodoRow(e.target.closest("[data-todo-row]"));
+    }
   });
   document.addEventListener("change", (e) => {
-    if (e.target.dataset && e.target.dataset.ticketInput) {
-      addTickets(e.target.dataset.ticketInput, [...e.target.files]);
+    const d = e.target.dataset || {};
+    if (d.ticketInput || d.formTicketInput) {
+      const files = [...e.target.files];
       e.target.value = ""; // pour pouvoir rechoisir le même fichier
+      if (d.ticketInput) addTickets(d.ticketInput, d.tkTodo, files);
+      else pickFormTickets(files);
       return;
     }
     if (onSettingChange(e.target)) return;
@@ -69,6 +77,7 @@ function onClick(e) {
       const arrive = prevLeg && prevLeg.arr ? prevLeg.arr.slice(0, 10) : (prev && prev.depart) || "";
       state.insertAt = { pos, draft: newStop(prevLeg ? prevLeg.to : "", arrive) };
       state.editingId = null;
+      resetFormTickets();
       break;
     }
     case "add-leg": {
@@ -77,16 +86,19 @@ function onClick(e) {
       const dep = prev && prev.depart ? prev.depart + "T08:00" : "";
       state.insertAt = { pos, draft: newTransport(prev ? prev.place : "", next ? next.place : "", dep) };
       state.editingId = null;
+      resetFormTickets();
       break;
     }
     case "edit":
       state.editingId = b.dataset.id;
       state.insertAt = null;
       state.confirm = null;
+      resetFormTickets();
       break;
     case "cancel":
       state.editingId = null;
       state.insertAt = null;
+      resetFormTickets(); // les billets choisis ne sont pas envoyés
       break;
     case "up":
     case "down": {
@@ -99,7 +111,7 @@ function onClick(e) {
       state.confirm = b.dataset.id;
       break;
     case "del-yes":
-      deleteLegTickets(t.items[idx]); // les billets d'un trajet supprimé ne restent pas dans le compte
+      deleteTicketFiles(allTickets(t.items[idx])); // ses billets ne restent pas dans le compte
       t.items.splice(idx, 1);
       state.confirm = null;
       save();
@@ -129,6 +141,15 @@ function onClick(e) {
     }
     case "rm-link":
       b.closest("[data-link]").remove();
+      return;
+    case "add-todo-row":
+      addTodoRow(null, b.closest("form"));
+      return;
+    case "rm-todo-row":
+      b.closest("[data-todo-row]").remove();
+      return;
+    case "form-ticket-rm":
+      removeFormTicket(b.dataset);
       return;
     default:
       return;
@@ -179,6 +200,7 @@ function onPageClick(act, b) {
     case "todo-del": {
       const s = findStop(b.dataset.stop);
       if (s) {
+        deleteTicketFiles(((s.todos || []).find((x) => x.id === b.dataset.todo) || {}).tickets);
         s.todos = (s.todos || []).filter((x) => x.id !== b.dataset.todo);
         save();
         render();
@@ -234,14 +256,14 @@ function onPageClick(act, b) {
       removeMember(b.dataset.uid);
       return true;
     case "ticket-open":
-      openTicket(b.dataset.leg, b.dataset.file);
+      openTicket(b.dataset.item, b.dataset.tkTodo, b.dataset.file);
       return true;
     case "ticket-del":
       state.confirm = "ticket:" + b.dataset.file;
       render();
       return true;
     case "ticket-del-yes":
-      deleteTicket(b.dataset.leg, b.dataset.file);
+      deleteTicket(b.dataset.item, b.dataset.tkTodo, b.dataset.file);
       return true;
   }
   return false;
@@ -402,17 +424,18 @@ function onSubmit(e) {
   const t = currentTrip();
   const item = f.dataset.form === "stop" ? readStopForm(f) : readTransportForm(f);
 
+  const old = f.dataset.new === "1" ? null : t.items.find((x) => x.id === item.id);
+  if (item.type === "transport") commitFormTickets(item, old);
+  if (item.type === "stop") keepTodoTickets(item, old);
+
   if (f.dataset.new === "1") {
     t.items.splice(state.insertAt.pos, 0, item);
     state.insertAt = null;
   } else {
     const i = t.items.findIndex((x) => x.id === item.id);
     if (i >= 0) {
-      const old = t.items[i];
       // Garde la position sur la carte et le pays si le lieu n'a pas été rechoisi
       if (!item.geo && old.geo) item.geo = old.geo;
-      if (old.todos) item.todos = old.todos; // la checklist n'est pas dans le formulaire
-      if (old.tickets) item.tickets = old.tickets; // les billets non plus
       if (item.type === "stop" && item.country === undefined && old.country && old.place === item.place) item.country = old.country;
       t.items[i] = item;
     }
@@ -421,6 +444,23 @@ function onSubmit(e) {
   save();
   render();
   toast("Enregistré");
+}
+
+// Les activités gardent leurs billets ; ceux des activités retirées sont supprimés du compte
+function keepTodoTickets(stop, old) {
+  const before = new Map(((old && old.todos) || []).map((x) => [x.id, x]));
+  stop.todos = stop.todos.map((x) => (before.get(x.id)?.tickets?.length ? { ...x, tickets: before.get(x.id).tickets } : x));
+  const kept = new Set(stop.todos.map((x) => x.id));
+  deleteTicketFiles([...before.values()].filter((x) => !kept.has(x.id)).flatMap((x) => x.tickets || []));
+}
+
+// Nouvelle activité dans le formulaire d'étape (après la ligne donnée, sinon à la fin)
+function addTodoRow(after, form) {
+  const html = todoRow({ id: uid(), text: "", done: false });
+  if (after) after.insertAdjacentHTML("afterend", html);
+  else form.querySelector("[data-todos]").insertAdjacentHTML("beforeend", html);
+  const row = after ? after.nextElementSibling : form.querySelector("[data-todos]").lastElementChild;
+  row.querySelector('[name="todoText"]').focus();
 }
 
 let nameTimer;

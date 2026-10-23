@@ -18,6 +18,7 @@ export const state = {
   insertAt: null,   // { pos, draft } : nouvel élément en cours de création
   confirm: null,    // id de l'élément à confirmer pour suppression ("trip" pour le voyage)
   todoAdding: null, // id de l'étape dont on remplit la checklist
+  formTickets: { pending: [], removed: [] }, // billets choisis dans le formulaire d'un trajet
   user: null,       // { uid, email } quand on est connecté
   authOpen: false,  // écran de connexion affiché
   loading: false,   // chargement des voyages du compte en cours
@@ -194,6 +195,7 @@ export function resetUi() {
   state.insertAt = null;
   state.confirm = null;
   state.todoAdding = null;
+  state.formTickets = { pending: [], removed: [] };
 }
 
 export function selectTrip(id) {

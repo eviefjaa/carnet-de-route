@@ -15,3 +15,14 @@
 /* Champ fichier invisible mais atteignable au clavier */
 .tk-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
 .tk-add:focus-within { outline: 2px solid var(--focus, var(--accent)); outline-offset: 2px; }
+
+/* Billets dans le formulaire d'un trajet */
+.tickets.in-form { border-top: 0; padding-top: 0; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.tk-open.is-pending { cursor: default; border-style: dashed; }
+
+/* Billets d'une activité de la checklist */
+.cl-list li { flex-wrap: wrap; }
+.cl-list li > .tk-list { padding: 0 0 4px 28px; }
+.tk-add-mini { padding: 2px 8px; font-size: 12px; opacity: .75; }
+.cl-list li:hover .tk-add-mini, .tk-add-mini:focus-within { opacity: 1; }
+@media (hover: none) { .tk-add-mini { opacity: 1; } }

@@ -2,7 +2,7 @@
 
 import { esc, uid, safeUrl, MODES, duration, fmtDateTime, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
 import { itemActions } from "./actions.js";
-import { ticketsBlock } from "./tickets.js";
+import { ticketsBlock, formTicketsBlock } from "./tickets.js";
 
 export function transportCard(it, trip, idx) {
   const d = duration(it.dep, it.arr);
@@ -51,6 +51,7 @@ export function transportForm(it, isNew) {
       <label class="f full">Lien de réservation<input name="url" id="t-url-${it.id}" value="${esc(it.url)}" placeholder="https://…" inputmode="url"></label>
       <label class="f full">Notes<input name="notes" id="t-notes-${it.id}" value="${esc(it.notes)}" placeholder="Quai, siège, bagages…"></label>
     </div>
+    ${formTicketsBlock(it)}
     <div class="form-actions">
       <button class="btn" data-act="cancel" type="button">Annuler</button>
       <button class="btn primary" type="submit">Enregistrer</button>

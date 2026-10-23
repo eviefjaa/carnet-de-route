@@ -1,8 +1,10 @@
 // Checklist d'une étape : activités à faire et choses à réserver
-// Chaque élément : { id, text, done }. Coché = réservé / fait.
+// Chaque élément : { id, text, done, tickets }. Coché = réservé / fait.
+// Une activité peut avoir ses billets (musée, excursion…) : voir views/tickets.js.
 
 import { esc } from "../utils.js";
 import { state } from "../store.js";
+import { todoTickets, todoTicketButton } from "./tickets.js";
 
 export const pending = (stop) => (stop.todos || []).filter((t) => !t.done).length;
 export const tripPending = (trip) => trip.items.filter((i) => i.type === "stop").reduce((n, s) => n + pending(s), 0);
@@ -24,7 +26,9 @@ export function checklist(stop) {
           <input type="checkbox" data-todo="${t.id}" data-stop="${stop.id}" id="todo-${t.id}"${t.done ? " checked" : ""}>
           <span>${esc(t.text)}</span>
         </label>
+        ${todoTicketButton(stop, t)}
         <button class="cl-del" data-act="todo-del" data-todo="${t.id}" data-stop="${stop.id}" type="button" aria-label="Supprimer « ${esc(t.text)} »" title="Supprimer">✕</button>
+        ${todoTickets(stop, t)}
       </li>`).join("")}</ul>` : adding ? "" : `<p class="note">Ajoutez les activités prévues et ce qu'il reste à réserver avec le bouton +.</p>`}
     ${adding ? `<form class="cl-form" data-todo-form="${stop.id}">
       <input name="text" id="todo-new-${stop.id}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" required>
