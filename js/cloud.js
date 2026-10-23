@@ -80,10 +80,22 @@ export const SHARING = ["owner", "members", "invites", "emails"];
 const tripDoc = (id) => fb.doc(db, "trips", id);
 const myTrips = (uid) => fb.query(fb.collection(db, "trips"), fb.where("members", "array-contains", uid));
 
+// Un voyage peut avoir été écrit par un autre voyageur : on garantit sa forme minimale
+function normalize(t) {
+  if (!Array.isArray(t.items)) t.items = [];
+  t.items = t.items.filter((i) => i && typeof i === "object" && typeof i.id === "string");
+  t.items.forEach((i) => {
+    for (const k of ["todos", "tickets", "links"]) if (k in i && !Array.isArray(i[k])) i[k] = [];
+    if (Array.isArray(i.todos)) i.todos = i.todos.filter((x) => x && typeof x === "object");
+  });
+  if (typeof t.name !== "string") t.name = "Sans titre";
+  return t;
+}
+
 export async function loadTrips(uid) {
   const snap = await fb.getDocs(myTrips(uid));
   const trips = {};
-  snap.forEach((d) => (trips[d.id] = d.data()));
+  snap.forEach((d) => (trips[d.id] = normalize(d.data())));
   return trips;
 }
 
@@ -170,6 +182,6 @@ export const savePrefs = (p) => fb.setDoc(fb.doc(db, "users", me.uid, "meta", "p
 export function watchTrips(uid, onChange, onError) {
   return fb.onSnapshot(myTrips(uid), (snap) => {
     if (snap.metadata.hasPendingWrites) return; // nos propres modifications
-    snap.docChanges().forEach((c) => onChange(c.doc.id, c.type === "removed" ? null : c.doc.data()));
+    snap.docChanges().forEach((c) => onChange(c.doc.id, c.type === "removed" ? null : normalize(c.doc.data())));
   }, onError);
 }

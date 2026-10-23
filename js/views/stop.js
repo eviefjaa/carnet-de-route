@@ -49,14 +49,14 @@ function linkCard(l) {
 
 export function stopForm(it, isNew) {
   const links = it.links && it.links.length ? it.links : [{ id: uid(), label: "", url: "" }];
-  return `<form class="form" data-form="stop" data-id="${it.id}" data-new="${isNew ? 1 : 0}">
+  return `<form class="form" data-form="stop" data-id="${esc(it.id)}" data-new="${isNew ? 1 : 0}">
     <h3>${isNew ? "Nouvelle étape" : "Modifier l'étape"}</h3>
     <div class="grid">
-      <label class="f full">Lieu<span class="ac"><input name="place" id="f-place-${it.id}" value="${esc(it.place)}" placeholder="Tapez une ville, une région ou un pays" required data-place="place" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
-      <label class="f">Arrivée<input type="date" name="arrive" id="f-arr-${it.id}" value="${esc(it.arrive)}"></label>
-      <label class="f">Départ<input type="date" name="depart" id="f-dep-${it.id}" value="${esc(it.depart)}" min="${esc(it.arrive)}"></label>
-      <label class="f">Prix de l'hébergement (séjour complet)<input name="price" id="f-price-${it.id}" value="${esc(priceInput(it.price))}" inputmode="decimal" placeholder="Ex. 450"></label>
-      <label class="f">Adresse de l'hébergement<input name="address" id="f-addr-${it.id}" value="${esc(it.address)}" placeholder="Optionnel : sert aussi à placer l'étape sur la carte"></label>
+      <label class="f full">Lieu<span class="ac"><input name="place" id="f-place-${esc(it.id)}" value="${esc(it.place)}" placeholder="Tapez une ville, une région ou un pays" required data-place="place" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
+      <label class="f">Arrivée<input type="date" name="arrive" id="f-arr-${esc(it.id)}" value="${esc(it.arrive)}"></label>
+      <label class="f">Départ<input type="date" name="depart" id="f-dep-${esc(it.id)}" value="${esc(it.depart)}" min="${esc(it.arrive)}"></label>
+      <label class="f">Prix de l'hébergement (séjour complet)<input name="price" id="f-price-${esc(it.id)}" value="${esc(priceInput(it.price))}" inputmode="decimal" placeholder="Ex. 450"></label>
+      <label class="f">Adresse de l'hébergement<input name="address" id="f-addr-${esc(it.id)}" value="${esc(it.address)}" placeholder="Optionnel : sert aussi à placer l'étape sur la carte"></label>
     </div>
     <div class="computed" data-nights></div>
     <div class="f-label">
@@ -69,7 +69,7 @@ export function stopForm(it, isNew) {
       <div class="todos-edit" data-todos>${(it.todos || []).map(todoRow).join("")}</div>
     </div>
     <div><button class="btn small" data-act="add-todo-row" type="button">+ Ajouter une activité</button></div>
-    <label class="f">Notes<textarea name="notes" id="f-notes-${it.id}" placeholder="Code d'accès, heure de check-in, idées de visites…">${esc(it.notes)}</textarea></label>
+    <label class="f">Notes<textarea name="notes" id="f-notes-${esc(it.id)}" placeholder="Code d'accès, heure de check-in, idées de visites…">${esc(it.notes)}</textarea></label>
     <div class="form-actions">
       <button class="btn" data-act="cancel" type="button">Annuler</button>
       <button class="btn primary" type="submit">Enregistrer</button>
@@ -78,9 +78,9 @@ export function stopForm(it, isNew) {
 }
 
 export function linkRow(l) {
-  return `<div class="link-edit" data-link="${l.id}">
-    <input name="lbl" id="l-lbl-${l.id}" value="${esc(l.label)}" placeholder="Nom (ex. Pousada Azul)" aria-label="Nom du lien">
-    <input name="url" id="l-url-${l.id}" value="${esc(l.url)}" placeholder="https://www.airbnb.fr/rooms/…" aria-label="Adresse du lien" inputmode="url">
+  return `<div class="link-edit" data-link="${esc(l.id)}">
+    <input name="lbl" id="l-lbl-${esc(l.id)}" value="${esc(l.label)}" placeholder="Nom (ex. Pousada Azul)" aria-label="Nom du lien">
+    <input name="url" id="l-url-${esc(l.id)}" value="${esc(l.url)}" placeholder="https://www.airbnb.fr/rooms/…" aria-label="Adresse du lien" inputmode="url">
     <button class="btn ghost small" data-act="rm-link" type="button" aria-label="Retirer ce lien">✕</button>
   </div>`;
 }

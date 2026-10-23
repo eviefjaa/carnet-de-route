@@ -4,13 +4,13 @@ import { esc, fmtMoney, CURRENCIES } from "../utils.js";
 import { computeBudget } from "../budget.js";
 
 export function budgetSection(trip) {
-  const cur = trip.currency || "EUR";
+  const cur = /^[A-Z]{3}$/.test(trip.currency || "") ? trip.currency : "EUR";
   const { rows, total } = computeBudget(trip);
   const m = (n) => esc(fmtMoney(n, cur));
 
   const list = CURRENCIES[cur] ? CURRENCIES : { [cur]: cur, ...CURRENCIES };
   const options = Object.entries(list)
-    .map(([k, v]) => `<option value="${k}"${k === cur ? " selected" : ""}>${esc(v)}</option>`)
+    .map(([k, v]) => `<option value="${esc(k)}"${k === cur ? " selected" : ""}>${esc(v)}</option>`)
     .join("");
 
   const body = rows.length

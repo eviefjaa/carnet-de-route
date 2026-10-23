@@ -12,7 +12,8 @@ export const PAGES = {
 };
 
 export function readHash() {
-  const h = decodeURIComponent(location.hash.slice(1));
+  let h = location.hash.slice(1);
+  try { h = decodeURIComponent(h); } catch {} // lien abîmé : on garde le texte brut
   state.country = null;
   state.tripId = null;
   if (h.startsWith("voyage-")) {

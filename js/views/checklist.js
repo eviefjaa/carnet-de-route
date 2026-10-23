@@ -18,20 +18,20 @@ export function checklist(stop) {
     <div class="cl-head">
       <h3>À faire et à réserver</h3>
       ${todos.length ? `<span class="cl-progress${done === todos.length ? " all" : ""}">${done}/${todos.length} réservé${done > 1 ? "s" : ""}</span>` : ""}
-      ${adding ? "" : `<button class="cl-add" data-act="todo-add" data-stop="${stop.id}" type="button" aria-label="Ajouter une activité" title="Ajouter une activité">+</button>`}
+      ${adding ? "" : `<button class="cl-add" data-act="todo-add" data-stop="${esc(stop.id)}" type="button" aria-label="Ajouter une activité" title="Ajouter une activité">+</button>`}
     </div>
     ${todos.length ? `<ul class="cl-list">${todos.map((t) => `
       <li class="${t.done ? "done" : ""}">
         <label>
-          <input type="checkbox" data-todo="${t.id}" data-stop="${stop.id}" id="todo-${t.id}"${t.done ? " checked" : ""}>
+          <input type="checkbox" data-todo="${esc(t.id)}" data-stop="${esc(stop.id)}" id="todo-${esc(t.id)}"${t.done ? " checked" : ""}>
           <span>${esc(t.text)}</span>
         </label>
         ${todoTicketButton(stop, t)}
-        <button class="cl-del" data-act="todo-del" data-todo="${t.id}" data-stop="${stop.id}" type="button" aria-label="Supprimer « ${esc(t.text)} »" title="Supprimer">✕</button>
+        <button class="cl-del" data-act="todo-del" data-todo="${esc(t.id)}" data-stop="${esc(stop.id)}" type="button" aria-label="Supprimer « ${esc(t.text)} »" title="Supprimer">✕</button>
         ${todoTickets(stop, t)}
       </li>`).join("")}</ul>` : adding ? "" : `<p class="note">Ajoutez les activités prévues et ce qu'il reste à réserver avec le bouton +.</p>`}
-    ${adding ? `<form class="cl-form" data-todo-form="${stop.id}">
-      <input name="text" id="todo-new-${stop.id}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" required>
+    ${adding ? `<form class="cl-form" data-todo-form="${esc(stop.id)}">
+      <input name="text" id="todo-new-${esc(stop.id)}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" required>
       <button class="btn primary small" type="submit">Ajouter</button>
       <button class="btn ghost small" data-act="todo-close" type="button">Fermer</button>
     </form>` : ""}

@@ -14,6 +14,9 @@ import { fmtSize, formTicketsList } from "./views/tickets.js";
 import { toast } from "./toast.js";
 
 const MAX = 700 * 1024;
+// Types ouverts dans le navigateur. Tout autre type (ex. une page HTML glissée par un autre
+// compte) pourrait exécuter du code sur le site : il est seulement téléchargé, comme fichier brut.
+const SAFE_TYPES = ["application/pdf", "image/jpeg"];
 const cache = new Map(); // billets déjà ouverts ou envoyés : id → Blob
 
 // Ce qui porte les billets : le trajet, ou l'activité d'une étape
@@ -93,7 +96,7 @@ export async function openTicket(itemId, todoId, fileId) {
     try {
       const file = await cloud.loadFile(state.currentId, fileId);
       if (!file) throw new Error("absent");
-      blob = fromBase64(file.data, file.type);
+      blob = fromBase64(file.data, SAFE_TYPES.includes(file.type) ? file.type : "application/octet-stream");
       cache.set(fileId, blob);
     } catch {
       if (win) win.close();
@@ -101,10 +104,11 @@ export async function openTicket(itemId, todoId, fileId) {
     }
   }
   const url = URL.createObjectURL(blob);
-  if (win) {
+  if (win && SAFE_TYPES.includes(blob.type)) {
     win.location.href = url;
   } else {
-    // Fenêtre bloquée : on télécharge le fichier
+    // Fenêtre bloquée, ou type inattendu : on télécharge le fichier
+    if (win) win.close();
     const a = document.createElement("a");
     a.href = url;
     a.download = ticket.name;

@@ -120,7 +120,7 @@ function hero(t) {
 
   return `<section class="hero">
     <a class="trip-back" href="#voyages">← Mes voyages</a>
-    <h1><input id="tripName" value="${esc(t.name)}" aria-label="Nom du voyage"></h1>
+    <h1><input id="tripName" value="${esc(t.name)}" maxlength="200" aria-label="Nom du voyage"></h1>
     <div class="stats">
       ${start ? `<span><b>${esc(fmtDay(start))}</b> → <b>${esc(fmtDay(end))}</b></span>` : ""}
       <span><b>${stops.length}</b> étape${stops.length > 1 ? "s" : ""}</span>

@@ -21,20 +21,30 @@ service cloud.firestore {
       function isInvited() { return request.auth.token.email_verified == true && email() in resource.data.invites; }
       function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
       function newData() { return request.resource.data; }
+      // Forme minimale d'un voyage : sinon un voyageur pourrait bloquer l'affichage des autres
+      function validTrip() {
+        return newData().items is list
+          && newData().name is string && newData().name.size() <= 200
+          && (!("currency" in newData()) || (newData().currency is string && newData().currency.size() <= 3));
+      }
 
       allow read: if signedIn() && (isMember() || isInvited());
 
-      allow create: if signedIn()
+      allow create: if signedIn() && validTrip()
         && newData().owner == uid()
         && newData().members == [uid()]
-        && newData().invites == [];
+        && newData().invites == []
+        && newData().emails.keys().hasOnly([uid()]);
 
       // Seul le créateur supprime le voyage
       allow delete: if signedIn() && isOwner();
 
-      allow update: if signedIn() && newData().invites is list && newData().invites.size() <= 30 && (
-        // Le créateur change tout, sauf le créateur, et reste dans le voyage
-        (isOwner() && newData().owner == resource.data.owner && uid() in newData().members)
+      allow update: if signedIn() && validTrip() && newData().invites is list && newData().invites.size() <= 30 && (
+        // Le créateur change tout, sauf le créateur, et reste dans le voyage.
+        // Il peut retirer des voyageurs mais pas en ajouter : on n'entre que sur invitation
+        (isOwner() && newData().owner == resource.data.owner && uid() in newData().members
+            && resource.data.members.hasAll(newData().members)
+            && resource.data.emails.keys().hasAll(newData().emails.keys()))
         // Un voyageur modifie le contenu ou invite quelqu'un (sans retirer d'invitation)
         || (isMember() && !changed().hasAny(["owner", "members", "emails"])
             && newData().invites.hasAll(resource.data.invites))
@@ -60,6 +70,8 @@ service cloud.firestore {
         allow create: if tripMember()
           && request.resource.data.addedBy == request.auth.uid
           && request.resource.data.name is string && request.resource.data.name.size() <= 200
+          // PDF ou photo JPEG seulement : un autre type pourrait exécuter du code à l'ouverture
+          && request.resource.data.type in ["application/pdf", "image/jpeg"]
           && request.resource.data.data is string && request.resource.data.data.size() < 1000000;
       }
     }
