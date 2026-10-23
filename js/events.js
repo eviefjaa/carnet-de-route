@@ -14,6 +14,7 @@ import { favButton, filterCountries } from "./views/explore.js";
 import { renderSidebar } from "./views/sidebar.js";
 import { countryByCode } from "./data/countries.js";
 import { inviteFromForm, resendInvite, cancelInvite, removeMember, leaveTrip } from "./share.js";
+import { addTickets, openTicket, deleteTicket, deleteLegTickets } from "./tickets.js";
 
 export function bindEvents() {
   document.addEventListener("click", onClick);
@@ -24,6 +25,11 @@ export function bindEvents() {
     if (e.key === "Escape") closeMenu();
   });
   document.addEventListener("change", (e) => {
+    if (e.target.dataset && e.target.dataset.ticketInput) {
+      addTickets(e.target.dataset.ticketInput, [...e.target.files]);
+      e.target.value = ""; // pour pouvoir rechoisir le même fichier
+      return;
+    }
     if (onSettingChange(e.target)) return;
     if (e.target.id === "tripCurrency") {
       currentTrip().currency = e.target.value;
@@ -93,6 +99,7 @@ function onClick(e) {
       state.confirm = b.dataset.id;
       break;
     case "del-yes":
+      deleteLegTickets(t.items[idx]); // les billets d'un trajet supprimé ne restent pas dans le compte
       t.items.splice(idx, 1);
       state.confirm = null;
       save();
@@ -225,6 +232,16 @@ function onPageClick(act, b) {
       return true;
     case "remove-member":
       removeMember(b.dataset.uid);
+      return true;
+    case "ticket-open":
+      openTicket(b.dataset.leg, b.dataset.file);
+      return true;
+    case "ticket-del":
+      state.confirm = "ticket:" + b.dataset.file;
+      render();
+      return true;
+    case "ticket-del-yes":
+      deleteTicket(b.dataset.leg, b.dataset.file);
       return true;
   }
   return false;
@@ -395,6 +412,7 @@ function onSubmit(e) {
       // Garde la position sur la carte et le pays si le lieu n'a pas été rechoisi
       if (!item.geo && old.geo) item.geo = old.geo;
       if (old.todos) item.todos = old.todos; // la checklist n'est pas dans le formulaire
+      if (old.tickets) item.tickets = old.tickets; // les billets non plus
       if (item.type === "stop" && item.country === undefined && old.country && old.place === item.place) item.country = old.country;
       t.items[i] = item;
     }

@@ -108,7 +108,22 @@ export const newTripSharing = () => ({ owner: me.uid, members: [me.uid], invites
 
 export const saveTrip = (id, trip, isNew) =>
   isNew ? fb.setDoc(tripDoc(id), clean(trip)) : fb.setDoc(tripDoc(id), content(trip), { merge: true });
-export const deleteTrip = (id) => fb.deleteDoc(tripDoc(id));
+// Les billets (sous-collection files) sont supprimés avec le voyage
+export async function deleteTrip(id) {
+  const files = await fb.getDocs(fb.collection(db, "trips", id, "files"));
+  await Promise.all(files.docs.map((d) => fb.deleteDoc(d.ref)));
+  await fb.deleteDoc(tripDoc(id));
+}
+
+// ---------- Billets ----------
+// Un billet par document : trips/{id}/files/{idDuBillet}, contenu encodé en base64 (1 Mo maximum par document)
+const fileDoc = (tripId, fileId) => fb.doc(db, "trips", tripId, "files", fileId);
+export const saveFile = (tripId, fileId, file) => fb.setDoc(fileDoc(tripId, fileId), { ...file, addedBy: me.uid, addedAt: Date.now() });
+export async function loadFile(tripId, fileId) {
+  const snap = await fb.getDoc(fileDoc(tripId, fileId));
+  return snap.exists() ? snap.data() : null;
+}
+export const deleteFile = (tripId, fileId) => fb.deleteDoc(fileDoc(tripId, fileId));
 
 // ---------- Voyageurs ----------
 export const invite = (id, email) => fb.updateDoc(tripDoc(id), { invites: fb.arrayUnion(email) });

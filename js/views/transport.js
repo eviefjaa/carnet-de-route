@@ -2,6 +2,7 @@
 
 import { esc, uid, safeUrl, MODES, duration, fmtDateTime, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
 import { itemActions } from "./actions.js";
+import { ticketsBlock } from "./tickets.js";
 
 export function transportCard(it, trip, idx) {
   const d = duration(it.dep, it.arr);
@@ -25,6 +26,7 @@ export function transportCard(it, trip, idx) {
         ${it.notes ? `<span>${esc(it.notes)}</span>` : ""}
       </div>` : ""}
     </div>
+    ${ticketsBlock(it)}
     ${itemActions(it, idx, trip)}
   </article>`;
 }

@@ -48,6 +48,20 @@ service cloud.firestore {
             && newData().invites == resource.data.invites.removeAll([email()])
             && newData().emails.diff(resource.data.emails).affectedKeys().hasOnly([uid()]))
       );
+
+      // Billets des trajets (un fichier par document, encodé en base64) :
+      // seuls les voyageurs du voyage les voient, les ajoutent et les suppriment
+      match /files/{fileId} {
+        function tripMember() {
+          return request.auth != null
+            && request.auth.uid in get(/databases/$(database)/documents/trips/$(tripId)).data.members;
+        }
+        allow read, delete: if tripMember();
+        allow create: if tripMember()
+          && request.resource.data.addedBy == request.auth.uid
+          && request.resource.data.name is string && request.resource.data.name.size() <= 200
+          && request.resource.data.data is string && request.resource.data.data.size() < 1000000;
+      }
     }
   }
 }
