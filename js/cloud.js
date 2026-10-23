@@ -74,6 +74,13 @@ const clean = (t) => JSON.parse(JSON.stringify(t));
 export const saveTrip = (id, trip) => fb.setDoc(fb.doc(db, "users", currentUid, "trips", id), clean(trip));
 export const deleteTrip = (id) => fb.deleteDoc(fb.doc(db, "users", currentUid, "trips", id));
 
+// Préférences (favoris, devise, thème, nom) : users/{uid}/meta/prefs
+export async function loadPrefs(uid) {
+  const snap = await fb.getDoc(fb.doc(db, "users", uid, "meta", "prefs"));
+  return snap.exists() ? snap.data() : null;
+}
+export const savePrefs = (p) => fb.setDoc(fb.doc(db, "users", currentUid, "meta", "prefs"), clean(p));
+
 // Écoute les modifications faites depuis un autre appareil
 export function watchTrips(uid, onChange) {
   return fb.onSnapshot(tripsCol(uid), (snap) => {

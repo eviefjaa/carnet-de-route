@@ -6,6 +6,7 @@
 
 import { uid } from "./utils.js";
 import { toast } from "./toast.js";
+import { prefs } from "./prefs.js";
 
 const TRIPS_KEY = "carnet-route-trips";
 const CURRENT_KEY = "carnet-route-current";
@@ -19,6 +20,9 @@ export const state = {
   user: null,       // { uid, email } quand on est connecté
   authOpen: false,  // écran de connexion affiché
   loading: false,   // chargement des voyages du compte en cours
+  view: "trips",    // page affichée : trips, explore, country, favorites, profile, settings
+  country: null,    // code du pays affiché dans sa fiche
+  explore: { q: "", continent: "", tag: "" }, // filtres des destinations
 };
 
 // ---------- Sauvegarde ----------
@@ -127,9 +131,9 @@ export function selectTrip(id) {
   rememberCurrent();
 }
 
-export function createTrip() {
+export function createTrip({ name = "Nouveau voyage", currency = prefs.currency || "EUR" } = {}) {
   const id = "v-" + uid();
-  state.trips[id] = { name: "Nouveau voyage", currency: "EUR", createdAt: Date.now(), items: [] };
+  state.trips[id] = { name, currency, createdAt: Date.now(), items: [] };
   selectTrip(id);
   save();
   return id;

@@ -1,0 +1,69 @@
+/* Mise en page : menu à gauche + contenu
+   Sur ordinateur, le menu est toujours visible ; sur téléphone, il s'ouvre avec le bouton ☰. */
+
+.layout { display: flex; min-height: 100vh; }
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding-block: 24px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- Menu ---------- */
+.sidebar {
+  width: 248px; flex: none;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  background: var(--surface); border-right: 1px solid var(--line);
+  padding: 20px 12px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+
+.side-head { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; }
+.side-brand { font-family: var(--display); font-weight: 700; font-size: 18px; }
+.side-close { display: none; }
+
+.side-nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 10px;
+  color: var(--ink); text-decoration: none; font-weight: 500;
+}
+.nav-link:hover { background: var(--bg); }
+.nav-link.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.nav-link .icon { flex: none; }
+.nav-count { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+.side-foot { margin-top: auto; }
+.side-user { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; text-decoration: none; color: var(--ink); min-width: 0; }
+.side-user:hover { background: var(--bg); }
+.side-user-text { display: flex; flex-direction: column; min-width: 0; font-size: 13px; }
+.side-user-text span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.avatar { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-family: var(--display); }
+.avatar.big { width: 56px; height: 56px; font-size: 22px; }
+
+/* ---------- Barre du haut ---------- */
+.menu-btn { display: none; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; }
+.top .brand { display: none; }
+.top .spacer { flex: 1; }
+
+.scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); z-index: 2999; }
+
+/* ---------- Téléphone et petite tablette ---------- */
+@media (max-width: 899px) {
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; z-index: 3000; height: auto;
+    width: min(300px, 85vw);
+    padding-top: calc(20px + env(safe-area-inset-top, 0px));
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-105%); transition: transform .2s ease;
+    box-shadow: 0 0 40px rgba(0, 0, 0, .25);
+  }
+  .sidebar.open { transform: none; }
+  .side-close { display: inline-flex; }
+  .menu-btn { display: inline-flex; }
+  .top .brand { display: inline; }
+}

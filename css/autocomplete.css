@@ -21,4 +21,4 @@
 .ac-list li.ac-empty:hover { background: none; }
 
 /* Pays sous le nom de l'étape */
-.country { font-size: 13px; color: var(--muted); }
+.stop-country { font-size: 13px; color: var(--muted); }

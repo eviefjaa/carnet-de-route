@@ -8,7 +8,8 @@ export function budgetSection(trip) {
   const { rows, total } = computeBudget(trip);
   const m = (n) => esc(fmtMoney(n, cur));
 
-  const options = Object.entries(CURRENCIES)
+  const list = CURRENCIES[cur] ? CURRENCIES : { [cur]: cur, ...CURRENCIES };
+  const options = Object.entries(list)
     .map(([k, v]) => `<option value="${k}"${k === cur ? " selected" : ""}>${esc(v)}</option>`)
     .join("");
 

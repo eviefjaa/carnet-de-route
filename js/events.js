@@ -8,13 +8,22 @@ import { uid, nights, duration, plural } from "./utils.js";
 import { toast } from "./toast.js";
 import * as cloud from "./cloud.js";
 import { setAuthMode } from "./views/auth.js";
+import { prefs, savePrefs, applyTheme, toggleFavorite } from "./prefs.js";
+import { openMenu, closeMenu, go } from "./router.js";
+import { favButton, filterCountries } from "./views/explore.js";
+import { renderSidebar } from "./views/sidebar.js";
+import { countryByCode } from "./data/countries.js";
 
 export function bindEvents() {
   document.addEventListener("click", onClick);
   document.addEventListener("submit", onSubmit);
   document.addEventListener("input", onInput);
   // Safari ne signale pas toujours les changements de date par "input" : on écoute aussi "change"
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
   document.addEventListener("change", (e) => {
+    if (onSettingChange(e.target)) return;
     if (e.target.id === "tripCurrency") {
       currentTrip().currency = e.target.value;
       save();
@@ -44,6 +53,7 @@ function onClick(e) {
   const act = b.dataset.act;
   if (act === "new-trip") return newTrip();
   if (onAccountClick(act, b)) return;
+  if (onPageClick(act, b)) return;
 
   const t = currentTrip();
   if (!t) return;
@@ -119,11 +129,92 @@ function onClick(e) {
   refreshComputed();
 }
 
+// ---------- Menu, destinations, favoris, paramètres ----------
+function onPageClick(act, b) {
+  switch (act) {
+    case "open-menu":
+      openMenu();
+      return true;
+    case "close-menu":
+      closeMenu();
+      return true;
+    case "fav": {
+      const code = b.dataset.code;
+      const on = toggleFavorite(code);
+      if (state.view === "favorites") render();
+      else {
+        document.querySelectorAll(`.fav[data-code="${code}"]`).forEach((btn) => (btn.outerHTML = favButton(code, btn.classList.contains("small"))));
+        renderSidebar();
+      }
+      toast(on ? "Ajouté aux favoris" : "Retiré des favoris");
+      return true;
+    }
+    case "chip": {
+      const filter = b.dataset.filter;
+      state.explore[filter] = b.dataset.value;
+      document.querySelectorAll(`.chip[data-filter="${filter}"]`).forEach((c) => {
+        const on = c.dataset.value === b.dataset.value;
+        c.classList.toggle("on", on);
+        c.setAttribute("aria-pressed", on);
+      });
+      filterCountries();
+      return true;
+    }
+    case "trip-from-country": {
+      const x = countryByCode(b.dataset.code);
+      if (!x) return true;
+      createTrip({ name: x.name, currency: x.currency });
+      toast(`Voyage « ${x.name} » créé : ajoutez vos étapes`);
+      go("voyages");
+      return true;
+    }
+    case "export":
+      exportTrips();
+      return true;
+  }
+  return false;
+}
+
+function onSettingChange(el) {
+  if (el.name === "theme") {
+    prefs.theme = el.value;
+    applyTheme();
+    savePrefs();
+    return true;
+  }
+  if (el.id === "defaultCurrency") {
+    prefs.currency = el.value;
+    savePrefs();
+    toast("Devise par défaut enregistrée");
+    return true;
+  }
+  if (el.id === "profileName") {
+    prefs.name = el.value.trim();
+    savePrefs();
+    renderSidebar();
+    toast("Nom enregistré");
+    return true;
+  }
+  return false;
+}
+
+function exportTrips() {
+  const data = JSON.stringify({ exportedAt: new Date().toISOString(), trips: state.trips }, null, 2);
+  const url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `carnet-de-route-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 // ---------- Compte ----------
 function onAccountClick(act, b) {
   switch (act) {
     case "open-auth":
-      setAuthMode("signin");
+      setAuthMode(b.dataset.mode || "signin");
       state.authOpen = true;
       break;
     case "close-auth":
@@ -217,6 +308,11 @@ function onSubmit(e) {
 
 let nameTimer;
 function onInput(e) {
+  if (e.target.id === "exploreSearch") {
+    state.explore.q = e.target.value;
+    filterCountries();
+    return;
+  }
   if (e.target.id === "tripName") {
     currentTrip().name = e.target.value;
     renderTripSelect();

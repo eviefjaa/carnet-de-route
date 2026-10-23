@@ -1,12 +1,13 @@
 /* Barre du haut, boutons, formulaires, messages */
 
 .top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.brand { font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-right: auto; }
+.brand { font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .trip-select { max-width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 
 /* Boutons */
 .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; font-weight: 500; font-size: 14px; }
 .btn:hover { border-color: var(--accent); }
+a.btn { display: inline-block; text-decoration: none; color: var(--ink); }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 6px 8px; }
 .btn.ghost:hover { color: var(--ink); border-color: var(--line); }

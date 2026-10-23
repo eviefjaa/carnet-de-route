@@ -21,7 +21,7 @@ export function stopCard(it, trip, idx) {
     <div class="stop-head">
       ${dayN ? `<span class="day">JOUR ${dayN}</span>` : ""}
       <h2>${esc(it.place || "Étape sans nom")}</h2>
-      ${it.country ? `<span class="country">${esc(it.country)}</span>` : ""}
+      ${it.country ? `<span class="stop-country">${esc(it.country)}</span>` : ""}
     </div>
     <div class="dates">
       ${it.arrive ? esc(fmtDay(it.arrive)) : "date à définir"}${it.depart ? " → " + esc(fmtDay(it.depart)) : ""}

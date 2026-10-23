@@ -4,6 +4,7 @@ import * as cloud from "./cloud.js";
 import { state, setCloud, replaceTrips, loadLocal, clearLocal, applyRemote, hasPendingChanges, save, resetUi } from "./store.js";
 import { render } from "./views/trip.js";
 import { toast } from "./toast.js";
+import { usePrefsCloud, resetPrefs } from "./prefs.js";
 
 let stopWatching = null;
 
@@ -21,8 +22,10 @@ async function onUserChange(user) {
 
   // Déconnexion : retour aux voyages de cet appareil
   if (!user) {
+    const wasConnected = !!state.user;
     state.user = null;
     setCloud(null);
+    if (wasConnected) resetPrefs();
     resetUi();
     replaceTrips(loadLocal());
     render();
@@ -51,6 +54,7 @@ async function onUserChange(user) {
       toast(imported.length > 1 ? `${imported.length} voyages de cet appareil ajoutés à votre compte` : "Le voyage de cet appareil a été ajouté à votre compte");
     }
     clearLocal();
+    usePrefsCloud(cloud, await cloud.loadPrefs(user.uid).catch(() => null));
 
     stopWatching = cloud.watchTrips(user.uid, (id, trip) => {
       const editing = id === state.currentId && (state.editingId || state.insertAt || document.activeElement?.id === "tripName");

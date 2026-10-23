@@ -11,14 +11,21 @@ import { drawMap } from "../map.js";
 import { scheduleGeo } from "../geocode.js";
 import { authScreen, renderAccountBar } from "./auth.js";
 import { isEnabled } from "../cloud.js";
+import { renderSidebar } from "./sidebar.js";
+import { exploreView, filterCountries, countryView, favoritesView } from "./explore.js";
+import { profileView, settingsView } from "./pages.js";
+import { prefs } from "../prefs.js";
 
 export function render() {
   renderTripSelect();
   renderAccountBar();
+  renderSidebar();
   const app = document.getElementById("app");
   const busy = state.authOpen || state.loading;
-  document.getElementById("newTrip").hidden = busy;
-  if (busy) document.getElementById("tripSelect").hidden = true;
+  const onTrips = state.view === "trips" && !busy;
+  document.getElementById("newTrip").hidden = !onTrips;
+  if (!onTrips) document.getElementById("tripSelect").hidden = true;
+  document.getElementById("wrap").classList.toggle("wide", ["explore", "country", "favorites"].includes(state.view) && !busy);
 
   if (state.authOpen) {
     app.innerHTML = authScreen();
@@ -29,6 +36,25 @@ export function render() {
     return;
   }
 
+  switch (state.view) {
+    case "explore":
+      app.innerHTML = exploreView();
+      filterCountries();
+      return;
+    case "country":
+      app.innerHTML = countryView(state.country);
+      return;
+    case "favorites":
+      app.innerHTML = favoritesView(prefs.favorites);
+      return;
+    case "profile":
+      app.innerHTML = profileView();
+      return;
+    case "settings":
+      app.innerHTML = settingsView();
+      return;
+  }
+
   const t = currentTrip();
 
   if (!t) {
@@ -36,6 +62,7 @@ export function render() {
       <h2>Aucun voyage pour l'instant</h2>
       <p class="note">Créez un voyage, puis ajoutez vos étapes, vos hébergements et vos trajets.</p>
       <button class="btn primary" data-act="new-trip" type="button">Créer un voyage</button>
+      <p class="note">En manque d'idées ? <a href="#destinations">Choisir une destination</a></p>
       ${isEnabled() && !state.user ? `<p class="note">Vous avez déjà un compte ? <button class="link-btn" data-act="open-auth" type="button">Se connecter</button></p>` : ""}
     </div>`;
     return;
