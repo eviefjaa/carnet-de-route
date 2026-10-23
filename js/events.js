@@ -249,6 +249,15 @@ function onPageClick(act, b) {
     case "export":
       exportTrips();
       return true;
+    case "open-invite":
+      state.inviteOpen = true;
+      render();
+      document.querySelector("form[data-invite-form] input")?.focus();
+      return true;
+    case "close-invite":
+      state.inviteOpen = false;
+      render();
+      return true;
     case "resend-invite":
       resendInvite(b.dataset.email);
       return true;

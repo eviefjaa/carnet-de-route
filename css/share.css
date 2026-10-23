@@ -2,6 +2,9 @@
 
 .share { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
 .share h2 { font-size: 20px; font-weight: 700; }
+.sh-head { display: flex; align-items: center; gap: 10px; }
+.sh-add { width: 34px; height: 34px; }
+.sh-add svg { display: block; }
 .sh-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .sh-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 4px; border-radius: 8px; }
 .sh-list li:hover { background: var(--bg); }

@@ -29,6 +29,7 @@ export async function inviteFromForm(f) {
     }
     patchTrip(id, { invites: [...(currentTrip()?.invites || []), email] });
   }
+  state.inviteOpen = false;
   render();
   openInviteMail(email, t, id);
 }

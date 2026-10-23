@@ -27,6 +27,7 @@ export const state = {
   explore: { q: "", continent: "", tag: "" }, // filtres des destinations
   profile: null,    // mon profil public { uid, name, handle, bio, visibility }, une fois créé
   publishOpen: false, // panneau « Publier l'itinéraire » ouvert
+  inviteOpen: false,  // champ « Inviter une personne » ouvert
   personId: null,   // personne affichée (#personne-…)
   postId: null,     // publication affichée (#publication-…)
 };
@@ -201,6 +202,7 @@ export function resetUi() {
   state.todoAdding = null;
   state.formTickets = { pending: [], removed: [] };
   state.publishOpen = false;
+  state.inviteOpen = false;
 }
 
 export function selectTrip(id) {

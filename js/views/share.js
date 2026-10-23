@@ -32,13 +32,21 @@ export function shareSection(t) {
       ${owner ? `<button class="cl-del" data-act="cancel-invite" data-email="${esc(email)}" type="button" aria-label="Annuler l'invitation de ${esc(email)}" title="Annuler l'invitation">✕</button>` : ""}
     </li>`).join("");
 
+  // Icône « ajouter une personne » : ouvre le champ d'invitation
+  const addButton = state.inviteOpen ? "" : `<button class="cl-add sh-add" data-act="open-invite" type="button" aria-label="Inviter une personne" title="Inviter une personne">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/>
+      </svg>
+    </button>`;
+
   return `<section class="share" aria-label="Voyageurs">
-    <h2>Voyageurs</h2>
+    <div class="sh-head"><h2>Voyageurs</h2>${addButton}</div>
     <ul class="sh-list">${members}${invites}</ul>
-    <form class="cl-form" data-invite-form>
-      <input type="email" name="email" placeholder="Adresse e-mail de la personne à inviter" aria-label="Adresse e-mail de la personne à inviter" autocomplete="email" required>
+    ${state.inviteOpen ? `<form class="cl-form" data-invite-form>
+      <input type="email" name="email" placeholder="Adresse e-mail" aria-label="Adresse e-mail de la personne à inviter" autocomplete="email" required>
       <button class="btn primary small" type="submit">Inviter</button>
+      <button class="btn ghost small" data-act="close-invite" type="button">Fermer</button>
     </form>
-    <p class="note">Votre messagerie s'ouvre avec un e-mail d'invitation prêt à envoyer. Les personnes invitées peuvent modifier le voyage.</p>
+    <p class="note">Votre messagerie s'ouvre avec un e-mail d'invitation prêt à envoyer. Les personnes invitées peuvent modifier le voyage.</p>` : ""}
   </section>`;
 }
