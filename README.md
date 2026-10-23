@@ -2,17 +2,19 @@
 
 Petit site pour planifier un road trip : étapes, hébergements (liens Airbnb, Booking…), trajets avec horaires, carte du voyage et budget (prix des hébergements et des transports, total par destination et par voyage).
 
-Les données sont enregistrées dans le navigateur (localStorage) : elles restent sur l'appareil et le navigateur utilisés.
+Sans compte, les voyages sont enregistrés dans le navigateur (localStorage). Avec un compte, ils sont enregistrés dans Firebase et synchronisés entre les appareils.
 
 ## Organisation des fichiers
 
 ```
 index.html            Page principale
+firestore.rules       Règles de sécurité Firestore (à copier dans la console Firebase)
 css/
   base.css            Couleurs, polices, mise en page générale
   components.css      Boutons, formulaires, en-tête, messages
   itinerary.css       Ligne de route, étapes, trajets
   map.css             Carte
+  auth.css            Connexion et compte
   budget.css          Budget et prix
 js/
   app.js              Point d'entrée
@@ -23,12 +25,16 @@ js/
   map.js              Carte (Leaflet + OpenStreetMap)
   geocode.js          Placement des lieux sur la carte (Nominatim)
   budget.js           Calcul des totaux par destination et par voyage
+  firebase-config.js  Configuration Firebase (null = sans compte)
+  cloud.js            Firebase : comptes et enregistrement des voyages
+  account.js          Connexion, déconnexion, import des voyages de l'appareil
   views/
     trip.js           Page d'un voyage
     stop.js           Étape : affichage et formulaire
     transport.js      Trajet : affichage et formulaire
     actions.js        Boutons d'action et d'insertion
     budget.js         Section Budget (tableau des coûts)
+    auth.js           Écran de connexion et bouton de compte
 ```
 
 ## Mise en ligne

@@ -9,10 +9,26 @@ import { budgetSection } from "./budget.js";
 import { computeBudget } from "../budget.js";
 import { drawMap } from "../map.js";
 import { scheduleGeo } from "../geocode.js";
+import { authScreen, renderAccountBar } from "./auth.js";
+import { isEnabled } from "../cloud.js";
 
 export function render() {
   renderTripSelect();
+  renderAccountBar();
   const app = document.getElementById("app");
+  const busy = state.authOpen || state.loading;
+  document.getElementById("newTrip").hidden = busy;
+  if (busy) document.getElementById("tripSelect").hidden = true;
+
+  if (state.authOpen) {
+    app.innerHTML = authScreen();
+    return;
+  }
+  if (state.loading) {
+    app.innerHTML = `<p class="note">Chargement de vos voyages…</p>`;
+    return;
+  }
+
   const t = currentTrip();
 
   if (!t) {
@@ -20,6 +36,7 @@ export function render() {
       <h2>Aucun voyage pour l'instant</h2>
       <p class="note">Créez un voyage, puis ajoutez vos étapes, vos hébergements et vos trajets.</p>
       <button class="btn primary" data-act="new-trip" type="button">Créer un voyage</button>
+      ${isEnabled() && !state.user ? `<p class="note">Vous avez déjà un compte ? <button class="link-btn" data-act="open-auth" type="button">Se connecter</button></p>` : ""}
     </div>`;
     return;
   }
@@ -62,6 +79,7 @@ function hero(t) {
       <span><b>${legs.length}</b> trajet${legs.length > 1 ? "s" : ""}</span>
       ${budget ? `<span><b>${esc(fmtMoney(budget, t.currency || "EUR"))}</b></span>` : ""}
     </div>
+    ${isEnabled() ? `<p class="sync-note">${state.user ? "Synchronisé avec votre compte" : "Enregistré sur cet appareil uniquement"}</p>` : ""}
     ${del}
   </section>`;
 }

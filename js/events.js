@@ -6,6 +6,8 @@ import { linkRow, newStop, readStopForm } from "./views/stop.js";
 import { newTransport, readTransportForm } from "./views/transport.js";
 import { uid, nights, duration, plural } from "./utils.js";
 import { toast } from "./toast.js";
+import * as cloud from "./cloud.js";
+import { setAuthMode } from "./views/auth.js";
 
 export function bindEvents() {
   document.addEventListener("click", onClick);
@@ -41,6 +43,7 @@ function onClick(e) {
   if (!b) return;
   const act = b.dataset.act;
   if (act === "new-trip") return newTrip();
+  if (onAccountClick(act, b)) return;
 
   const t = currentTrip();
   if (!t) return;
@@ -116,7 +119,68 @@ function onClick(e) {
   refreshComputed();
 }
 
+// ---------- Compte ----------
+function onAccountClick(act, b) {
+  switch (act) {
+    case "open-auth":
+      setAuthMode("signin");
+      state.authOpen = true;
+      break;
+    case "close-auth":
+      state.authOpen = false;
+      break;
+    case "auth-mode":
+      setAuthMode(b.dataset.mode);
+      break;
+    case "sign-out":
+      cloud.signOut().then(() => toast("Vous êtes déconnecté(e)"));
+      return true;
+    default:
+      return false;
+  }
+  render();
+  const email = document.getElementById("auth-email");
+  if (email) email.focus();
+  return true;
+}
+
+async function onAuthSubmit(f) {
+  const mode = f.dataset.auth;
+  const email = f.email.value.trim();
+  const password = f.password ? f.password.value : "";
+  const msg = f.querySelector("#auth-error");
+  const btn = f.querySelector("button[type=submit]");
+  const show = (text, ok = false) => {
+    msg.textContent = text;
+    msg.className = ok ? "auth-ok" : "auth-error";
+    msg.hidden = false;
+  };
+
+  if (!email) return show("Indiquez votre adresse e-mail.");
+  if (mode !== "reset" && !password) return show("Indiquez votre mot de passe.");
+  if (mode === "signup" && password !== f.confirm.value) return show("Les deux mots de passe ne sont pas identiques.");
+
+  btn.disabled = true;
+  try {
+    if (mode === "signin") await cloud.signIn(email, password);
+    else if (mode === "signup") await cloud.signUp(email, password);
+    else {
+      await cloud.resetPassword(email);
+      show("E-mail envoyé. Pensez à regarder dans vos spams.", true);
+    }
+  } catch (err) {
+    show(cloud.errorMessage(err));
+  }
+  btn.disabled = false;
+}
+
 function onSubmit(e) {
+  const auth = e.target.closest("form[data-auth]");
+  if (auth) {
+    e.preventDefault();
+    onAuthSubmit(auth);
+    return;
+  }
   const f = e.target.closest("form[data-form]");
   if (!f) return;
   e.preventDefault();

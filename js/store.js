@@ -1,4 +1,8 @@
-// Données des voyages : chargement, sauvegarde (dans le navigateur) et état de l'interface
+// Données des voyages : état de l'interface, chargement et sauvegarde
+//
+// Deux modes de sauvegarde :
+//  - sans compte : dans le navigateur (localStorage), propre à cet appareil ;
+//  - avec compte : dans le cloud (Firebase), synchronisé entre les appareils.
 
 import { uid } from "./utils.js";
 import { toast } from "./toast.js";
@@ -7,33 +11,108 @@ const TRIPS_KEY = "carnet-route-trips";
 const CURRENT_KEY = "carnet-route-current";
 
 export const state = {
-  trips: {},        // { id: { name, createdAt, items: [...] } }
+  trips: {},        // { id: { name, currency, createdAt, items: [...] } }
   currentId: null,  // voyage affiché
   editingId: null,  // élément en cours de modification
   insertAt: null,   // { pos, draft } : nouvel élément en cours de création
   confirm: null,    // id de l'élément à confirmer pour suppression ("trip" pour le voyage)
+  user: null,       // { uid, email } quand on est connecté
+  authOpen: false,  // écran de connexion affiché
+  loading: false,   // chargement des voyages du compte en cours
 };
 
-export function load() {
-  try {
-    state.trips = JSON.parse(localStorage.getItem(TRIPS_KEY) || "{}");
-  } catch {
-    state.trips = {};
-  }
-  let saved = null;
-  try { saved = localStorage.getItem(CURRENT_KEY); } catch {}
-  state.currentId = saved && state.trips[saved] ? saved : Object.keys(state.trips)[0] || null;
+// ---------- Sauvegarde ----------
+let cloud = null;          // module cloud.js quand on est connecté
+let saved = {};            // dernière version enregistrée de chaque voyage (texte JSON)
+let saveTimer = null;
+
+const snapshot = (t) => JSON.stringify(t);
+
+export function setCloud(c) {
+  cloud = c;
+}
+
+// Repartir d'un nouvel ensemble de voyages (au chargement ou à la connexion)
+export function replaceTrips(trips) {
+  state.trips = trips;
+  saved = {};
+  Object.entries(trips).forEach(([id, t]) => (saved[id] = snapshot(t)));
+  pickCurrent();
 }
 
 export function save() {
+  rememberCurrent();
+  if (!cloud) return saveLocal();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushCloud, 500);
+}
+
+function saveLocal() {
   try {
     localStorage.setItem(TRIPS_KEY, JSON.stringify(state.trips));
-    localStorage.setItem(CURRENT_KEY, state.currentId || "");
   } catch {
     toast("Enregistrement impossible : le stockage du navigateur est plein ou bloqué.");
   }
 }
 
+// N'envoie au cloud que les voyages modifiés, ajoutés ou supprimés
+async function flushCloud() {
+  const c = cloud;
+  if (!c) return;
+  const jobs = [];
+  Object.entries(state.trips).forEach(([id, t]) => {
+    const s = snapshot(t);
+    if (saved[id] !== s) { saved[id] = s; jobs.push(c.saveTrip(id, t)); }
+  });
+  Object.keys(saved).forEach((id) => {
+    if (!state.trips[id]) { delete saved[id]; jobs.push(c.deleteTrip(id)); }
+  });
+  try {
+    await Promise.all(jobs);
+  } catch {
+    toast("Synchronisation impossible pour le moment. Vérifiez votre connexion.");
+  }
+}
+
+// Un voyage modifié depuis un autre appareil
+export function applyRemote(id, trip) {
+  if (trip) {
+    state.trips[id] = trip;
+    saved[id] = snapshot(trip);
+  } else {
+    delete state.trips[id];
+    delete saved[id];
+  }
+  pickCurrent();
+}
+
+// Voyages non enregistrés localement en attente d'envoi
+export const hasPendingChanges = (id) => state.trips[id] && saved[id] !== snapshot(state.trips[id]);
+
+export function loadLocal() {
+  try {
+    return JSON.parse(localStorage.getItem(TRIPS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function clearLocal() {
+  try { localStorage.removeItem(TRIPS_KEY); } catch {}
+}
+
+function rememberCurrent() {
+  try { localStorage.setItem(CURRENT_KEY, state.currentId || ""); } catch {}
+}
+
+function pickCurrent() {
+  if (state.currentId && state.trips[state.currentId]) return;
+  let last = null;
+  try { last = localStorage.getItem(CURRENT_KEY); } catch {}
+  state.currentId = last && state.trips[last] ? last : Object.keys(state.trips)[0] || null;
+}
+
+// ---------- Voyages ----------
 export const currentTrip = () => state.trips[state.currentId] || null;
 
 export function resetUi() {
@@ -45,13 +124,14 @@ export function resetUi() {
 export function selectTrip(id) {
   state.currentId = id;
   resetUi();
-  save();
+  rememberCurrent();
 }
 
 export function createTrip() {
   const id = "v-" + uid();
   state.trips[id] = { name: "Nouveau voyage", currency: "EUR", createdAt: Date.now(), items: [] };
   selectTrip(id);
+  save();
   return id;
 }
 
