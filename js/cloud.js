@@ -10,28 +10,58 @@ const SDK = `https://www.gstatic.com/firebasejs/${V}`;
 
 let auth = null, db = null, fb = null;
 
+// Tests en local : http://localhost:…/?emulateur utilise les émulateurs Firebase
+// (firebase emulators:start --only auth,firestore) au lieu des vraies données. Sans effet en ligne.
+const EMULATOR = typeof location !== "undefined" && ["localhost", "127.0.0.1"].includes(location.hostname) && new URLSearchParams(location.search).has("emulateur");
+
 export const isEnabled = () => !!firebaseConfig;
+
+// Firebase chargé (même sans compte : les publications publiques se lisent sans se connecter)
+let markReady;
+export const ready = new Promise((r) => (markReady = r));
+// Accès direct à Firestore pour les profils et publications (social.js)
+export const firestore = () => ({ fb, db, me });
 
 // Charge Firebase seulement si le site est configuré
 export async function init(onUser) {
-  if (!firebaseConfig) return false;
-  const [app, a, f] = await Promise.all([
-    import(`${SDK}/firebase-app.js`),
-    import(`${SDK}/firebase-auth.js`),
-    import(`${SDK}/firebase-firestore.js`),
-  ]);
+  if (!firebaseConfig) {
+    markReady(false);
+    return false;
+  }
+  let app, a, f;
+  try {
+    [app, a, f] = await Promise.all([
+      import(`${SDK}/firebase-app.js`),
+      import(`${SDK}/firebase-auth.js`),
+      import(`${SDK}/firebase-firestore.js`),
+    ]);
+  } catch (err) {
+    markReady(false); // hors ligne : les pages qui attendent Firebase affichent un message
+    throw err;
+  }
   fb = { ...a, ...f };
   const firebaseApp = app.initializeApp(firebaseConfig);
   auth = a.getAuth(firebaseApp);
   auth.languageCode = "fr";
   db = f.getFirestore(firebaseApp);
+  if (EMULATOR) {
+    a.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+    f.connectFirestoreEmulator(db, "127.0.0.1", 8181);
+  }
   a.onAuthStateChanged(auth, (u) => onUser(u ? { uid: u.uid, email: u.email, emailVerified: u.emailVerified } : null));
+  markReady(true);
   return true;
 }
 
 // ---------- Compte ----------
+// Sur une connexion lente, on peut valider le formulaire avant que Firebase soit chargé : on l'attend
+async function authReady() {
+  if (!(await ready)) throw Object.assign(new Error("Firebase indisponible"), { code: "auth/network-request-failed" });
+}
+
 // Un e-mail de confirmation est envoyé : les rappels ne partent que vers une adresse confirmée
 export async function signUp(email, password) {
+  await authReady();
   const cred = await fb.createUserWithEmailAndPassword(auth, email, password);
   await fb.sendEmailVerification(cred.user).catch(() => {});
   return cred;
@@ -46,9 +76,9 @@ export async function refreshEmailVerified() {
   return auth.currentUser.emailVerified;
 }
 
-export const signIn = (email, password) => fb.signInWithEmailAndPassword(auth, email, password);
+export const signIn = (email, password) => authReady().then(() => fb.signInWithEmailAndPassword(auth, email, password));
 export const signOut = () => fb.signOut(auth);
-export const resetPassword = (email) => fb.sendPasswordResetEmail(auth, email);
+export const resetPassword = (email) => authReady().then(() => fb.sendPasswordResetEmail(auth, email));
 
 // Messages d'erreur compréhensibles
 export function errorMessage(e) {

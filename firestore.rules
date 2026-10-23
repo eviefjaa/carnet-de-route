@@ -75,5 +75,82 @@ service cloud.firestore {
           && request.resource.data.data is string && request.resource.data.data.size() < 1000000;
       }
     }
+
+    // ---------- Profils publics, abonnements, publications ----------
+
+    // Pseudo unique : handles/{pseudo} = { uid }, réservé par son propriétaire
+    match /handles/{handle} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && handle.matches('^[a-z0-9_.]{3,20}$')
+        && request.resource.data.keys().hasOnly(["uid"])
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    // Profil : nom, pseudo, bio, compte public ou privé. Lisible par tous (comme une carte de visite)
+    match /profiles/{userId} {
+      allow read: if true;
+      allow create, update: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(["name", "nameLower", "handle", "bio", "visibility"])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 40
+        && request.resource.data.nameLower == request.resource.data.name.lower()
+        && request.resource.data.bio is string && request.resource.data.bio.size() <= 160
+        && request.resource.data.visibility in ["public", "private"]
+        // Le pseudo doit être réservé à son nom (dans la même écriture groupée)
+        && getAfter(/databases/$(database)/documents/handles/$(request.resource.data.handle)).data.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Abonnement : follows/{abonné}_{suivi} = { follower, followed, status, createdAt }
+    // Compte public : abonnement immédiat (accepted). Compte privé : demande (pending) à accepter.
+    // Seules les deux personnes concernées voient l'abonnement.
+    match /follows/{followId} {
+      function party() {
+        return request.auth != null && (request.auth.uid == resource.data.follower || request.auth.uid == resource.data.followed);
+      }
+      allow read, delete: if party();
+      allow create: if request.auth != null
+        && followId == request.auth.uid + "_" + request.resource.data.followed
+        && request.resource.data.keys().hasOnly(["follower", "followed", "status", "createdAt"])
+        && request.resource.data.follower == request.auth.uid
+        && request.resource.data.followed != request.auth.uid
+        // Il faut un profil public pour s'abonner : la personne suivie sait qui la suit
+        && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        && (request.resource.data.status == "pending"
+            || (request.resource.data.status == "accepted"
+                && get(/databases/$(database)/documents/profiles/$(request.resource.data.followed)).data.visibility == "public"));
+      // La personne suivie accepte une demande
+      allow update: if request.auth != null && request.auth.uid == resource.data.followed
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])
+        && request.resource.data.status == "accepted";
+    }
+
+    // Publication : copie figée d'un itinéraire, sans prix, notes, adresses, liens ni billets.
+    // Visibilité : public (tout le monde, même sans compte), followers (abonnés acceptés), private (moi seul)
+    match /posts/{postId} {
+      function isFollower(owner) {
+        let f = /databases/$(database)/documents/follows/$(request.auth.uid + "_" + owner);
+        return exists(f) && get(f).data.status == "accepted";
+      }
+      function profile() { return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data; }
+
+      allow read: if resource.data.visibility == "public"
+        || (request.auth != null && (resource.data.owner == request.auth.uid
+            || (resource.data.visibility == "followers" && isFollower(resource.data.owner))));
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(["owner", "ownerName", "ownerHandle", "title", "visibility", "publishedAt", "trip"])
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.ownerName == profile().name
+        && request.resource.data.ownerHandle == profile().handle
+        && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 200
+        && request.resource.data.visibility in ["public", "followers", "private"]
+        && request.resource.data.trip is map;
+      // Non modifiable : seul son auteur change la visibilité ou la supprime
+      allow update: if request.auth != null && resource.data.owner == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["visibility"])
+        && request.resource.data.visibility in ["public", "followers", "private"];
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+    }
   }
 }

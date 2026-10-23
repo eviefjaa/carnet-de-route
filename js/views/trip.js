@@ -18,6 +18,7 @@ import { prefs } from "../prefs.js";
 import { tripsListView } from "./trips-list.js";
 import { tripPending } from "./checklist.js";
 import { shareSection, travellers } from "./share.js";
+import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel } from "./social.js";
 
 // Met à jour l'état de la synchronisation sans tout réafficher (garde la saisie en cours)
 export function renderSync() {
@@ -35,7 +36,7 @@ export function render() {
   renderSidebar();
   const app = document.getElementById("app");
   const busy = state.authOpen || state.loading;
-  document.getElementById("wrap").classList.toggle("wide", ["trips", "explore", "country", "favorites"].includes(state.view) && !busy);
+  document.getElementById("wrap").classList.toggle("wide", ["trips", "explore", "country", "favorites", "feed", "discover", "person"].includes(state.view) && !busy);
 
   if (state.authOpen) {
     app.innerHTML = authScreen();
@@ -62,6 +63,21 @@ export function render() {
     case "favorites":
       app.innerHTML = favoritesView(prefs.favorites);
       return;
+    case "feed":
+      app.innerHTML = feedView();
+      return;
+    case "discover":
+      app.innerHTML = discoverView();
+      return;
+    case "person":
+      app.innerHTML = personView(state.personId);
+      return;
+    case "post": {
+      app.innerHTML = postView(state.postId);
+      const trip = loadedPostTrip(state.postId);
+      if (trip) drawMap(trip, { published: true });
+      return;
+    }
     case "profile":
       app.innerHTML = profileView();
       return;
@@ -130,6 +146,7 @@ function hero(t) {
     </div>
     ${tripPending(t) ? `<span class="todo-alert">${tripPending(t)} chose${tripPending(t) > 1 ? "s" : ""} à réserver</span>` : ""}
     ${isEnabled() ? `<p class="sync-note${sync.status === "error" ? " is-error" : ""}" id="syncNote" role="status">${esc(syncNote(travellers(t)))}</p>` : ""}
+    ${publishPanel(t)}
     ${del}
   </section>`;
 }

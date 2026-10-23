@@ -5,6 +5,8 @@ import { state, resetUi } from "./store.js";
 
 export const PAGES = {
   trips: { hash: "voyages", label: "Mes voyages" },
+  feed: { hash: "fil", label: "Fil d'actualité" },
+  discover: { hash: "decouvrir", label: "Découvrir" },
   explore: { hash: "destinations", label: "Choisir une destination" },
   favorites: { hash: "favoris", label: "Favoris" },
   profile: { hash: "profil", label: "Mon profil" },
@@ -19,6 +21,17 @@ export function readHash() {
   if (h.startsWith("voyage-")) {
     state.view = "trip";
     state.tripId = h.slice("voyage-".length);
+    return;
+  }
+  // Profil d'une personne (#personne-<uid>) et publication (#publication-<id>)
+  if (h.startsWith("personne-")) {
+    state.view = "person";
+    state.personId = h.slice("personne-".length);
+    return;
+  }
+  if (h.startsWith("publication-")) {
+    state.view = "post";
+    state.postId = h.slice("publication-".length);
     return;
   }
   if (h.startsWith("destination-")) {

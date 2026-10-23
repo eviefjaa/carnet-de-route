@@ -5,6 +5,7 @@ import { state, setCloud, replaceTrips, loadLocal, clearLocal, applyRemote, hasP
 import { render } from "./views/trip.js";
 import { toast } from "./toast.js";
 import { usePrefsCloud, resetPrefs } from "./prefs.js";
+import { loadMyProfile, resetSocial } from "./social.js";
 
 let stopWatching = null;
 
@@ -23,8 +24,13 @@ async function onUserChange(user) {
   // Déconnexion : retour aux voyages de cet appareil
   if (!user) {
     const wasConnected = !!state.user;
-    state.user = null;
     setCloud(null);
+    // Au chargement, personne n'était connecté : rien ne change, on ne réaffiche pas la page
+    // (ce qui effacerait un formulaire de connexion en cours de saisie)
+    if (!wasConnected) return;
+    state.user = null;
+    state.profile = null;
+    resetSocial();
     if (wasConnected) resetPrefs();
     resetUi();
     replaceTrips(loadLocal());
@@ -62,6 +68,8 @@ async function onUserChange(user) {
     // La copie de l'appareil n'est effacée qu'une fois tout enregistré dans le compte
     if (!hasUnsaved()) clearLocal();
     usePrefsCloud(cloud, await cloud.loadPrefs(user.uid).catch(() => null));
+    resetSocial();
+    await loadMyProfile();
     if (joined.length) toast(joined.length > 1 ? `Vous avez rejoint ${joined.length} voyages` : `Vous avez rejoint le voyage « ${joined[0]} »`);
 
     stopWatching = cloud.watchTrips(user.uid, (id, trip) => {

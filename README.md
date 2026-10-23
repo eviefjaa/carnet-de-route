@@ -24,6 +24,7 @@ css/
   budget.css          Budget et prix
   checklist.css       Checklist des étapes
   share.css           Voyageurs et invitations
+  social.css          Profils, abonnements et publications
   tickets.css         Billets des trajets
   trips.css           Page Mes voyages (cartes)
 js/
@@ -44,6 +45,9 @@ js/
   cloud.js            Firebase : comptes et enregistrement des voyages
   account.js          Connexion, déconnexion, import des voyages de l'appareil
   share.js            Invitations par e-mail, voyageurs, quitter un voyage
+  social.js           Profils publics, abonnements et publications (Firestore)
+  social-events.js    Clics et formulaires des pages sociales
+  publish.js          Copie publique d'un voyage (sans dates, prix, notes, adresses, billets)
   tickets.js          Billets des trajets et des activités : envoi, ouverture, suppression
   data/
     countries.js      Fiches pays (ajoutez-en en copiant une ligne)
@@ -57,6 +61,7 @@ js/
     budget.js         Section Budget (tableau des coûts)
     checklist.js      Checklist « À faire et à réserver » de chaque étape
     share.js          Section Voyageurs d'un voyage
+    social.js         Fil d'actualité, Découvrir, profil d'une personne, publication
     tickets.js        Billets affichés dans un trajet, une activité ou un formulaire
     auth.js           Écran de connexion et bouton de compte
     sidebar.js        Menu de gauche
@@ -79,6 +84,18 @@ Tous les voyageurs peuvent modifier le voyage et inviter d'autres personnes. Seu
 Les voyages sont dans `trips/{id}` (avec `owner`, `members`, `invites`, `emails`). Les anciens voyages, rangés dans `users/{uid}/trips`, sont déplacés automatiquement à la connexion suivante.
 
 Après toute modification de `firestore.rules`, copiez son contenu dans la console Firebase (Firestore Database → Règles → Publier).
+
+## Profils et publications
+
+Dans « Mon profil », on crée un profil public (nom, pseudo unique, bio) et on choisit un compte public (tout le monde peut s'abonner) ou privé (chaque demande d'abonnement est à accepter). L'adresse e-mail n'apparaît jamais.
+
+Sur la page d'un voyage, « Publier l'itinéraire » crée une copie figée, que personne ne peut modifier, visible par « Tout le monde » (même sans compte, avec le lien), « Mes abonnés » ou « Moi seul(e) ». La visibilité se change et la publication se supprime à tout moment. Sont publiés : les étapes, les activités, les trajets et la carte (positions arrondies à environ 2 km), avec « Jour 1, Jour 2… » à la place des dates. Ne sont jamais publiés : dates, prix, notes, adresses, liens et numéros de réservation, billets, co-voyageurs.
+
+Pages : « Fil d'actualité » (publications des personnes suivies), « Découvrir » (derniers itinéraires publics et recherche de personnes), `#personne-…` (profil) et `#publication-…` (itinéraire publié).
+
+Données Firestore : `profiles/{uid}`, `handles/{pseudo}`, `follows/{abonné}_{suivi}`, `posts/{id}`. Qui voit et modifie quoi : `firestore.rules`.
+
+Tests en local avec les émulateurs Firebase : lancer `firebase emulators:start --only auth,firestore` (Java 11 ou plus récent), puis ouvrir le site sur `http://localhost:…/?emulateur`.
 
 ## Billets des trajets
 

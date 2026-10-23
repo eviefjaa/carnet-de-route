@@ -1,0 +1,282 @@
+// Pages sociales : fil d'actualité, Découvrir (et recherche de personnes), profil d'une
+// personne, publication d'un itinéraire ; sections « Publier » d'un voyage et « Profil public »
+
+import { esc, plural, MODES } from "../utils.js";
+import { state } from "../store.js";
+import { isEnabled } from "../cloud.js";
+import * as social from "../social.js";
+import { COUNTRIES, flag } from "../data/countries.js";
+
+const me = () => (state.user ? state.user.uid : null);
+const loadingNote = `<p class="note">Chargement…</p>`;
+const errorNote = (text = "Impossible de charger cette page. Vérifiez votre connexion puis rechargez.") => `<p class="note">${text}</p>`;
+const avatar = (p, big = false) => `<span class="avatar${big ? " big" : ""}">${esc(((p && p.name) || "?")[0].toUpperCase())}</span>`;
+const fmtDate = (ms) => new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+
+const signInPanel = (text) => `<div class="panel">
+    <p class="note">${text}</p>
+    <div class="row-btns"><button class="btn primary" data-act="open-auth" data-mode="signin" type="button">Se connecter</button></div>
+  </div>`;
+
+// ---------- Carte d'une publication (dans les listes) ----------
+function flagsOf(trip) {
+  const codes = new Set(trip.country ? [trip.country] : []);
+  (trip.items || []).forEach((i) => {
+    const c = i.type === "stop" && COUNTRIES.find((x) => x.name === i.country);
+    if (c) codes.add(c.code);
+  });
+  return [...codes].filter((c) => /^[A-Z]{2}$/.test(c)).slice(0, 4).map(flag).join(" ");
+}
+
+export function postCard(p) {
+  const trip = p.trip || {};
+  const stops = (trip.items || []).filter((i) => i.type === "stop");
+  const places = stops.map((s) => s.place).filter(Boolean);
+  const route = places.length > 4 ? [...places.slice(0, 3), `+${places.length - 3}`] : places;
+  return `<article class="trip-card post-card">
+    <div class="tc-top">
+      <a class="post-author" href="#personne-${esc(p.owner)}">${avatar({ name: p.ownerName })}<span>${esc(p.ownerName)} <span class="handle">@${esc(p.ownerHandle)}</span></span></a>
+      <span class="tc-flags" aria-hidden="true">${flagsOf(trip)}</span>
+    </div>
+    <h2><a class="tc-link" href="#publication-${esc(p.id)}">${esc(p.title)}</a></h2>
+    ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
+    <p class="tc-dates">${plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
+    ${p.owner === me() ? `<span class="vis-badge">${esc(social.VISIBILITIES[p.visibility] || "")}</span>` : ""}
+  </article>`;
+}
+
+const postGrid = (posts, empty) =>
+  posts.length ? `<div class="trip-grid">${posts.map(postCard).join("")}</div>` : `<p class="note">${empty}</p>`;
+
+// ---------- Fil d'actualité ----------
+export function feedView() {
+  const head = `<header class="page-head"><h1>Fil d'actualité</h1><p class="lead">Les derniers itinéraires des voyageurs que vous suivez.</p></header>`;
+  if (!isEnabled()) return `<section class="page">${head}${errorNote("Les comptes ne sont pas activés sur ce site.")}</section>`;
+  if (!state.user) return `<section class="page">${head}${signInPanel("Connectez-vous pour suivre des voyageurs et voir leurs itinéraires ici.")}</section>`;
+  const e = social.load("feed", social.feed);
+  const body = e.status === "loading" ? loadingNote
+    : e.status === "error" ? errorNote()
+    : !e.data.following
+      ? `<div class="empty"><h2>Vous ne suivez personne pour l'instant</h2>
+          <p class="note">Trouvez des voyageurs et des itinéraires qui vous inspirent.</p>
+          <a class="btn primary" href="#decouvrir">Découvrir</a></div>`
+      : postGrid(e.data.posts, "Les personnes que vous suivez n'ont encore rien publié.");
+  return `<section class="page">${head}${body}</section>`;
+}
+
+// ---------- Découvrir ----------
+export function discoverView() {
+  const e = isEnabled() ? social.load("discover", social.discover) : { status: "error" };
+  const body = e.status === "loading" ? loadingNote
+    : e.status === "error" ? errorNote()
+    : postGrid(e.data, "Aucun itinéraire public pour l'instant. Soyez le premier à publier le vôtre !");
+  return `<section class="page">
+    <header class="page-head"><h1>Découvrir</h1><p class="lead">Les derniers itinéraires publiés par la communauté.</p></header>
+    <div class="explore-tools">
+      <input type="search" id="peopleSearch" class="search" placeholder="Rechercher une personne : nom ou @pseudo" aria-label="Rechercher une personne" autocomplete="off">
+      <div id="peopleResults" class="people-results" aria-live="polite"></div>
+    </div>
+    ${body}
+  </section>`;
+}
+
+// Résultats de recherche (insérés sans réafficher la page, pour garder la saisie)
+export function peopleList(list, emptyText = "Personne trouvé(e).") {
+  if (!list.length) return `<p class="note">${emptyText}</p>`;
+  return `<ul class="people">${list.map((p) => `<li>
+      <a class="person" href="#personne-${esc(p.uid)}">${avatar(p)}<span><b>${esc(p.name)}</b> <span class="handle">@${esc(p.handle)}</span></span></a>
+    </li>`).join("")}</ul>`;
+}
+
+// ---------- Profil d'une personne ----------
+function followButton(profile, status) {
+  if (!isEnabled()) return "";
+  if (!state.user) return `<button class="btn primary" data-act="open-auth" data-mode="signin" type="button">Se connecter pour s'abonner</button>`;
+  if (profile.uid === me()) return `<a class="btn" href="#profil">Modifier mon profil</a>`;
+  const attrs = `data-uid="${esc(profile.uid)}"`;
+  if (status === "accepted") return `<span class="follow-state">Abonné(e) ✓</span><button class="btn small" data-act="unfollow" ${attrs} type="button">Se désabonner</button>`;
+  if (status === "pending") return `<span class="follow-state">Demande envoyée</span><button class="btn small" data-act="unfollow" ${attrs} type="button">Annuler la demande</button>`;
+  return `<button class="btn primary" data-act="follow" ${attrs} data-visibility="${esc(profile.visibility)}" type="button">${profile.visibility === "private" ? "Demander à s'abonner" : "S'abonner"}</button>`;
+}
+
+export function personView(id) {
+  const e = social.load("person:" + id, async () => {
+    const profile = await social.getProfile(id);
+    if (!profile) return null;
+    const status = state.user && id !== me() ? await social.followStatus(id) : null;
+    const posts = await social.postsOf(id, status);
+    return { profile, status, posts };
+  });
+  const back = `<a class="back" href="#decouvrir">← Découvrir</a>`;
+  if (e.status === "loading") return `<section class="page">${back}${loadingNote}</section>`;
+  if (e.status === "error") return `<section class="page">${back}${errorNote()}</section>`;
+  if (!e.data) return `<section class="page">${back}<p>Ce profil n'existe pas.</p></section>`;
+
+  const { profile: p, status, posts } = e.data;
+  const hidden = p.uid !== me() && status !== "accepted" && p.visibility === "private";
+  return `<section class="page">
+    ${back}
+    <header class="person-head">
+      ${avatar(p, true)}
+      <div class="person-id">
+        <h1>${esc(p.name)}</h1>
+        <p class="handle">@${esc(p.handle)}${p.visibility === "private" ? ` · <span class="vis-badge">Compte privé</span>` : ""}</p>
+        ${p.bio ? `<p class="person-bio">${esc(p.bio)}</p>` : ""}
+      </div>
+      <div class="row-btns follow-btns">${followButton(p, status)}</div>
+    </header>
+    <h2 class="section-title">Itinéraires</h2>
+    ${postGrid(posts, hidden ? "Ce compte est privé : abonnez-vous pour voir les itinéraires réservés à ses abonnés." : "Aucun itinéraire visible pour l'instant.")}
+  </section>`;
+}
+
+// ---------- Publication ----------
+export function postView(id) {
+  const e = social.load("post:" + id, () => social.getPost(id));
+  const back = `<a class="back" href="#decouvrir">← Découvrir</a>`;
+  if (e.status === "loading") return `<section class="page">${back}${loadingNote}</section>`;
+  if (e.status === "error" || !e.data) {
+    return `<section class="page">${back}<div class="empty">
+      <h2>Itinéraire introuvable</h2>
+      <p class="note">Il a peut-être été supprimé, ou il n'est visible que par certaines personnes.${state.user ? "" : " Connectez-vous si vous êtes abonné(e) à son auteur."}</p>
+    </div></section>`;
+  }
+
+  const p = e.data;
+  const trip = p.trip || { items: [] };
+  const items = trip.items || [];
+  const stops = items.filter((i) => i.type === "stop");
+  const mine = p.owner === me();
+  const options = Object.entries(social.VISIBILITIES)
+    .map(([k, v]) => `<option value="${k}"${p.visibility === k ? " selected" : ""}>${esc(v)}</option>`).join("");
+  const del = state.confirm === "post:" + p.id
+    ? `<div class="confirm">Supprimer cette publication ? Votre voyage, lui, n'est pas touché.
+        <button class="btn small danger" data-act="delete-post-yes" data-post="${esc(p.id)}" type="button">Supprimer</button>
+        <button class="btn small" data-act="cancel-confirm" type="button">Annuler</button></div>`
+    : `<button class="btn ghost small danger" data-act="delete-post" data-post="${esc(p.id)}" type="button">Supprimer la publication</button>`;
+
+  return `<section class="page post">
+    ${back}
+    <header class="hero">
+      <a class="post-author" href="#personne-${esc(p.owner)}">${avatar({ name: p.ownerName })}<span>${esc(p.ownerName)} <span class="handle">@${esc(p.ownerHandle)}</span></span></a>
+      <h1>${esc(p.title)}</h1>
+      <div class="stats">
+        <span><b>${stops.length}</b> étape${stops.length > 1 ? "s" : ""}</span>
+        ${trip.days ? `<span><b>${plural(trip.days, "jour")}</b></span>` : ""}
+        ${trip.nights ? `<span><b>${plural(trip.nights, "nuit")}</b></span>` : ""}
+      </div>
+      <p class="sync-note">Publié le ${esc(fmtDate(p.publishedAt))}${mine ? "" : " · lecture seule"}</p>
+      ${mine ? `<div class="post-owner">
+          <label class="currency">Visible par <select data-post-visibility="${esc(p.id)}">${options}</select></label>
+          ${del}
+        </div>` : ""}
+      ${p.visibility === "public" ? `<div><button class="btn small" data-act="copy-link" type="button">Copier le lien de partage</button></div>` : ""}
+    </header>
+    ${stops.some((s) => s.geo) ? `<section class="map-box" aria-label="Carte de l'itinéraire"><div id="mapSlot"></div></section>` : ""}
+    <section class="route" aria-label="Itinéraire">${items.map(readOnlyItem).join("")}</section>
+  </section>`;
+}
+
+// Élément de l'itinéraire, en lecture seule
+function readOnlyItem(it) {
+  if (it.type === "transport") {
+    return `<article class="item transport">
+      <span class="mode">${esc(MODES[it.mode] || "Trajet")}</span>
+      <div class="leg">
+        <div class="leg-places">${esc(it.from || "Départ")} → ${esc(it.to || "Arrivée")}</div>
+        ${it.duration ? `<div class="leg-times"><span class="dur">${esc(it.duration)}</span></div>` : ""}
+      </div>
+    </article>`;
+  }
+  const todos = it.todos || [];
+  return `<article class="item stop">
+    <div class="stop-head">
+      ${it.day ? `<span class="day">JOUR ${+it.day}</span>` : ""}
+      <h2>${esc(it.place || "Étape")}</h2>
+      ${it.country ? `<span class="stop-country">${esc(it.country)}</span>` : ""}
+    </div>
+    ${it.nights ? `<div class="dates"><span class="nights">${plural(+it.nights, "nuit")}</span></div>` : ""}
+    ${todos.length ? `<section class="checklist"><div class="cl-head"><h3>À faire</h3></div>
+      <ul class="post-todos">${todos.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></section>` : ""}
+  </article>`;
+}
+
+// Données de la carte d'une publication déjà chargée (ou null)
+export function loadedPostTrip(id) {
+  const e = social.load("post:" + id, () => social.getPost(id));
+  return e.status === "ok" && e.data ? e.data.trip : null;
+}
+
+// ---------- Publier un voyage (sous l'en-tête du voyage) ----------
+export function publishPanel(t) {
+  if (!isEnabled() || !state.user) return "";
+  if (!state.publishOpen) {
+    return `<div class="hero-actions"><button class="btn small" data-act="open-publish" type="button">Publier l'itinéraire</button></div>`;
+  }
+  if (!state.profile) {
+    return `<div class="publish panel">
+      <h2>Publier l'itinéraire</h2>
+      <p class="note">Pour publier, créez d'abord votre profil public : un nom et un pseudo.</p>
+      <div class="row-btns"><a class="btn primary" href="#profil">Créer mon profil</a>
+        <button class="btn" data-act="close-publish" type="button">Annuler</button></div>
+    </div>`;
+  }
+  const def = state.profile.visibility === "private" ? "followers" : "public";
+  return `<form class="publish panel" data-publish-form>
+    <h2>Publier l'itinéraire</h2>
+    <label class="f">Titre<input name="title" value="${esc(t.name)}" maxlength="200" required></label>
+    <fieldset class="radios"><legend>Visible par</legend>
+      ${Object.entries(social.VISIBILITIES).map(([k, v]) => `<label class="radio"><input type="radio" name="visibility" value="${k}"${k === def ? " checked" : ""}> ${esc(v)}${k === "public" ? " (même sans compte, avec le lien)" : ""}</label>`).join("")}
+    </fieldset>
+    <p class="note"><b>Publié :</b> les étapes, les activités, les trajets et la carte (positions arrondies à environ 2 km), avec « Jour 1, Jour 2… » à la place des dates.<br>
+      <b>Jamais publié :</b> dates, prix, notes, adresses, liens et numéros de réservation, billets, co-voyageurs.<br>
+      La publication est une copie : vos modifications du voyage ne s'y reportent pas, et personne ne peut la modifier.</p>
+    <div class="row-btns">
+      <button class="btn primary" type="submit">Publier</button>
+      <button class="btn" data-act="close-publish" type="button">Annuler</button>
+    </div>
+  </form>`;
+}
+
+// ---------- Profil public, abonnés et publications (page Mon profil) ----------
+export function socialProfileSection() {
+  if (!isEnabled() || !state.user) return "";
+  const p = state.profile;
+  const form = `<form class="panel" data-profile-form>
+    <h2>Profil public</h2>
+    <p class="note">${p ? `Votre profil : <a href="#personne-${esc(me())}">@${esc(p.handle)}</a>. Votre adresse e-mail n'y apparaît jamais.`
+      : "Créez votre profil pour publier vos itinéraires et suivre d'autres voyageurs. Votre adresse e-mail n'y apparaît jamais."}</p>
+    <label class="f">Nom<input name="name" value="${esc(p ? p.name : "")}" maxlength="40" required placeholder="Ex. Evie"></label>
+    <label class="f">Pseudo (lettres minuscules, chiffres, point, tiret bas)<input name="handle" value="${esc(p ? p.handle : "")}" maxlength="20" required placeholder="ex. evie.voyage" autocomplete="off" autocapitalize="none"></label>
+    <label class="f">Bio<textarea name="bio" maxlength="160" placeholder="Quelques mots sur vous et vos voyages">${esc(p ? p.bio : "")}</textarea></label>
+    <fieldset class="radios"><legend>Compte</legend>
+      <label class="radio"><input type="radio" name="visibility" value="public"${!p || p.visibility === "public" ? " checked" : ""}> Public : tout le monde peut s'abonner</label>
+      <label class="radio"><input type="radio" name="visibility" value="private"${p && p.visibility === "private" ? " checked" : ""}> Privé : vous acceptez chaque abonnement</label>
+    </fieldset>
+    <div class="row-btns"><button class="btn primary" type="submit">${p ? "Enregistrer" : "Créer mon profil"}</button></div>
+  </form>`;
+  if (!p) return form;
+
+  const net = social.load("network", social.myNetwork);
+  const mine = social.load("mine", () => social.postsOf(me()));
+  const person = (f, buttons) => `<li>
+      <a class="person" href="#personne-${esc(f.profile.uid)}">${avatar(f.profile)}<span><b>${esc(f.profile.name)}</b>${f.profile.handle ? ` <span class="handle">@${esc(f.profile.handle)}</span>` : ""}</span></a>
+      <span class="row-btns">${buttons}</span>
+    </li>`;
+  const list = (items, empty, buttons) => (items.length ? `<ul class="people">${items.map((f) => person(f, buttons(f))).join("")}</ul>` : `<p class="note">${empty}</p>`);
+
+  const network = net.status === "loading" ? loadingNote : net.status === "error" ? errorNote() : `
+    ${net.data.requests.length ? `<div class="panel"><h2>Demandes d'abonnement (${net.data.requests.length})</h2>
+      ${list(net.data.requests, "", (f) => `<button class="btn small primary" data-act="accept-follower" data-uid="${esc(f.follower)}" type="button">Accepter</button>
+        <button class="btn small" data-act="remove-follower" data-uid="${esc(f.follower)}" type="button">Refuser</button>`)}</div>` : ""}
+    <div class="panel"><h2>Abonnés (${net.data.followers.length})</h2>
+      ${list(net.data.followers, "Personne ne vous suit encore.", (f) => `<button class="btn small" data-act="remove-follower" data-uid="${esc(f.follower)}" type="button">Retirer</button>`)}</div>
+    <div class="panel"><h2>Abonnements (${net.data.following.filter((f) => f.status === "accepted").length})</h2>
+      ${list(net.data.following, "Vous ne suivez personne. Trouvez des voyageurs dans Découvrir.", (f) => `${f.status === "pending" ? `<span class="follow-state">En attente</span>` : ""}
+        <button class="btn small" data-act="unfollow" data-uid="${esc(f.followed)}" type="button">${f.status === "pending" ? "Annuler" : "Se désabonner"}</button>`)}</div>`;
+
+  const posts = mine.status === "loading" ? loadingNote : mine.status === "error" ? errorNote()
+    : postGrid(mine.data, "Vous n'avez rien publié. Ouvrez un voyage et choisissez « Publier l'itinéraire ».");
+
+  return `${form}${network}<h2 class="section-title">Mes publications</h2>${posts}`;
+}

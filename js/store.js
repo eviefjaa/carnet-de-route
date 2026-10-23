@@ -25,6 +25,10 @@ export const state = {
   view: "trips",    // page affichée : trips, explore, country, favorites, profile, settings
   country: null,    // code du pays affiché dans sa fiche
   explore: { q: "", continent: "", tag: "" }, // filtres des destinations
+  profile: null,    // mon profil public { uid, name, handle, bio, visibility }, une fois créé
+  publishOpen: false, // panneau « Publier l'itinéraire » ouvert
+  personId: null,   // personne affichée (#personne-…)
+  postId: null,     // publication affichée (#publication-…)
 };
 
 // ---------- Sauvegarde ----------
@@ -196,6 +200,7 @@ export function resetUi() {
   state.confirm = null;
   state.todoAdding = null;
   state.formTickets = { pending: [], removed: [] };
+  state.publishOpen = false;
 }
 
 export function selectTrip(id) {

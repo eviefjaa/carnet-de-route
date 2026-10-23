@@ -14,6 +14,7 @@ import { favButton, filterCountries } from "./views/explore.js";
 import { renderSidebar } from "./views/sidebar.js";
 import { countryByCode } from "./data/countries.js";
 import { inviteFromForm, resendInvite, cancelInvite, removeMember, leaveTrip } from "./share.js";
+import { onSocialClick, onSocialSubmit, onSocialChange, onSocialInput } from "./social-events.js";
 import { addTickets, openTicket, deleteTicket, deleteTicketFiles, allTickets, resetFormTickets, pickFormTickets, removeFormTicket, commitFormTickets } from "./tickets.js";
 
 export function bindEvents() {
@@ -38,6 +39,7 @@ export function bindEvents() {
       else pickFormTickets(files);
       return;
     }
+    if (onSocialChange(e.target)) return;
     if (onSettingChange(e.target)) return;
     if (e.target.id === "tripCurrency") {
       currentTrip().currency = e.target.value;
@@ -61,6 +63,7 @@ function onClick(e) {
   if (!b) return;
   const act = b.dataset.act;
   if (act === "new-trip") return newTrip();
+  if (onSocialClick(act, b)) return;
   if (onAccountClick(act, b)) return;
   if (onPageClick(act, b)) return;
 
@@ -388,6 +391,7 @@ async function onAuthSubmit(f) {
 }
 
 function onSubmit(e) {
+  if (onSocialSubmit(e)) return;
   const todoForm = e.target.closest("form[data-todo-form]");
   if (todoForm) {
     e.preventDefault();
@@ -466,6 +470,7 @@ function addTodoRow(after, form) {
 
 let nameTimer;
 function onInput(e) {
+  if (onSocialInput(e.target)) return;
   if (e.target.id === "exploreSearch") {
     state.explore.q = e.target.value;
     filterCountries();

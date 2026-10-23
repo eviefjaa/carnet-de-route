@@ -4,6 +4,7 @@ import { esc, nights, CURRENCIES } from "../utils.js";
 import { state } from "../store.js";
 import { prefs } from "../prefs.js";
 import { isEnabled } from "../cloud.js";
+import { socialProfileSection } from "./social.js";
 
 function stats() {
   const trips = Object.values(state.trips);
@@ -50,6 +51,7 @@ export function profileView() {
   return `<section class="page">
     <header class="page-head"><h1>Mon profil</h1></header>
     ${account}
+    ${socialProfileSection()}
     <h2 class="section-title">Mes statistiques</h2>
     <div class="stat-tiles">${tiles.map(([n, one, many]) => `<div class="stat-tile"><b>${n}</b><span>${n > 1 ? many : one}</span></div>`).join("")}</div>
     <p class="note">Les pays sont comptés à partir des étapes choisies dans les suggestions de lieux.</p>

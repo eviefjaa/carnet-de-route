@@ -1,0 +1,33 @@
+/* Profils, abonnements et publications d'itinéraires */
+
+.handle { color: var(--muted); font-weight: 400; }
+.post-author { display: inline-flex; align-items: center; gap: 8px; min-width: 0; text-decoration: none; color: var(--ink); font-size: 14px; font-weight: 600; }
+.post-author .avatar { width: 28px; height: 28px; font-size: 13px; }
+.post-author:hover .handle { text-decoration: underline; }
+.vis-badge { display: inline-block; width: fit-content; font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--ticket); color: var(--ink); }
+
+/* Recherche de personnes et listes d'abonnés */
+.people-results:empty { display: none; }
+.people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.people li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 6px 4px; border-radius: 8px; }
+.people li:hover { background: var(--bg); }
+.person { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; color: var(--ink); }
+.person span { min-width: 0; overflow-wrap: anywhere; }
+.follow-state { font-size: 13px; font-weight: 600; color: var(--accent); align-self: center; }
+
+/* Profil d'une personne */
+.person-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; }
+.person-id { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px; }
+.person-id h1 { font-size: clamp(26px, 5vw, 34px); }
+.person-id p { margin: 0; }
+.person-bio { max-width: 60ch; }
+.follow-btns { align-items: center; }
+
+/* Publication */
+.post .hero { gap: 10px; }
+.post-owner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.post-todos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; }
+
+/* Panneau « Publier l'itinéraire » */
+.publish { margin-top: 4px; }
+.publish h2 { font-size: 18px; }
