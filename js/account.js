@@ -1,7 +1,7 @@
 // Connexion / déconnexion : branche le site sur le compte de l'utilisateur
 
 import * as cloud from "./cloud.js";
-import { state, setCloud, replaceTrips, loadLocal, clearLocal, applyRemote, hasPendingChanges, save, resetUi } from "./store.js";
+import { state, setCloud, replaceTrips, loadLocal, clearLocal, applyRemote, hasPendingChanges, hasUnsaved, save, flush, resetUi, setSync, syncError } from "./store.js";
 import { render } from "./views/trip.js";
 import { toast } from "./toast.js";
 import { usePrefsCloud, resetPrefs } from "./prefs.js";
@@ -56,9 +56,11 @@ async function onUserChange(user) {
       imported.forEach((id) => (state.trips[id] = local[id]));
       if (!state.trips[state.currentId]) state.currentId = imported[0];
       save();
-      toast(imported.length > 1 ? `${imported.length} voyages de cet appareil ajoutés à votre compte` : "Le voyage de cet appareil a été ajouté à votre compte");
+      await flush();
+      if (!hasUnsaved()) toast(imported.length > 1 ? `${imported.length} voyages de cet appareil ajoutés à votre compte` : "Le voyage de cet appareil a été ajouté à votre compte");
     }
-    clearLocal();
+    // La copie de l'appareil n'est effacée qu'une fois tout enregistré dans le compte
+    if (!hasUnsaved()) clearLocal();
     usePrefsCloud(cloud, await cloud.loadPrefs(user.uid).catch(() => null));
     if (joined.length) toast(joined.length > 1 ? `Vous avez rejoint ${joined.length} voyages` : `Vous avez rejoint le voyage « ${joined[0]} »`);
 
@@ -67,9 +69,13 @@ async function onUserChange(user) {
       if (editing || hasPendingChanges(id)) return;
       applyRemote(id, trip);
       render();
-    });
-  } catch {
-    toast("Impossible de charger vos voyages. Vérifiez votre connexion puis rechargez la page.");
+    }, (err) => setSync("error", "La synchronisation en direct s'est arrêtée. " + syncError(err) + " Rechargez la page."));
+  } catch (err) {
+    // On reste sur les voyages de cet appareil, enregistrés sur l'appareil seulement :
+    // ils seront ajoutés au compte à la prochaine connexion réussie
+    setCloud(null);
+    setSync("error", "Vos voyages n'ont pas pu être chargés depuis votre compte. " + syncError(err) + " Les modifications restent sur cet appareil.");
+    toast("Impossible de charger vos voyages depuis votre compte.");
   }
   state.loading = false;
   render();

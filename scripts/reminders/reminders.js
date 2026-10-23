@@ -15,6 +15,9 @@ export function todayIn(timeZone = "Europe/Paris", now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
 
+// Date retenue pour une étape : son arrivée, sinon le début du voyage
+export const stopDate = (trip, stop) => stop.arrive || tripStart(trip);
+
 function tripStart(trip) {
   const dates = (trip.items || []).flatMap((i) =>
     i.type === "stop" ? [i.arrive] : i.type === "transport" ? [(i.dep || "").slice(0, 10)] : []
@@ -26,12 +29,11 @@ function tripStart(trip) {
 export function findDueReminders(trips, today, daysBefore = 3, sent = {}) {
   const due = [];
   for (const [tripId, trip] of Object.entries(trips)) {
-    const start = tripStart(trip);
     for (const stop of trip.items || []) {
       if (stop.type !== "stop") continue;
       const left = (stop.todos || []).filter((t) => !t.done && t.text);
       if (!left.length) continue;
-      const date = stop.arrive || start;
+      const date = stopDate(trip, stop);
       if (!date) continue;
       const inDays = daysBetween(today, date);
       if (inDays < 0 || inDays > daysBefore) continue;

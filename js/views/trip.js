@@ -1,7 +1,7 @@
 // Page d'un voyage : en-tête, résumé, carte et itinéraire
 
 import { esc, fmtDay, nights, plural, fmtMoney } from "../utils.js";
-import { state, currentTrip, tripStart, tripEnd, isOwner } from "../store.js";
+import { state, currentTrip, tripStart, tripEnd, isOwner, sync } from "../store.js";
 import { stopCard, stopForm } from "./stop.js";
 import { transportCard, transportForm } from "./transport.js";
 import { insertRow } from "./actions.js";
@@ -9,7 +9,7 @@ import { budgetSection } from "./budget.js";
 import { computeBudget } from "../budget.js";
 import { drawMap } from "../map.js";
 import { scheduleGeo } from "../geocode.js";
-import { authScreen, renderAccountBar } from "./auth.js";
+import { authScreen, renderAccountBar, syncNote } from "./auth.js";
 import { isEnabled } from "../cloud.js";
 import { renderSidebar } from "./sidebar.js";
 import { exploreView, filterCountries, countryView, favoritesView } from "./explore.js";
@@ -18,6 +18,17 @@ import { prefs } from "../prefs.js";
 import { tripsListView } from "./trips-list.js";
 import { tripPending } from "./checklist.js";
 import { shareSection, travellers } from "./share.js";
+
+// Met à jour l'état de la synchronisation sans tout réafficher (garde la saisie en cours)
+export function renderSync() {
+  renderAccountBar();
+  const note = document.getElementById("syncNote");
+  const t = currentTrip();
+  if (note && t) {
+    note.textContent = syncNote(travellers(t));
+    note.classList.toggle("is-error", sync.status === "error");
+  }
+}
 
 export function render() {
   renderAccountBar();
@@ -116,7 +127,7 @@ function hero(t) {
       ${budget ? `<span><b>${esc(fmtMoney(budget, t.currency || "EUR"))}</b></span>` : ""}
     </div>
     ${tripPending(t) ? `<span class="todo-alert">${tripPending(t)} chose${tripPending(t) > 1 ? "s" : ""} à réserver</span>` : ""}
-    ${isEnabled() ? `<p class="sync-note">${!state.user ? "Enregistré sur cet appareil uniquement" : travellers(t) > 1 ? `Partagé entre ${travellers(t)} voyageurs` : "Synchronisé avec votre compte"}</p>` : ""}
+    ${isEnabled() ? `<p class="sync-note${sync.status === "error" ? " is-error" : ""}" id="syncNote" role="status">${esc(syncNote(travellers(t)))}</p>` : ""}
     ${del}
   </section>`;
 }

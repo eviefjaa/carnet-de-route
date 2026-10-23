@@ -33,8 +33,33 @@ let saveTimer = null;
 
 const snapshot = (t) => JSON.stringify(t);
 
+// ---------- État de la synchronisation (affiché en haut de la page) ----------
+//   local    sans compte : enregistré sur cet appareil
+//   saved    tout est enregistré dans le compte
+//   pending  des modifications partent vers le compte
+//   error    le compte refuse ou ne répond pas (sync.error explique pourquoi)
+export const sync = { status: "local", error: "" };
+let onSync = () => {};
+export const onSyncChange = (fn) => (onSync = fn);
+
+export function setSync(status, error = "") {
+  sync.status = status;
+  sync.error = error;
+  onSync();
+}
+
+// Explication lisible d'une erreur Firestore
+export function syncError(err) {
+  const code = (err && err.code) || "";
+  if (code === "permission-denied") return "Firebase refuse l'accès : les règles Firestore ne sont sans doute pas publiées.";
+  if (code === "unavailable" || code === "deadline-exceeded") return "Pas de connexion avec Firebase.";
+  if (code === "unauthenticated") return "Votre session a expiré : reconnectez-vous.";
+  return `Erreur Firebase${code ? ` (${code})` : ""}.`;
+}
+
 export function setCloud(c) {
   cloud = c;
+  setSync(c ? "saved" : "local");
 }
 
 // Repartir d'un nouvel ensemble de voyages (au chargement ou à la connexion)
@@ -48,6 +73,7 @@ export function replaceTrips(trips) {
 export function save() {
   rememberCurrent();
   if (!cloud) return saveLocal();
+  if (sync.status !== "error") setSync("pending");
   clearTimeout(saveTimer);
   saveTimer = setTimeout(flushCloud, 500);
 }
@@ -66,27 +92,41 @@ function saveLocal() {
   }
 }
 
-// N'envoie au cloud que les voyages modifiés, ajoutés ou supprimés
+// N'envoie au cloud que les voyages modifiés, ajoutés ou supprimés.
+// Un voyage n'est marqué enregistré qu'une fois l'écriture acceptée : en cas d'échec,
+// il sera renvoyé à la prochaine modification ou avec le bouton « Réessayer ».
 async function flushCloud() {
   const c = cloud;
   if (!c) return;
   const jobs = [];
   Object.entries(state.trips).forEach(([id, t]) => {
     // Voyage pas encore dans le compte : on en devient le créateur
-    const isNew = !t.owner;
-    if (isNew) Object.assign(t, c.newTripSharing());
+    const isNew = !(id in saved);
+    if (!t.owner) Object.assign(t, c.newTripSharing());
     const s = snapshot(t);
-    if (saved[id] !== s) { saved[id] = s; jobs.push(c.saveTrip(id, t, isNew)); }
+    if (saved[id] !== s) jobs.push(c.saveTrip(id, t, isNew).then(() => (saved[id] = s)));
   });
   Object.keys(saved).forEach((id) => {
-    if (!state.trips[id]) { delete saved[id]; jobs.push(c.deleteTrip(id)); }
+    if (!state.trips[id]) jobs.push(c.deleteTrip(id).then(() => delete saved[id]));
   });
-  try {
-    await Promise.all(jobs);
-  } catch {
-    toast("Synchronisation impossible pour le moment. Vérifiez votre connexion.");
+  if (!jobs.length) {
+    if (sync.status === "pending") setSync("saved");
+    return;
+  }
+  setSync("pending");
+  const failed = (await Promise.allSettled(jobs)).find((r) => r.status === "rejected");
+  if (cloud !== c) return; // déconnecté entre-temps
+  if (failed) {
+    setSync("error", syncError(failed.reason));
+    toast("Modifications non enregistrées dans le compte. " + sync.error);
+  } else {
+    setSync(hasUnsaved() ? "pending" : "saved");
   }
 }
+
+// Modifications pas encore acceptées par le compte
+export const hasUnsaved = () =>
+  !!cloud && (Object.keys(state.trips).some(hasPendingChanges) || Object.keys(saved).some((id) => !state.trips[id]));
 
 // Un voyage modifié depuis un autre appareil
 export function applyRemote(id, trip) {

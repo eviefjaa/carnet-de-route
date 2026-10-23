@@ -152,9 +152,9 @@ export async function loadPrefs(uid) {
 export const savePrefs = (p) => fb.setDoc(fb.doc(db, "users", me.uid, "meta", "prefs"), clean(p));
 
 // Écoute les modifications faites depuis un autre appareil ou par les autres voyageurs
-export function watchTrips(uid, onChange) {
+export function watchTrips(uid, onChange, onError) {
   return fb.onSnapshot(myTrips(uid), (snap) => {
     if (snap.metadata.hasPendingWrites) return; // nos propres modifications
     snap.docChanges().forEach((c) => onChange(c.doc.id, c.type === "removed" ? null : c.doc.data()));
-  });
+  }, onError);
 }

@@ -15,7 +15,7 @@
 
 import admin from "firebase-admin";
 import nodemailer from "nodemailer";
-import { findDueReminders, buildEmail, todayIn, daysBetween } from "./reminders.js";
+import { findDueReminders, buildEmail, todayIn, daysBetween, stopDate } from "./reminders.js";
 
 const SITE_URL = process.env.SITE_URL || "https://eviefjaa.github.io/carnet-de-route/";
 const DAYS_BEFORE = Number(process.env.DAYS_BEFORE || 3);
@@ -48,51 +48,77 @@ function explain(trips, sent) {
       if (stop.type !== "stop") continue;
       const left = (stop.todos || []).filter((t) => !t.done && t.text).length;
       if (!left) continue;
-      if (!stop.arrive) { lines.push(`étape sans date d'arrivée (${left} à réserver) → ignorée`); continue; }
-      const d = daysBetween(today, stop.arrive);
+      const date = stopDate(trip, stop);
+      if (!date) { lines.push(`étape sans date (${left} à réserver) → ignorée`); continue; }
+      const d = daysBetween(today, date);
       if (d < 0) lines.push(`étape passée (il y a ${-d} j) → ignorée`);
       else if (d > DAYS_BEFORE) lines.push(`étape dans ${d} jours → trop tôt`);
-      else if (sent[`${tripId}:${stop.id}:${stop.arrive}`]) lines.push(`étape dans ${d} jour(s) → rappel déjà envoyé`);
+      else if (sent[`${tripId}:${stop.id}:${date}`]) lines.push(`étape dans ${d} jour(s) → rappel déjà envoyé`);
       else lines.push(`étape dans ${d} jour(s), ${left} à réserver → rappel à envoyer`);
     }
   }
   return lines;
 }
 
+// Voyages de chaque personne : { uid: { idVoyage: voyage } }
+const tripsByUser = {};
+const addTrip = (uid, id, trip) => ((tripsByUser[uid] ||= {})[id] = trip);
+
+// Voyages (trips/{id}) : chaque voyageur reçoit ses rappels
+const shared = await db.collection("trips").get();
+shared.docs.forEach((d) => (d.data().members || []).forEach((uid) => addTrip(uid, d.id, d.data())));
+
+// Anciens voyages (users/{uid}/trips) : déplacés dans trips à la prochaine connexion sur le site
+const users = await db.collection("users").listDocuments();
+let oldCount = 0;
+for (const userRef of users) {
+  const snap = await userRef.collection("trips").get();
+  oldCount += snap.size;
+  snap.docs.forEach((d) => addTrip(userRef.id, d.id, d.data()));
+}
+
+const uids = [...new Set([...users.map((u) => u.id), ...Object.keys(tripsByUser)])];
+console.log(`${uids.length} compte(s), ${shared.size} voyage(s) dans trips, ${oldCount} ancien(s) voyage(s) pas encore déplacé(s).`);
+
 let sentCount = 0;
 let n = 0;
-const users = await db.collection("users").listDocuments();
-console.log(`${users.length} compte(s) trouvé(s).`);
 
-for (const userRef of users) {
+for (const uid of uids) {
   n++;
   const label = `Compte ${n}`;
+  const userRef = db.collection("users").doc(uid);
   const prefs = (await userRef.collection("meta").doc("prefs").get()).data() || {};
   if (prefs.emailReminders === false) {
     console.log(`${label} : rappels désactivés dans les Paramètres → ignoré`);
     continue;
   }
 
-  const tripsSnap = await userRef.collection("trips").get();
-  const trips = Object.fromEntries(tripsSnap.docs.map((d) => [d.id, d.data()]));
+  const trips = tripsByUser[uid] || {};
   const sentRef = userRef.collection("meta").doc("reminders");
   const sent = (await sentRef.get()).data() || {};
 
   const reasons = explain(trips, sent);
-  console.log(`${label} : ${tripsSnap.size} voyage(s)${reasons.length ? "" : ", aucune case non cochée"}`);
+  console.log(`${label} : ${Object.keys(trips).length} voyage(s)${reasons.length ? "" : ", aucune case non cochée"}`);
   reasons.forEach((r) => console.log(`   - ${r}`));
 
   const due = findDueReminders(trips, today, DAYS_BEFORE, sent);
   if (!due.length) continue;
 
-  let email = null;
+  // Seulement vers une adresse confirmée : sinon n'importe qui pourrait
+  // créer un compte avec l'adresse d'un autre et lui faire envoyer des e-mails
+  let user = null;
   try {
-    email = (await admin.auth().getUser(userRef.id)).email;
+    user = await admin.auth().getUser(uid);
   } catch {}
-  if (!email) {
+  if (!user || !user.email) {
     console.log(`${label} : pas d'adresse e-mail sur le compte → ignoré`);
     continue;
   }
+  if (!user.emailVerified) {
+    console.log(`${label} : adresse e-mail pas encore confirmée → ignoré (bouton dans Paramètres → Rappels par e-mail)`);
+    continue;
+  }
+  const email = user.email;
 
   const { subject, text, html } = buildEmail(due, SITE_URL);
   if (DRY_RUN) {

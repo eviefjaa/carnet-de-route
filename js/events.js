@@ -294,6 +294,9 @@ function onAccountClick(act, b) {
     case "auth-mode":
       setAuthMode(b.dataset.mode);
       break;
+    case "retry-sync":
+      flush();
+      return true;
     case "sign-out":
       // On envoie d'abord les dernières modifications, encore en attente
       flush().then(() => cloud.signOut()).then(() => toast("Vous êtes déconnecté(e)"));

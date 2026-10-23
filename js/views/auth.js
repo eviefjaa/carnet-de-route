@@ -1,7 +1,7 @@
 // Écran de connexion / création de compte et bouton de compte dans la barre du haut
 
 import { esc } from "../utils.js";
-import { state } from "../store.js";
+import { state, sync } from "../store.js";
 import { isEnabled } from "../cloud.js";
 
 let mode = "signin"; // "signin" | "signup" | "reset"
@@ -13,9 +13,28 @@ export function renderAccountBar() {
   if (!box) return;
   if (!isEnabled()) { box.innerHTML = ""; return; }
   box.innerHTML = state.user
-    ? `<span class="account-email" title="${esc(state.user.email)}">${esc(state.user.email)}</span>
+    ? `${syncBadge()}<span class="account-email" title="${esc(state.user.email)}">${esc(state.user.email)}</span>
        <button class="btn ghost small" data-act="sign-out" type="button">Se déconnecter</button>`
     : `<button class="btn primary" data-act="open-auth" type="button">Se connecter</button>`;
+}
+
+// « Enregistré dans le compte » / « Enregistrement… » / « Non synchronisé »
+const SYNC_LABELS = { saved: "✓ Enregistré dans le compte", pending: "Enregistrement…", error: "⚠ Non synchronisé" };
+
+function syncBadge() {
+  const label = SYNC_LABELS[sync.status];
+  if (!label) return "";
+  return sync.status === "error"
+    ? `<button class="sync-badge is-error" data-act="retry-sync" type="button" title="${esc(sync.error)} Cliquez pour réessayer.">${label} · Réessayer</button>`
+    : `<span class="sync-badge is-${sync.status}" role="status">${label}</span>`;
+}
+
+// Texte sous le nom d'un voyage
+export function syncNote(travellers) {
+  if (!state.user) return "Enregistré sur cet appareil uniquement";
+  if (sync.status === "error") return "⚠ " + sync.error;
+  if (sync.status === "pending") return "Enregistrement dans le compte…";
+  return travellers > 1 ? `Enregistré dans le compte · partagé entre ${travellers} voyageurs` : "Enregistré dans le compte";
 }
 
 export function authScreen() {
