@@ -36,6 +36,7 @@ js/
   toast.js            Messages temporaires
   map.js              Carte (Leaflet + OpenStreetMap)
   geocode.js          Placement des lieux sur la carte (Nominatim)
+  routes.js           Tracé des routes pour les trajets en voiture ou en bus (OSRM d'OpenStreetMap)
   places.js           Recherche de lieux dans le monde (Photon / OpenStreetMap)
   autocomplete.js     Suggestions de lieux pendant la saisie
   budget.js           Calcul des totaux par destination et par voyage

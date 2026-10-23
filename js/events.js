@@ -436,6 +436,7 @@ function onSubmit(e) {
     if (i >= 0) {
       // Garde la position sur la carte et le pays si le lieu n'a pas été rechoisi
       if (!item.geo && old.geo) item.geo = old.geo;
+      if (old.route) item.route = old.route; // tracé de la route, vérifié à l'affichage
       if (item.type === "stop" && item.country === undefined && old.country && old.place === item.place) item.country = old.country;
       t.items[i] = item;
     }

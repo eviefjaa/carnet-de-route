@@ -1,8 +1,15 @@
-// Carte du voyage (Leaflet + OpenStreetMap) : étapes numérotées reliées dans l'ordre
+// Carte du voyage (Leaflet + OpenStreetMap) : étapes numérotées reliées dans l'ordre.
+// Trajets en voiture ou en bus : tracé de la route (routes.js) ; autres : ligne droite.
 
 import { esc, MODES, duration, fmtDay, nights, plural } from "./utils.js";
-import { currentTrip } from "./store.js";
+import { state, currentTrip } from "./store.js";
 import { renderGeoNote } from "./geocode.js";
+import { ROAD_MODES, roadRoute, decodeLine, onRouteReady } from "./routes.js";
+
+// Un tracé vient d'arriver : on redessine si ce voyage est affiché
+onRouteReady((tripId) => {
+  if (tripId === state.currentId && mapEl && mapEl.isConnected) drawMap();
+});
 
 let map = null, layer = null, mapEl = null, lastFit = "";
 
@@ -51,7 +58,7 @@ export function drawMap() {
     if (it.geo && typeof it.geo.lat === "number") {
       const ll = [it.geo.lat, it.geo.lng];
       layer.addLayer(marker(it, n, ll));
-      if (prev) layer.addLayer(segment(prev, ll, leg, color));
+      if (prev) layer.addLayer(segment(prev, ll, leg, color, state.currentId));
       prev = ll;
       points.push(ll);
     }
@@ -81,16 +88,20 @@ function marker(it, n, ll) {
   }).bindPopup(popup);
 }
 
-function segment(from, to, leg, color) {
-  const line = L.polyline([from, to], {
+function segment(from, to, leg, color, tripId) {
+  const road = leg && ROAD_MODES.has(leg.mode);
+  const route = road ? roadRoute(tripId, leg, from, to) : null;
+  const line = L.polyline(route ? decodeLine(route.line) : [from, to], {
     color,
     weight: 4,
-    opacity: 0.9,
+    // Tracé de la route en cours de calcul : ligne droite plus discrète en attendant
+    opacity: road && !route && !(leg.route && leg.route.none) ? 0.4 : 0.9,
     dashArray: leg && leg.mode === "avion" ? "6 9" : null, // vols en pointillés
   });
   if (leg) {
     const d = duration(leg.dep, leg.arr);
-    line.bindTooltip(`${esc(MODES[leg.mode] || "Trajet")}${d ? " · " + esc(d) : ""}`, { sticky: true });
+    const km = route ? ` · ${route.km.toLocaleString("fr-FR")} km par la route` : "";
+    line.bindTooltip(`${esc(MODES[leg.mode] || "Trajet")}${d ? " · " + esc(d) : ""}${km}`, { sticky: true });
   }
   return line;
 }
