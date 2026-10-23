@@ -19,6 +19,9 @@
 .cl-list input[type="checkbox"] { flex: none; width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
 .cl-list span { overflow-wrap: anywhere; }
 .cl-list li.done span { color: var(--muted); text-decoration: line-through; }
+/* Encore à réserver : en rouge pour ne pas l'oublier */
+.cl-list li:not(.done) > label span { color: var(--danger); font-weight: 600; }
+.cl-list li:not(.done) > label input[type="checkbox"] { accent-color: var(--danger); }
 .cl-del { flex: none; border: 0; background: none; color: var(--muted); padding: 4px 6px; border-radius: 6px; opacity: .5; }
 .cl-list li:hover .cl-del, .cl-del:focus-visible { opacity: 1; }
 .cl-del:hover { color: var(--danger); }
@@ -28,7 +31,7 @@
 .cl-form input { flex: 1 1 220px; min-width: 0; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg); font-size: 15px; }
 
 /* Rappel du nombre de choses à réserver (carte de voyage et en-tête) */
-.todo-alert { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--ticket); border: 1px solid var(--route); border-radius: 99px; padding: 2px 10px; width: fit-content; }
+.todo-alert { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--danger); background: var(--surface); border: 1px solid var(--danger); border-radius: 99px; padding: 2px 10px; width: fit-content; }
 
 /* Checklist dans le formulaire d'une étape */
 .todos-edit { display: flex; flex-direction: column; gap: 6px; text-transform: none; letter-spacing: 0; font-weight: 400; }
