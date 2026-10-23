@@ -15,17 +15,14 @@ import { renderSidebar } from "./sidebar.js";
 import { exploreView, filterCountries, countryView, favoritesView } from "./explore.js";
 import { profileView, settingsView } from "./pages.js";
 import { prefs } from "../prefs.js";
+import { tripsListView } from "./trips-list.js";
 
 export function render() {
-  renderTripSelect();
   renderAccountBar();
   renderSidebar();
   const app = document.getElementById("app");
   const busy = state.authOpen || state.loading;
-  const onTrips = state.view === "trips" && !busy;
-  document.getElementById("newTrip").hidden = !onTrips;
-  if (!onTrips) document.getElementById("tripSelect").hidden = true;
-  document.getElementById("wrap").classList.toggle("wide", ["explore", "country", "favorites"].includes(state.view) && !busy);
+  document.getElementById("wrap").classList.toggle("wide", ["trips", "explore", "country", "favorites"].includes(state.view) && !busy);
 
   if (state.authOpen) {
     app.innerHTML = authScreen();
@@ -37,6 +34,9 @@ export function render() {
   }
 
   switch (state.view) {
+    case "trips":
+      app.innerHTML = tripsListView();
+      return;
     case "explore":
       app.innerHTML = exploreView();
       filterCountries();
@@ -55,15 +55,14 @@ export function render() {
       return;
   }
 
+  // Page d'un voyage (#voyage-<id>)
+  if (state.tripId) state.currentId = state.tripId;
   const t = currentTrip();
-
   if (!t) {
     app.innerHTML = `<div class="empty">
-      <h2>Aucun voyage pour l'instant</h2>
-      <p class="note">Créez un voyage, puis ajoutez vos étapes, vos hébergements et vos trajets.</p>
-      <button class="btn primary" data-act="new-trip" type="button">Créer un voyage</button>
-      <p class="note">En manque d'idées ? <a href="#destinations">Choisir une destination</a></p>
-      ${isEnabled() && !state.user ? `<p class="note">Vous avez déjà un compte ? <button class="link-btn" data-act="open-auth" type="button">Se connecter</button></p>` : ""}
+      <h2>Voyage introuvable</h2>
+      <p class="note">Il a peut-être été supprimé, ou il est enregistré dans un autre compte.</p>
+      <a class="btn primary" href="#voyages">Voir mes voyages</a>
     </div>`;
     return;
   }
@@ -72,15 +71,11 @@ export function render() {
   app.innerHTML = hero(t) + (stops.length ? mapSection() : "") + (t.items.length ? budgetSection(t) : "") + itinerary(t);
   drawMap();
   scheduleGeo();
-}
-
-export function renderTripSelect() {
-  const sel = document.getElementById("tripSelect");
-  const ids = Object.keys(state.trips).sort((a, b) => (state.trips[a].name || "").localeCompare(state.trips[b].name || ""));
-  sel.innerHTML = ids
-    .map((id) => `<option value="${esc(id)}"${id === state.currentId ? " selected" : ""}>${esc(state.trips[id].name || "Sans titre")}</option>`)
-    .join("");
-  sel.hidden = ids.length === 0;
+  if (state.focusName) {
+    state.focusName = false;
+    const input = document.getElementById("tripName");
+    if (input) { input.focus(); input.select(); }
+  }
 }
 
 function hero(t) {
@@ -98,6 +93,7 @@ function hero(t) {
     : `<div class="hero-actions"><button class="btn ghost small danger" data-act="del-trip" type="button">Supprimer ce voyage</button></div>`;
 
   return `<section class="hero">
+    <a class="trip-back" href="#voyages">← Mes voyages</a>
     <h1><input id="tripName" value="${esc(t.name)}" aria-label="Nom du voyage"></h1>
     <div class="stats">
       ${start ? `<span><b>${esc(fmtDay(start))}</b> → <b>${esc(fmtDay(end))}</b></span>` : ""}

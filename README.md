@@ -19,9 +19,10 @@ css/
   autocomplete.css    Suggestions de lieux
   explore.css         Destinations, fiches pays, favoris, profil, paramètres
   budget.css          Budget et prix
+  trips.css           Page Mes voyages (cartes)
 js/
   app.js              Point d'entrée
-  router.js           Navigation entre les pages (#destinations, #favoris…)
+  router.js           Navigation entre les pages (#voyages, #voyage-…, #destinations…)
   prefs.js            Préférences : favoris, thème, devise, nom
   store.js            Données des voyages et sauvegarde
   events.js           Clics, saisies, formulaires
@@ -38,7 +39,8 @@ js/
   data/
     countries.js      Fiches pays (ajoutez-en en copiant une ligne)
   views/
-    trip.js           Page d'un voyage
+    trips-list.js     Page Mes voyages : une carte par voyage
+    trip.js           Page d'un voyage (et choix de la page à afficher)
     stop.js           Étape : affichage et formulaire
     transport.js      Trajet : affichage et formulaire
     actions.js        Boutons d'action et d'insertion

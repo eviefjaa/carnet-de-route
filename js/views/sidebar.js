@@ -18,7 +18,7 @@ export const icon = (name) =>
 
 export function renderSidebar() {
   const el = document.getElementById("sidebar");
-  const current = state.view === "country" ? "explore" : state.view;
+  const current = { country: "explore", trip: "trips" }[state.view] || state.view;
   const counts = {
     trips: Object.keys(state.trips).length,
     favorites: prefs.favorites.length,

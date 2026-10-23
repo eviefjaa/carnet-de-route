@@ -1,7 +1,7 @@
 // Réactions aux clics, saisies et envois de formulaires
 
-import { state, currentTrip, save, createTrip, deleteTrip, selectTrip, neighbours } from "./store.js";
-import { render, renderTripSelect } from "./views/trip.js";
+import { state, currentTrip, save, createTrip, deleteTrip, neighbours } from "./store.js";
+import { render } from "./views/trip.js";
 import { linkRow, newStop, readStopForm } from "./views/stop.js";
 import { newTransport, readTransportForm } from "./views/transport.js";
 import { uid, nights, duration, plural } from "./utils.js";
@@ -33,18 +33,12 @@ export function bindEvents() {
     const f = e.target.closest("form[data-form]");
     if (f) { keepEndAfterStart(f); refreshComputed(); }
   });
-  document.getElementById("tripSelect").addEventListener("change", (e) => {
-    selectTrip(e.target.value);
-    render();
-  });
-  document.getElementById("newTrip").addEventListener("click", newTrip);
 }
 
 function newTrip() {
-  createTrip();
-  render();
-  const input = document.getElementById("tripName");
-  if (input) { input.focus(); input.select(); }
+  const id = createTrip();
+  state.focusName = true; // on place le curseur sur le nom du voyage
+  go("voyage-" + id);
 }
 
 function onClick(e) {
@@ -109,6 +103,7 @@ function onClick(e) {
     case "del-trip-yes":
       deleteTrip(state.currentId);
       toast("Voyage supprimé");
+      go("voyages");
       break;
     case "cancel-confirm":
       state.confirm = null;
@@ -163,9 +158,9 @@ function onPageClick(act, b) {
     case "trip-from-country": {
       const x = countryByCode(b.dataset.code);
       if (!x) return true;
-      createTrip({ name: x.name, currency: x.currency });
+      const id = createTrip({ name: x.name, currency: x.currency, country: x.code });
       toast(`Voyage « ${x.name} » créé : ajoutez vos étapes`);
-      go("voyages");
+      go("voyage-" + id);
       return true;
     }
     case "export":
@@ -315,7 +310,6 @@ function onInput(e) {
   }
   if (e.target.id === "tripName") {
     currentTrip().name = e.target.value;
-    renderTripSelect();
     clearTimeout(nameTimer);
     nameTimer = setTimeout(save, 400);
     return;

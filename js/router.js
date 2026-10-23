@@ -14,6 +14,12 @@ export const PAGES = {
 export function readHash() {
   const h = decodeURIComponent(location.hash.slice(1));
   state.country = null;
+  state.tripId = null;
+  if (h.startsWith("voyage-")) {
+    state.view = "trip";
+    state.tripId = h.slice("voyage-".length);
+    return;
+  }
   if (h.startsWith("destination-")) {
     state.view = "country";
     state.country = h.slice("destination-".length).toUpperCase();

@@ -131,9 +131,9 @@ export function selectTrip(id) {
   rememberCurrent();
 }
 
-export function createTrip({ name = "Nouveau voyage", currency = prefs.currency || "EUR" } = {}) {
+export function createTrip({ name = "Nouveau voyage", currency = prefs.currency || "EUR", country = "" } = {}) {
   const id = "v-" + uid();
-  state.trips[id] = { name, currency, createdAt: Date.now(), items: [] };
+  state.trips[id] = { name, currency, country, createdAt: Date.now(), items: [] };
   selectTrip(id);
   save();
   return id;
