@@ -202,7 +202,10 @@ function onSubmit(e) {
   } else {
     const i = t.items.findIndex((x) => x.id === item.id);
     if (i >= 0) {
-      if (t.items[i].geo) item.geo = t.items[i].geo; // garde la position sur la carte
+      const old = t.items[i];
+      // Garde la position sur la carte et le pays si le lieu n'a pas été rechoisi
+      if (!item.geo && old.geo) item.geo = old.geo;
+      if (item.type === "stop" && item.country === undefined && old.country && old.place === item.place) item.country = old.country;
       t.items[i] = item;
     }
     state.editingId = null;

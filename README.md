@@ -15,6 +15,7 @@ css/
   itinerary.css       Ligne de route, étapes, trajets
   map.css             Carte
   auth.css            Connexion et compte
+  autocomplete.css    Suggestions de lieux
   budget.css          Budget et prix
 js/
   app.js              Point d'entrée
@@ -24,6 +25,8 @@ js/
   toast.js            Messages temporaires
   map.js              Carte (Leaflet + OpenStreetMap)
   geocode.js          Placement des lieux sur la carte (Nominatim)
+  places.js           Recherche de lieux dans le monde (Photon / OpenStreetMap)
+  autocomplete.js     Suggestions de lieux pendant la saisie
   budget.js           Calcul des totaux par destination et par voyage
   firebase-config.js  Configuration Firebase (null = sans compte)
   cloud.js            Firebase : comptes et enregistrement des voyages

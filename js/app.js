@@ -4,8 +4,10 @@ import { replaceTrips, loadLocal } from "./store.js";
 import { bindEvents } from "./events.js";
 import { render } from "./views/trip.js";
 import { startAccounts } from "./account.js";
+import { bindAutocomplete } from "./autocomplete.js";
 
 replaceTrips(loadLocal());
 bindEvents();
+bindAutocomplete();
 render();
 startAccounts();

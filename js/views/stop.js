@@ -3,6 +3,7 @@
 import { esc, uid, safeUrl, source, fmtDay, nights, plural, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
 import { tripStart } from "../store.js";
 import { itemActions } from "./actions.js";
+import { pickedPlace } from "../autocomplete.js";
 
 export function stopCard(it, trip, idx) {
   const start = tripStart(trip);
@@ -20,6 +21,7 @@ export function stopCard(it, trip, idx) {
     <div class="stop-head">
       ${dayN ? `<span class="day">JOUR ${dayN}</span>` : ""}
       <h2>${esc(it.place || "Étape sans nom")}</h2>
+      ${it.country ? `<span class="country">${esc(it.country)}</span>` : ""}
     </div>
     <div class="dates">
       ${it.arrive ? esc(fmtDay(it.arrive)) : "date à définir"}${it.depart ? " → " + esc(fmtDay(it.depart)) : ""}
@@ -48,7 +50,7 @@ export function stopForm(it, isNew) {
   return `<form class="form" data-form="stop" data-id="${it.id}" data-new="${isNew ? 1 : 0}">
     <h3>${isNew ? "Nouvelle étape" : "Modifier l'étape"}</h3>
     <div class="grid">
-      <label class="f full">Lieu<input name="place" id="f-place-${it.id}" value="${esc(it.place)}" placeholder="Ex. Rio de Janeiro" required></label>
+      <label class="f full">Lieu<span class="ac"><input name="place" id="f-place-${it.id}" value="${esc(it.place)}" placeholder="Tapez une ville, une région ou un pays" required data-place="place" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
       <label class="f">Arrivée<input type="date" name="arrive" id="f-arr-${it.id}" value="${esc(it.arrive)}"></label>
       <label class="f">Départ<input type="date" name="depart" id="f-dep-${it.id}" value="${esc(it.depart)}" min="${esc(it.arrive)}"></label>
       <label class="f">Prix de l'hébergement (séjour complet)<input name="price" id="f-price-${it.id}" value="${esc(priceInput(it.price))}" inputmode="decimal" placeholder="Ex. 450"></label>
@@ -80,6 +82,13 @@ export function readStopForm(f) {
   const o = { id: f.dataset.id, type: "stop" };
   ["place", "arrive", "depart", "address", "notes"].forEach((k) => (o[k] = f[k].value.trim()));
   o.price = parsePrice(f.price.value);
+
+  // Lieu choisi dans les suggestions : on garde sa position exacte et son pays
+  const picked = pickedPlace(f.place);
+  if (picked) {
+    o.country = picked.country;
+    o.geo = { q: [o.address, o.place].filter(Boolean).join(" | "), lat: picked.lat, lng: picked.lng };
+  }
   o.links = [...f.querySelectorAll("[data-link]")]
     .map((r) => ({
       id: r.dataset.link,

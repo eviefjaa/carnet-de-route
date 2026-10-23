@@ -39,8 +39,8 @@ export function transportForm(it, isNew) {
     <div class="grid">
       <label class="f">Moyen de transport<select name="mode" id="t-mode-${it.id}">${modes}</select></label>
       <label class="f">Compagnie<input name="company" id="t-comp-${it.id}" value="${esc(it.company)}" placeholder="Ex. 1001, LATAM"></label>
-      <label class="f">Lieu de départ<input name="from" id="t-from-${it.id}" value="${esc(it.from)}" placeholder="Ex. Terminal Tietê"></label>
-      <label class="f">Lieu d'arrivée<input name="to" id="t-to-${it.id}" value="${esc(it.to)}" placeholder="Ex. Rodoviária Novo Rio"></label>
+      <label class="f">Lieu de départ<span class="ac"><input name="from" id="t-from-${it.id}" value="${esc(it.from)}" placeholder="Ville, gare, aéroport…" data-place="any" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
+      <label class="f">Lieu d'arrivée<span class="ac"><input name="to" id="t-to-${it.id}" value="${esc(it.to)}" placeholder="Ville, gare, aéroport…" data-place="any" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
       <label class="f">Départ (date et heure)<input type="datetime-local" name="dep" id="t-dep-${it.id}" value="${esc(it.dep)}"></label>
       <label class="f">Arrivée (date et heure)<input type="datetime-local" name="arr" id="t-arr-${it.id}" value="${esc(it.arr)}" min="${esc(it.dep)}"></label>
       <div class="computed full" data-duration></div>
