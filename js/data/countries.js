@@ -19,8 +19,6 @@ export const TAGS = {
   faune: "Faune",
 };
 
-// Drapeau à partir du code pays (ex. "BR" → 🇧🇷)
-export const flag = (code) => String.fromCodePoint(...[...code].map((ch) => 127397 + ch.charCodeAt(0)));
 
 const c = (code, name, continent, capital, language, currency, best, budget, tags, tagline, description, history, highlights) =>
   ({ code, name, continent, capital, language, currency, best, budget, tags, tagline, description, history, highlights });

@@ -1,5 +1,5 @@
 // Recherche de lieux dans le monde entier pour les suggestions de saisie
-// Service : Photon (komoot), basé sur OpenStreetMap — gratuit, sans clé.
+// Service : Photon (komoot), basé sur OpenStreetMap, gratuit et sans clé.
 
 const API = "https://photon.komoot.io/api/";
 

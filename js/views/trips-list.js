@@ -4,8 +4,26 @@
 import { esc, nights, plural, fmtMoney, toDate } from "../utils.js";
 import { state, tripStart, tripEnd } from "../store.js";
 import { computeBudget } from "../budget.js";
-import { COUNTRIES, flag } from "../data/countries.js";
+import { COUNTRIES } from "../data/countries.js";
 import { tripPending } from "./checklist.js";
+import { isEnabled } from "../cloud.js";
+
+// Premier écran d'un nouveau visiteur : ce que fait le site, et de quoi commencer tout de suite
+function welcome() {
+  return `<section class="page welcome">
+    <h1>Préparez votre road trip, étape par étape.</h1>
+    <p class="lead">Ajoutez vos villes et vos trajets : le site les place sur une carte et calcule le budget au fur et à mesure.
+      Vos compagnons de route peuvent le préparer avec vous.</p>
+    <div class="row-btns">
+      <button class="btn primary big" data-act="new-trip" type="button">Créer mon premier voyage</button>
+      <a class="btn big" href="#destinations">Trouver une destination</a>
+    </div>
+    ${isEnabled() && !state.user
+      ? `<p class="note">Sans compte, vos voyages restent dans ce navigateur.
+          <button class="link-btn" data-act="open-auth" data-mode="signup" type="button">Créez un compte</button> pour les retrouver sur tous vos appareils.</p>`
+      : ""}
+  </section>`;
+}
 
 const DAY = 86400000;
 const todayStr = () => {
@@ -34,7 +52,7 @@ function fmtRange(start, end) {
   return start === end ? right : `${left} → ${right}`;
 }
 
-// Drapeaux des pays traversés (d'après les étapes ou le pays choisi à la création)
+// Codes des pays traversés (d'après les étapes ou le pays choisi à la création), ex. « BR · AR »
 function flagsOf(trip, stops) {
   const codes = new Set();
   if (trip.country) codes.add(trip.country);
@@ -42,7 +60,7 @@ function flagsOf(trip, stops) {
     const c = COUNTRIES.find((x) => x.name === s.country);
     if (c) codes.add(c.code);
   });
-  return [...codes].slice(0, 4).map(flag).join(" ");
+  return [...codes].filter((c) => /^[A-Z]{2}$/.test(c)).slice(0, 4).join(" · ");
 }
 
 function summary(id, trip) {
@@ -77,7 +95,7 @@ function card(s) {
     <dl class="tc-stats">
       <div><dt>Étapes</dt><dd>${stops.length}</dd></div>
       <div><dt>Nuits</dt><dd>${s.nights}</dd></div>
-      <div><dt>Budget</dt><dd>${s.budget ? esc(fmtMoney(s.budget, trip.currency || "EUR")) : "—"}</dd></div>
+      <div><dt>Budget</dt><dd>${s.budget ? esc(fmtMoney(s.budget, trip.currency || "EUR")) : "–"}</dd></div>
     </dl>
   </article>`;
 }
@@ -91,11 +109,13 @@ export function tripsListView() {
     return (b.trip.createdAt || 0) - (a.trip.createdAt || 0);
   });
 
+  if (!all.length) return welcome();
+
   return `<section class="page">
     <header class="page-head trips-head">
       <div>
         <h1>Mes voyages</h1>
-        <p class="lead">${all.length ? plural(all.length, "voyage") : "Vos voyages apparaîtront ici."}</p>
+        <p class="lead">${plural(all.length, "voyage")}</p>
       </div>
       <button class="btn primary" data-act="new-trip" type="button">+ Nouveau voyage</button>
     </header>
@@ -107,6 +127,5 @@ export function tripsListView() {
         <span class="note">Ou inspirez-vous des destinations</span>
       </button>
     </div>
-    ${all.length ? "" : `<p class="note">En manque d'idées ? <a href="#destinations">Choisir une destination</a></p>`}
   </section>`;
 }

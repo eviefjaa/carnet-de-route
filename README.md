@@ -8,6 +8,9 @@ Sans compte, les voyages sont enregistrés dans le navigateur (localStorage). Av
 
 ```
 index.html            Page principale
+404.html              Page « introuvable » (GitHub Pages)
+sitemap.xml           Plan du site pour les moteurs de recherche
+img/                  Favicons et image de partage sur les réseaux
 firestore.rules       Règles de sécurité Firestore (à copier dans la console Firebase)
 .github/workflows/
   reminders.yml       Rappels par e-mail, lancés chaque jour par GitHub Actions

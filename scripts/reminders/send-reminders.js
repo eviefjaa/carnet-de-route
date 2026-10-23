@@ -1,4 +1,4 @@
-// Envoi des rappels par e-mail — lancé chaque jour par GitHub Actions
+// Envoi des rappels par e-mail, lancé chaque jour par GitHub Actions
 // (.github/workflows/reminders.yml)
 //
 // Variables d'environnement (secrets GitHub) :
@@ -130,7 +130,7 @@ for (const uid of uids) {
     await mailer.sendMail({ from: `Carnet de route <${process.env.GMAIL_USER}>`, to: email, subject, text, html });
     await sentRef.set(Object.fromEntries(due.map((r) => [r.key, today])), { merge: true });
     sentCount++;
-    console.log(`${label} : e-mail envoyé ✓`);
+    console.log(`${label} : e-mail envoyé`);
   } catch (err) {
     console.error(`${label} : échec de l'envoi (${err.code || "erreur"}). Vérifiez GMAIL_USER et GMAIL_APP_PASSWORD.`);
     process.exitCode = 1;

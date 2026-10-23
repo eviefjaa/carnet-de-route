@@ -285,7 +285,7 @@ function onSettingChange(el) {
       todo.done = el.checked;
       save();
       render();
-      if (el.checked) toast("Réservé ✓");
+      if (el.checked) toast("Marqué comme réservé");
     }
     return true;
   }

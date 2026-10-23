@@ -19,7 +19,7 @@ export function renderAccountBar() {
 }
 
 // « Enregistré dans le compte » / « Enregistrement… » / « Non synchronisé »
-const SYNC_LABELS = { saved: "✓ Enregistré dans le compte", pending: "Enregistrement…", error: "⚠ Non synchronisé" };
+const SYNC_LABELS = { saved: "Enregistré dans le compte", pending: "Enregistrement…", error: "Non synchronisé" };
 
 function syncBadge() {
   const label = SYNC_LABELS[sync.status];
@@ -32,7 +32,7 @@ function syncBadge() {
 // Texte sous le nom d'un voyage
 export function syncNote(travellers) {
   if (!state.user) return "Enregistré sur cet appareil uniquement";
-  if (sync.status === "error") return "⚠ " + sync.error;
+  if (sync.status === "error") return "Non synchronisé. " + sync.error;
   if (sync.status === "pending") return "Enregistrement dans le compte…";
   return travellers > 1 ? `Enregistré dans le compte · partagé entre ${travellers} voyageurs` : "Enregistré dans le compte";
 }

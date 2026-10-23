@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Seule la page principale existe pour les moteurs de recherche : les autres pages
+     (#voyages, #destinations…) sont des vues de la même page. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://eviefjaa.github.io/carnet-de-route/</loc>
+    <changefreq>weekly</changefreq>
+  </url>
+</urlset>

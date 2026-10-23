@@ -18,7 +18,32 @@ import { prefs } from "../prefs.js";
 import { tripsListView } from "./trips-list.js";
 import { tripPending } from "./checklist.js";
 import { shareSection, travellers } from "./share.js";
-import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel } from "./social.js";
+import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel, socialTitle } from "./social.js";
+import { countryByCode } from "../data/countries.js";
+
+// Titre de l'onglet et description de chaque page
+const PAGE_META = {
+  trips: ["Mes voyages", "Préparez votre road trip étape par étape : villes, trajets, carte et budget du voyage."],
+  explore: ["Choisir une destination", "59 pays décrits avec leur histoire, leurs incontournables et la meilleure saison pour partir."],
+  favorites: ["Favoris", "Les destinations que vous avez gardées de côté."],
+  profile: ["Mon profil", "Votre profil, vos abonnés et vos itinéraires publiés."],
+  settings: ["Paramètres", "Thème, devise par défaut, rappels par e-mail et export de vos voyages."],
+  feed: ["Fil d'actualité", "Les derniers itinéraires des voyageurs que vous suivez."],
+  discover: ["Découvrir", "Les derniers itinéraires publiés par la communauté Carnet de route."],
+};
+
+function setMeta() {
+  const t = state.view === "trip" ? currentTrip() : null;
+  const country = state.view === "country" ? countryByCode(state.country) : null;
+  const [title, description] =
+    state.authOpen ? ["Connexion", "Connectez-vous pour retrouver vos voyages sur tous vos appareils."]
+    : t ? [t.name || "Voyage", PAGE_META.trips[1]]
+    : country ? [country.name, country.tagline]
+    : ["person", "post"].includes(state.view) ? socialTitle()
+    : PAGE_META[state.view] || PAGE_META.trips;
+  document.title = `${title} · Carnet de route`;
+  document.querySelector('meta[name="description"]')?.setAttribute("content", description);
+}
 
 // Met à jour l'état de la synchronisation sans tout réafficher (garde la saisie en cours)
 export function renderSync() {
@@ -32,6 +57,7 @@ export function renderSync() {
 }
 
 export function render() {
+  setMeta();
   renderAccountBar();
   renderSidebar();
   const app = document.getElementById("app");

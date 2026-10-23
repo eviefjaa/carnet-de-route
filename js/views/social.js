@@ -5,7 +5,7 @@ import { esc, plural, MODES } from "../utils.js";
 import { state } from "../store.js";
 import { isEnabled } from "../cloud.js";
 import * as social from "../social.js";
-import { COUNTRIES, flag } from "../data/countries.js";
+import { COUNTRIES } from "../data/countries.js";
 
 const me = () => (state.user ? state.user.uid : null);
 const loadingNote = `<p class="note">Chargement…</p>`;
@@ -25,7 +25,7 @@ function flagsOf(trip) {
     const c = i.type === "stop" && COUNTRIES.find((x) => x.name === i.country);
     if (c) codes.add(c.code);
   });
-  return [...codes].filter((c) => /^[A-Z]{2}$/.test(c)).slice(0, 4).map(flag).join(" ");
+  return [...codes].filter((c) => /^[A-Z]{2}$/.test(c)).slice(0, 4).join(" · ");
 }
 
 export function postCard(p) {
@@ -94,7 +94,7 @@ function followButton(profile, status) {
   if (!state.user) return `<button class="btn primary" data-act="open-auth" data-mode="signin" type="button">Se connecter pour s'abonner</button>`;
   if (profile.uid === me()) return `<a class="btn" href="#profil">Modifier mon profil</a>`;
   const attrs = `data-uid="${esc(profile.uid)}"`;
-  if (status === "accepted") return `<span class="follow-state">Abonné(e) ✓</span><button class="btn small" data-act="unfollow" ${attrs} type="button">Se désabonner</button>`;
+  if (status === "accepted") return `<span class="follow-state">Abonné(e)</span><button class="btn small" data-act="unfollow" ${attrs} type="button">Se désabonner</button>`;
   if (status === "pending") return `<span class="follow-state">Demande envoyée</span><button class="btn small" data-act="unfollow" ${attrs} type="button">Annuler la demande</button>`;
   return `<button class="btn primary" data-act="follow" ${attrs} data-visibility="${esc(profile.visibility)}" type="button">${profile.visibility === "private" ? "Demander à s'abonner" : "S'abonner"}</button>`;
 }
@@ -279,4 +279,16 @@ export function socialProfileSection() {
     : postGrid(mine.data, "Vous n'avez rien publié. Ouvrez un voyage et choisissez « Publier l'itinéraire ».");
 
   return `${form}${network}<h2 class="section-title">Mes publications</h2>${posts}`;
+}
+
+// Titre et description de l'onglet pour un profil ou une publication déjà chargés
+export function socialTitle() {
+  if (state.view === "person") {
+    const e = social.peek("person:" + state.personId);
+    const p = e.status === "ok" && e.data && e.data.profile;
+    return p ? [`${p.name} (@${p.handle})`, p.bio || `Les itinéraires de ${p.name} sur Carnet de route.`] : ["Profil", "Profil d'un voyageur sur Carnet de route."];
+  }
+  const e = social.peek("post:" + state.postId);
+  const p = e.status === "ok" && e.data;
+  return p ? [p.title, `Itinéraire publié par ${p.ownerName} sur Carnet de route.`] : ["Itinéraire", "Itinéraire publié sur Carnet de route."];
 }

@@ -16,8 +16,8 @@ export function budgetSection(trip) {
   const body = rows.length
     ? rows.map((r) => `<tr>
         <th scope="row">${esc(r.place)}</th>
-        <td>${r.lodging ? m(r.lodging) : "—"}</td>
-        <td>${r.transport ? m(r.transport) : "—"}</td>
+        <td>${r.lodging ? m(r.lodging) : "–"}</td>
+        <td>${r.transport ? m(r.transport) : "–"}</td>
         <td class="b-total">${m(r.total)}</td>
       </tr>`).join("")
     : `<tr><td colspan="4" class="note">Ajoutez des étapes et des trajets pour voir le budget.</td></tr>`;

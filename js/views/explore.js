@@ -3,7 +3,7 @@
 import { esc } from "../utils.js";
 import { state } from "../store.js";
 import { isFavorite } from "../prefs.js";
-import { COUNTRIES, CONTINENTS, TAGS, flag, countryByCode, wikiUrl } from "../data/countries.js";
+import { COUNTRIES, CONTINENTS, TAGS, countryByCode, wikiUrl } from "../data/countries.js";
 
 const BUDGET = { 1: ["€", "Bon marché"], 2: ["€€", "Moyen"], 3: ["€€€", "Cher"] };
 
@@ -30,7 +30,7 @@ export function favButton(code, small = false) {
 export function countryCard(x) {
   const search = [x.name, x.capital, x.continent, ...x.highlights].join(" ").toLowerCase();
   return `<article class="country-card" data-continent="${esc(x.continent)}" data-tags="${x.tags.join(" ")}" data-search="${esc(search)}">
-    <span class="cc-flag" aria-hidden="true">${flag(x.code)}</span>
+    <span class="cc-code" aria-hidden="true">${esc(x.code)}</span>
     <div class="cc-body">
       <h3><a class="cc-link" href="#destination-${x.code}">${esc(x.name)}</a></h3>
       <p class="cc-meta">${esc(x.continent)} · ${BUDGET[x.budget][0]}</p>
@@ -49,7 +49,7 @@ export function exploreView() {
   return `<section class="page">
     <header class="page-head">
       <h1>Choisir une destination</h1>
-      <p class="lead">${COUNTRIES.length} pays pour vous inspirer : un peu d'histoire, les incontournables et la meilleure saison pour partir.</p>
+      <p class="lead">${COUNTRIES.length} pays pour vous inspirer, avec leur histoire et les lieux à ne pas manquer.</p>
     </header>
     <div class="explore-tools">
       <input type="search" id="exploreSearch" class="search" value="${esc(f.q)}" placeholder="Rechercher un pays, une ville, un lieu…" aria-label="Rechercher une destination">
@@ -100,7 +100,7 @@ export function countryView(code) {
   return `<section class="page country">
     <a class="back" href="#destinations">← Toutes les destinations</a>
     <header class="country-head">
-      <span class="country-flag" aria-hidden="true">${flag(x.code)}</span>
+      <span class="country-code" aria-hidden="true">${esc(x.code)}</span>
       <div>
         <h1>${esc(x.name)}</h1>
         <p class="lead">${esc(x.tagline)}</p>

@@ -71,7 +71,7 @@ export function buildEmail(reminders, siteUrl) {
     "Certaines choses ne sont pas encore cochées dans votre carnet de route :",
     "",
     ...reminders.flatMap((r) => [
-      `${r.place} (${r.tripName}) — ${when(r.inDays)}, ${fmtDate(r.date)}`,
+      `${r.place} (${r.tripName}) : ${when(r.inDays)}, ${fmtDate(r.date)}`,
       ...r.items.map((i) => `  - ${i}`),
       `  ${siteUrl}#voyage-${r.tripId}`,
       "",

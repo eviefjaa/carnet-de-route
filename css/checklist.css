@@ -1,7 +1,7 @@
 /* Checklist d'une étape */
 
 .checklist { border-top: 1px dashed var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
-.cl-head { display: flex; align-items: center; gap: 10px; }
+.cl-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .cl-head h3 { white-space: nowrap; font-family: var(--body); font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 .cl-progress { white-space: nowrap; font-family: var(--mono); font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--ticket); color: var(--ink); }
 .cl-progress.all { background: var(--accent-soft); color: var(--accent); }

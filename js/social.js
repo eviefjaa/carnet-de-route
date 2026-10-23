@@ -45,6 +45,8 @@ export function load(key, fn) {
   return entry;
 }
 export const resetSocial = () => cache.clear();
+// Données déjà chargées pour cette clé, sans lancer de chargement
+export const peek = (key) => cache.get(key) || { status: "none", data: null };
 
 // ---------- Profil ----------
 export async function getProfile(id) {

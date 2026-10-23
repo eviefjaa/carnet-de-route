@@ -10,9 +10,9 @@
   display: flex; flex-direction: column; gap: 8px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
   padding: 18px; min-width: 0;
-  transition: border-color .15s, transform .15s, box-shadow .15s;
+  transition: border-color .15s;
 }
-.trip-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, .06); }
+.trip-card:hover { border-color: var(--accent); }
 
 .tc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tc-status {
@@ -22,7 +22,7 @@
 .is-upcoming .tc-status { background: var(--accent-soft); color: var(--accent); }
 .is-now .tc-status { background: var(--route); color: #1d1600; }
 .is-past { opacity: .8; }
-.tc-flags { font-size: 20px; line-height: 1; }
+.tc-flags { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--muted); }
 
 .trip-card h2 { font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
 .tc-link { color: var(--ink); text-decoration: none; }
@@ -54,3 +54,12 @@
 /* Lien de retour en haut d'un voyage */
 .trip-back { font-size: 14px; text-decoration: none; }
 .trip-back:hover { text-decoration: underline; }
+
+/* Premier écran d'un nouveau visiteur */
+.welcome { max-width: 640px; padding-top: clamp(16px, 6vh, 64px); gap: 18px; }
+.welcome h1 { font-size: clamp(32px, 7vw, 52px); line-height: 1.05; letter-spacing: -.01em; }
+.welcome .lead { font-size: 18px; }
+.btn.big { padding: 12px 18px; font-size: 16px; }
+
+/* Page seule (404), sans le menu du site */
+.standalone .wrap { max-width: 720px; margin: 0 auto; padding: clamp(24px, 6vh, 64px) 16px; }
