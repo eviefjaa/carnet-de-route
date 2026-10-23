@@ -7,6 +7,17 @@ import { COUNTRIES, CONTINENTS, TAGS, flag, countryByCode, wikiUrl } from "../da
 
 const BUDGET = { 1: ["€", "Bon marché"], 2: ["€€", "Moyen"], 3: ["€€€", "Cher"] };
 
+// Frise historique et incontournables détaillés : fichier chargé à la première fiche pays ouverte
+let details = null;
+let loading = null;
+export const detailsReady = () => !!details;
+export function loadDetails() {
+  loading ||= import("../data/country-details.js")
+    .then((m) => (details = m.DETAILS))
+    .catch(() => (details = {})); // hors ligne : la fiche garde sa version courte
+  return loading;
+}
+
 export function favButton(code, small = false) {
   const on = isFavorite(code);
   return `<button class="fav${on ? " on" : ""}${small ? " small" : ""}" data-act="fav" data-code="${code}" type="button"
@@ -76,6 +87,7 @@ export function countryView(code) {
     return `<section class="page"><a class="back" href="#destinations">← Toutes les destinations</a>
       <p>Cette destination n'existe pas.</p></section>`;
   }
+  const d = details && details[x.code];
   const facts = [
     ["Capitale", x.capital],
     ["Langue", x.language],
@@ -102,11 +114,41 @@ export function countryView(code) {
     <dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
     <div class="country-text">
       <section><h2>Présentation</h2><p>${esc(x.description)}</p></section>
-      <section><h2>Un peu d'histoire</h2><p>${esc(x.history)}</p></section>
-      <section><h2>À ne pas manquer</h2><ul class="highlights">${x.highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul></section>
+      <section>
+        <h2>Un peu d'histoire</h2>
+        <p>${esc(x.history)}</p>
+        ${d && d.timeline ? timeline(d.timeline) : ""}
+      </section>
+      <section>
+        <h2>À ne pas manquer</h2>
+        ${d && d.highlights
+          ? highlightCards(d.highlights, x)
+          : `<ul class="highlights">${x.highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>`}
+      </section>
     </div>
     <p class="note"><a href="${wikiUrl(x)}" target="_blank" rel="noopener noreferrer">En savoir plus sur Wikipédia ↗</a></p>
   </section>`;
+}
+
+// Grandes périodes de l'histoire du pays
+function timeline(periods) {
+  return `<ol class="timeline">${periods.map((p) => `<li>
+      <span class="tl-period">${esc(p.period)}</span>
+      <div class="tl-body"><h3>${esc(p.title)}</h3><p>${esc(p.text)}</p></div>
+    </li>`).join("")}</ol>`;
+}
+
+// Incontournables, avec un lien pour les situer sur une carte
+function highlightCards(list, country) {
+  return `<ol class="hl-grid">${list.map((h) => {
+    const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([h.name, h.region, country.name].filter(Boolean).join(", "))}`;
+    return `<li class="hl-card">
+      <h3>${esc(h.name)}</h3>
+      ${h.region ? `<p class="hl-region">${esc(h.region)}</p>` : ""}
+      <p>${esc(h.text)}</p>
+      <a class="hl-map" href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Voir sur la carte ↗</a>
+    </li>`;
+  }).join("")}</ol>`;
 }
 
 export function favoritesView(codes) {

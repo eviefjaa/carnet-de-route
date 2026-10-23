@@ -12,7 +12,7 @@ import { scheduleGeo } from "../geocode.js";
 import { authScreen, renderAccountBar, syncNote } from "./auth.js";
 import { isEnabled } from "../cloud.js";
 import { renderSidebar } from "./sidebar.js";
-import { exploreView, filterCountries, countryView, favoritesView } from "./explore.js";
+import { exploreView, filterCountries, countryView, favoritesView, detailsReady, loadDetails } from "./explore.js";
 import { profileView, settingsView } from "./pages.js";
 import { prefs } from "../prefs.js";
 import { tripsListView } from "./trips-list.js";
@@ -56,6 +56,8 @@ export function render() {
       return;
     case "country":
       app.innerHTML = countryView(state.country);
+      // Première fiche ouverte : on affiche la version courte, puis la version détaillée
+      if (!detailsReady()) loadDetails().then(() => state.view === "country" && !state.authOpen && render());
       return;
     case "favorites":
       app.innerHTML = favoritesView(prefs.favorites);
