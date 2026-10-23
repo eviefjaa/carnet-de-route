@@ -2,7 +2,7 @@
 
 Petit site pour planifier un road trip : étapes, hébergements (liens Airbnb, Booking…), trajets avec horaires, carte du voyage et budget. Un menu donne accès aux idées de destinations (fiches pays), aux favoris, au profil et aux paramètres.
 
-Sans compte, les voyages sont enregistrés dans le navigateur (localStorage). Avec un compte, ils sont enregistrés dans Firebase et synchronisés entre les appareils.
+Sans compte, les voyages sont enregistrés dans le navigateur (localStorage). Avec un compte, ils sont enregistrés dans Firebase et synchronisés entre les appareils, et on peut inviter d'autres personnes à préparer un voyage.
 
 ## Organisation des fichiers
 
@@ -23,6 +23,7 @@ css/
   explore.css         Destinations, fiches pays, favoris, profil, paramètres
   budget.css          Budget et prix
   checklist.css       Checklist des étapes
+  share.css           Voyageurs et invitations
   trips.css           Page Mes voyages (cartes)
 js/
   app.js              Point d'entrée
@@ -40,6 +41,7 @@ js/
   firebase-config.js  Configuration Firebase (null = sans compte)
   cloud.js            Firebase : comptes et enregistrement des voyages
   account.js          Connexion, déconnexion, import des voyages de l'appareil
+  share.js            Invitations par e-mail, voyageurs, quitter un voyage
   data/
     countries.js      Fiches pays (ajoutez-en en copiant une ligne)
   views/
@@ -50,6 +52,7 @@ js/
     actions.js        Boutons d'action et d'insertion
     budget.js         Section Budget (tableau des coûts)
     checklist.js      Checklist « À faire et à réserver » de chaque étape
+    share.js          Section Voyageurs d'un voyage
     auth.js           Écran de connexion et bouton de compte
     sidebar.js        Menu de gauche
     explore.js        Destinations, fiche pays, favoris
@@ -62,9 +65,19 @@ Le site est publié avec GitHub Pages (Settings → Pages → branche `main`, do
 
 Les fichiers JavaScript sont des modules : le site doit être ouvert via une adresse web (GitHub Pages ou un petit serveur local), pas en double-cliquant sur `index.html`.
 
+## Partager un voyage
+
+Sur la page d'un voyage, la section « Voyageurs » permet d'inviter quelqu'un par son adresse e-mail. L'invitation est enregistrée dans le voyage, puis la messagerie de l'utilisateur s'ouvre avec un e-mail prêt à envoyer (lien vers le voyage). La personne invitée crée un compte ou se connecte avec cette adresse et la confirme : le voyage apparaît alors dans « Mes voyages ».
+
+Tous les voyageurs peuvent modifier le voyage et inviter d'autres personnes. Seul le créateur peut supprimer le voyage, annuler une invitation ou retirer quelqu'un ; les autres peuvent quitter le voyage.
+
+Les voyages sont dans `trips/{id}` (avec `owner`, `members`, `invites`, `emails`). Les anciens voyages, rangés dans `users/{uid}/trips`, sont déplacés automatiquement à la connexion suivante.
+
+Après toute modification de `firestore.rules`, copiez son contenu dans la console Firebase (Firestore Database → Règles → Publier).
+
 ## Rappels par e-mail
 
-Chaque jour, GitHub Actions lance `scripts/reminders/send-reminders.js`. Pour chaque étape qui commence dans 3 jours ou moins et dont la checklist contient encore des éléments non cochés, un e-mail est envoyé à l'adresse du compte (une seule fois par étape). Seules les adresses confirmées reçoivent les rappels : un lien de confirmation est envoyé à la création du compte.
+Chaque jour, GitHub Actions lance `scripts/reminders/send-reminders.js`. Pour chaque étape qui commence dans 3 jours ou moins et dont la checklist contient encore des éléments non cochés, un e-mail est envoyé à chacun des voyageurs (une seule fois par étape). Seules les adresses confirmées reçoivent les rappels : un lien de confirmation est envoyé à la création du compte.
 
 Secrets à créer dans GitHub (Settings → Secrets and variables → Actions) :
 - `FIREBASE_SERVICE_ACCOUNT` : contenu du fichier JSON de la clé de compte de service Firebase

@@ -1,7 +1,7 @@
 // Page d'un voyage : en-tête, résumé, carte et itinéraire
 
 import { esc, fmtDay, nights, plural, fmtMoney } from "../utils.js";
-import { state, currentTrip, tripStart, tripEnd } from "../store.js";
+import { state, currentTrip, tripStart, tripEnd, isOwner } from "../store.js";
 import { stopCard, stopForm } from "./stop.js";
 import { transportCard, transportForm } from "./transport.js";
 import { insertRow } from "./actions.js";
@@ -17,6 +17,7 @@ import { profileView, settingsView } from "./pages.js";
 import { prefs } from "../prefs.js";
 import { tripsListView } from "./trips-list.js";
 import { tripPending } from "./checklist.js";
+import { shareSection, travellers } from "./share.js";
 
 export function render() {
   renderAccountBar();
@@ -62,14 +63,20 @@ export function render() {
   if (!t) {
     app.innerHTML = `<div class="empty">
       <h2>Voyage introuvable</h2>
-      <p class="note">Il a peut-être été supprimé, ou il est enregistré dans un autre compte.</p>
-      <a class="btn primary" href="#voyages">Voir mes voyages</a>
+      <p class="note">${!state.user && isEnabled()
+        ? "Si vous avez été invité(e), connectez-vous avec l'adresse e-mail qui a reçu l'invitation."
+        : state.user && !state.user.emailVerified
+          ? "Si vous avez été invité(e), confirmez d'abord votre adresse e-mail avec le lien reçu, puis rechargez la page."
+          : "Il a peut-être été supprimé, ou il est enregistré dans un autre compte."}</p>
+      ${!state.user && isEnabled()
+        ? `<button class="btn primary" data-act="open-auth" data-mode="signin" type="button">Se connecter</button>`
+        : `<a class="btn primary" href="#voyages">Voir mes voyages</a>`}
     </div>`;
     return;
   }
 
   const stops = t.items.filter((i) => i.type === "stop");
-  app.innerHTML = hero(t) + (stops.length ? mapSection() : "") + (t.items.length ? budgetSection(t) : "") + itinerary(t);
+  app.innerHTML = hero(t) + shareSection(t) + (stops.length ? mapSection() : "") + (t.items.length ? budgetSection(t) : "") + itinerary(t);
   drawMap();
   scheduleGeo();
   if (state.focusName) {
@@ -86,12 +93,17 @@ function hero(t) {
   const start = tripStart(t), end = tripEnd(t);
   const budget = computeBudget(t).total.total;
 
+  // Seul le créateur supprime le voyage ; les autres voyageurs peuvent le quitter
+  const owner = isOwner(t);
+  const others = travellers(t) - 1;
   const del = state.confirm === "trip"
-    ? `<div class="confirm">Supprimer « ${esc(t.name)} » et tout son contenu ?
-        <button class="btn small danger" data-act="del-trip-yes" type="button">Supprimer</button>
+    ? `<div class="confirm">${owner
+          ? `Supprimer « ${esc(t.name)} » et tout son contenu${others ? ` pour vous et ${plural(others, "autre voyageur")}` : ""} ?`
+          : `Quitter « ${esc(t.name)} » ? Il disparaîtra de vos voyages.`}
+        <button class="btn small danger" data-act="del-trip-yes" type="button">${owner ? "Supprimer" : "Quitter"}</button>
         <button class="btn small" data-act="cancel-confirm" type="button">Annuler</button>
       </div>`
-    : `<div class="hero-actions"><button class="btn ghost small danger" data-act="del-trip" type="button">Supprimer ce voyage</button></div>`;
+    : `<div class="hero-actions"><button class="btn ghost small danger" data-act="del-trip" type="button">${owner ? "Supprimer ce voyage" : "Quitter ce voyage"}</button></div>`;
 
   return `<section class="hero">
     <a class="trip-back" href="#voyages">← Mes voyages</a>
@@ -104,7 +116,7 @@ function hero(t) {
       ${budget ? `<span><b>${esc(fmtMoney(budget, t.currency || "EUR"))}</b></span>` : ""}
     </div>
     ${tripPending(t) ? `<span class="todo-alert">${tripPending(t)} chose${tripPending(t) > 1 ? "s" : ""} à réserver</span>` : ""}
-    ${isEnabled() ? `<p class="sync-note">${state.user ? "Synchronisé avec votre compte" : "Enregistré sur cet appareil uniquement"}</p>` : ""}
+    ${isEnabled() ? `<p class="sync-note">${!state.user ? "Enregistré sur cet appareil uniquement" : travellers(t) > 1 ? `Partagé entre ${travellers(t)} voyageurs` : "Synchronisé avec votre compte"}</p>` : ""}
     ${del}
   </section>`;
 }

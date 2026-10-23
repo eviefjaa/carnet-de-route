@@ -66,6 +66,7 @@ function card(s) {
   return `<article class="trip-card is-${s.status.key}">
     <div class="tc-top">
       <span class="tc-status">${esc(s.status.label)}</span>
+      ${(trip.members || []).length > 1 ? `<span class="tc-shared">Partagé · ${trip.members.length}</span>` : ""}
       <span class="tc-flags" aria-hidden="true">${flagsOf(trip, stops)}</span>
     </div>
     <h2><a class="tc-link" href="#voyage-${esc(id)}">${esc(trip.name || "Sans titre")}</a></h2>

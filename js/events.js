@@ -1,6 +1,6 @@
 // Réactions aux clics, saisies et envois de formulaires
 
-import { state, currentTrip, save, flush, createTrip, deleteTrip, neighbours } from "./store.js";
+import { state, currentTrip, save, flush, createTrip, deleteTrip, neighbours, isOwner } from "./store.js";
 import { render } from "./views/trip.js";
 import { linkRow, newStop, readStopForm } from "./views/stop.js";
 import { newTransport, readTransportForm } from "./views/transport.js";
@@ -13,6 +13,7 @@ import { openMenu, closeMenu, go } from "./router.js";
 import { favButton, filterCountries } from "./views/explore.js";
 import { renderSidebar } from "./views/sidebar.js";
 import { countryByCode } from "./data/countries.js";
+import { inviteFromForm, resendInvite, cancelInvite, removeMember, leaveTrip } from "./share.js";
 
 export function bindEvents() {
   document.addEventListener("click", onClick);
@@ -101,8 +102,13 @@ function onClick(e) {
       state.confirm = "trip";
       break;
     case "del-trip-yes":
-      deleteTrip(state.currentId);
-      toast("Voyage supprimé");
+      // Le créateur supprime le voyage pour tout le monde ; les autres le quittent
+      if (isOwner(t)) {
+        deleteTrip(state.currentId);
+        toast("Voyage supprimé");
+      } else {
+        leaveTrip(state.currentId);
+      }
       go("voyages");
       break;
     case "cancel-confirm":
@@ -197,6 +203,15 @@ function onPageClick(act, b) {
     }
     case "export":
       exportTrips();
+      return true;
+    case "resend-invite":
+      resendInvite(b.dataset.email);
+      return true;
+    case "cancel-invite":
+      cancelInvite(b.dataset.email);
+      return true;
+    case "remove-member":
+      removeMember(b.dataset.uid);
       return true;
   }
   return false;
@@ -329,6 +344,12 @@ function onSubmit(e) {
       render();
       focusTodoInput(); // on peut enchaîner plusieurs ajouts
     }
+    return;
+  }
+  const inviteForm = e.target.closest("form[data-invite-form]");
+  if (inviteForm) {
+    e.preventDefault();
+    inviteFromForm(inviteForm);
     return;
   }
   const auth = e.target.closest("form[data-auth]");

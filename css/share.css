@@ -1,0 +1,21 @@
+/* Voyageurs d'un voyage et invitations */
+
+.share { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.share h2 { font-size: 20px; font-weight: 700; }
+.sh-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sh-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 4px; border-radius: 8px; }
+.sh-list li:hover { background: var(--bg); }
+.sh-list li:hover .cl-del, .sh-list .cl-del:focus-visible { opacity: 1; }
+.sh-who { min-width: 0; overflow-wrap: anywhere; }
+.sh-me { color: var(--muted); }
+.sh-pending .sh-who { color: var(--muted); }
+.sh-badge { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .04em; padding: 1px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.sh-pending .sh-badge { background: var(--ticket); color: var(--ink); }
+.sh-list .link-btn { font-size: 13px; }
+.sh-list .cl-del { margin-left: auto; }
+.sh-list .link-btn + .cl-del { margin-left: 0; }
+.sh-pending .link-btn { margin-left: auto; }
+
+/* Pastille « Partagé » sur la carte d'un voyage */
+.tc-shared { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.tc-top .tc-shared { margin-right: auto; }

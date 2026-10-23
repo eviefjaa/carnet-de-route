@@ -72,8 +72,11 @@ async function flushCloud() {
   if (!c) return;
   const jobs = [];
   Object.entries(state.trips).forEach(([id, t]) => {
+    // Voyage pas encore dans le compte : on en devient le créateur
+    const isNew = !t.owner;
+    if (isNew) Object.assign(t, c.newTripSharing());
     const s = snapshot(t);
-    if (saved[id] !== s) { saved[id] = s; jobs.push(c.saveTrip(id, t)); }
+    if (saved[id] !== s) { saved[id] = s; jobs.push(c.saveTrip(id, t, isNew)); }
   });
   Object.keys(saved).forEach((id) => {
     if (!state.trips[id]) { delete saved[id]; jobs.push(c.deleteTrip(id)); }
@@ -100,6 +103,23 @@ export function applyRemote(id, trip) {
 // Voyages non enregistrés localement en attente d'envoi
 export const hasPendingChanges = (id) => state.trips[id] && saved[id] !== snapshot(state.trips[id]);
 
+// Voyageurs ou invitations changés directement dans le cloud : on met à jour la copie locale
+export function patchTrip(id, fields) {
+  const t = state.trips[id];
+  if (!t) return;
+  const pending = hasPendingChanges(id);
+  Object.assign(t, fields);
+  if (!pending) saved[id] = snapshot(t);
+}
+
+// Voyage quitté : on l'oublie sans le supprimer du compte des autres
+export function forgetTrip(id) {
+  delete state.trips[id];
+  delete saved[id];
+  if (state.currentId === id) state.currentId = Object.keys(state.trips)[0] || null;
+  resetUi();
+}
+
 export function loadLocal() {
   try {
     return JSON.parse(localStorage.getItem(TRIPS_KEY) || "{}");
@@ -125,6 +145,9 @@ function pickCurrent() {
 
 // ---------- Voyages ----------
 export const currentTrip = () => state.trips[state.currentId] || null;
+
+// Créateur du voyage (ou voyage pas encore dans un compte)
+export const isOwner = (t) => !t.owner || (!!state.user && t.owner === state.user.uid);
 
 export function resetUi() {
   state.editingId = null;

@@ -1,6 +1,7 @@
 // Comptes et synchronisation avec Firebase (Authentication + Firestore)
 //
-// Chaque utilisateur a ses voyages dans : users/{uid}/trips/{idDuVoyage}
+// Voyages : trips/{idDuVoyage}, partagés entre leurs voyageurs
+// Préférences et rappels envoyés : users/{uid}/meta/…
 
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -40,10 +41,12 @@ export const resendVerification = () => fb.sendEmailVerification(auth.currentUse
 // L'état « adresse confirmée » est gardé en mémoire par Firebase : on le redemande au serveur
 export async function refreshEmailVerified() {
   await auth.currentUser.reload();
+  // Nouveau jeton : les règles Firestore voient aussi l'adresse comme confirmée
+  if (auth.currentUser.emailVerified) await auth.currentUser.getIdToken(true);
   return auth.currentUser.emailVerified;
 }
 
-export const signIn =(email, password) => fb.signInWithEmailAndPassword(auth, email, password);
+export const signIn = (email, password) => fb.signInWithEmailAndPassword(auth, email, password);
 export const signOut = () => fb.signOut(auth);
 export const resetPassword = (email) => fb.sendPasswordResetEmail(auth, email);
 
@@ -67,36 +70,90 @@ export function errorMessage(e) {
 }
 
 // ---------- Voyages ----------
-const tripsCol = (uid) => fb.collection(db, "users", uid, "trips");
+// Chaque voyage est dans trips/{id}, avec ses voyageurs :
+//   owner    uid du créateur
+//   members  uid des voyageurs (le créateur compris)
+//   invites  adresses e-mail invitées qui n'ont pas encore rejoint (en minuscules)
+//   emails   { uid: adresse e-mail } des voyageurs, pour les afficher
+export const SHARING = ["owner", "members", "invites", "emails"];
+
+const tripDoc = (id) => fb.doc(db, "trips", id);
+const myTrips = (uid) => fb.query(fb.collection(db, "trips"), fb.where("members", "array-contains", uid));
 
 export async function loadTrips(uid) {
-  const snap = await fb.getDocs(tripsCol(uid));
+  const snap = await fb.getDocs(myTrips(uid));
   const trips = {};
   snap.forEach((d) => (trips[d.id] = d.data()));
   return trips;
 }
 
-let currentUid = null;
-export function useAccount(uid) {
-  currentUid = uid;
+let me = null; // { uid, email } du compte connecté
+export function useAccount(user) {
+  me = user;
 }
 
 // Firestore refuse les valeurs undefined : on passe par JSON pour nettoyer
 const clean = (t) => JSON.parse(JSON.stringify(t));
 
-export const saveTrip = (id, trip) => fb.setDoc(fb.doc(db, "users", currentUid, "trips", id), clean(trip));
-export const deleteTrip = (id) => fb.deleteDoc(fb.doc(db, "users", currentUid, "trips", id));
+// Contenu seul : les voyageurs ne changent qu'avec les fonctions plus bas,
+// pour ne pas écraser une invitation faite au même moment par quelqu'un d'autre
+function content(trip) {
+  const c = clean(trip);
+  SHARING.forEach((k) => delete c[k]);
+  return c;
+}
+
+// Nouveau voyage : on en est le créateur et le seul voyageur
+export const newTripSharing = () => ({ owner: me.uid, members: [me.uid], invites: [], emails: { [me.uid]: me.email } });
+
+export const saveTrip = (id, trip, isNew) =>
+  isNew ? fb.setDoc(tripDoc(id), clean(trip)) : fb.setDoc(tripDoc(id), content(trip), { merge: true });
+export const deleteTrip = (id) => fb.deleteDoc(tripDoc(id));
+
+// ---------- Voyageurs ----------
+export const invite = (id, email) => fb.updateDoc(tripDoc(id), { invites: fb.arrayUnion(email) });
+export const cancelInvite = (id, email) => fb.updateDoc(tripDoc(id), { invites: fb.arrayRemove(email) });
+
+// Retirer un voyageur (le créateur), ou se retirer soi-même (quitter le voyage)
+export const removeMember = (id, uid) =>
+  fb.updateDoc(tripDoc(id), { members: fb.arrayRemove(uid), [`emails.${uid}`]: fb.deleteField() });
+
+// Rejoint les voyages où notre adresse est invitée (adresse confirmée obligatoire)
+// Renvoie les noms des voyages rejoints
+export async function acceptInvites() {
+  const email = me.email.toLowerCase();
+  const snap = await fb.getDocs(fb.query(fb.collection(db, "trips"), fb.where("invites", "array-contains", email)));
+  const joined = [];
+  for (const d of snap.docs) {
+    try {
+      await fb.updateDoc(d.ref, { members: fb.arrayUnion(me.uid), invites: fb.arrayRemove(email), [`emails.${me.uid}`]: me.email });
+      joined.push(d.data().name || "Sans titre");
+    } catch {}
+  }
+  return joined;
+}
+
+// Avant le partage, les voyages étaient dans users/{uid}/trips : on les déplace dans trips
+export async function moveOldTrips(uid) {
+  const snap = await fb.getDocs(fb.collection(db, "users", uid, "trips"));
+  for (const d of snap.docs) {
+    try {
+      await fb.setDoc(tripDoc(d.id), { ...d.data(), ...newTripSharing() });
+      await fb.deleteDoc(d.ref);
+    } catch {} // on réessaiera à la prochaine connexion
+  }
+}
 
 // Préférences (favoris, devise, thème, nom) : users/{uid}/meta/prefs
 export async function loadPrefs(uid) {
   const snap = await fb.getDoc(fb.doc(db, "users", uid, "meta", "prefs"));
   return snap.exists() ? snap.data() : null;
 }
-export const savePrefs = (p) => fb.setDoc(fb.doc(db, "users", currentUid, "meta", "prefs"), clean(p));
+export const savePrefs = (p) => fb.setDoc(fb.doc(db, "users", me.uid, "meta", "prefs"), clean(p));
 
-// Écoute les modifications faites depuis un autre appareil
+// Écoute les modifications faites depuis un autre appareil ou par les autres voyageurs
 export function watchTrips(uid, onChange) {
-  return fb.onSnapshot(tripsCol(uid), (snap) => {
+  return fb.onSnapshot(myTrips(uid), (snap) => {
     if (snap.metadata.hasPendingWrites) return; // nos propres modifications
     snap.docChanges().forEach((c) => onChange(c.doc.id, c.type === "removed" ? null : c.doc.data()));
   });

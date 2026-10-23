@@ -39,7 +39,12 @@ async function onUserChange(user) {
   render();
 
   try {
-    cloud.useAccount(user.uid);
+    // L'adresse a peut-être été confirmée depuis la dernière visite
+    if (!user.emailVerified) user.emailVerified = await cloud.refreshEmailVerified().catch(() => false);
+    cloud.useAccount(user);
+    await cloud.moveOldTrips(user.uid);
+    // Voyages auxquels on a été invité : il faut une adresse confirmée
+    const joined = user.emailVerified ? await cloud.acceptInvites().catch(() => []) : [];
     const remote = await cloud.loadTrips(user.uid);
 
     // Les voyages créés sans compte sur cet appareil sont ajoutés au compte
@@ -55,9 +60,10 @@ async function onUserChange(user) {
     }
     clearLocal();
     usePrefsCloud(cloud, await cloud.loadPrefs(user.uid).catch(() => null));
+    if (joined.length) toast(joined.length > 1 ? `Vous avez rejoint ${joined.length} voyages` : `Vous avez rejoint le voyage « ${joined[0]} »`);
 
     stopWatching = cloud.watchTrips(user.uid, (id, trip) => {
-      const editing = id === state.currentId && (state.editingId || state.insertAt || state.todoAdding || document.activeElement?.id === "tripName");
+      const editing = id === state.currentId && (state.editingId || state.insertAt || state.todoAdding || isTyping());
       if (editing || hasPendingChanges(id)) return;
       applyRemote(id, trip);
       render();
@@ -67,13 +73,10 @@ async function onUserChange(user) {
   }
   state.loading = false;
   render();
-
-  // L'adresse a peut-être été confirmée depuis la dernière visite
-  if (!user.emailVerified) {
-    const verified = await cloud.refreshEmailVerified().catch(() => false);
-    if (verified && state.user === user) {
-      user.emailVerified = true;
-      render();
-    }
-  }
 }
+
+// Saisie en cours dans le nom du voyage ou le champ d'invitation : on ne réaffiche pas
+const isTyping = () => {
+  const el = document.activeElement;
+  return !!el && (el.id === "tripName" || !!el.closest("form[data-invite-form]"));
+};

@@ -37,16 +37,26 @@ const mailer = DRY_RUN ? null : nodemailer.createTransport({
 const today = todayIn("Europe/Paris");
 console.log(`Rappels du ${today} (étapes dans ${DAYS_BEFORE} jours ou moins)${DRY_RUN ? " — essai, rien n'est envoyé" : ""}`);
 
-let sentCount = 0;
-const users = await db.collection("users").listDocuments();
+// Voyages de chaque personne : { uid: { idVoyage: voyage } }
+const tripsByUser = {};
+const addTrip = (uid, id, trip) => ((tripsByUser[uid] ||= {})[id] = trip);
 
-for (const userRef of users) {
-  const uid = userRef.id;
+// Voyages partagés : chaque voyageur reçoit ses rappels
+for (const d of (await db.collection("trips").get()).docs) {
+  for (const uid of d.data().members || []) addTrip(uid, d.id, d.data());
+}
+// Anciens voyages (users/{uid}/trips), pas encore déplacés : la personne ne s'est pas reconnectée depuis
+for (const userRef of await db.collection("users").listDocuments()) {
+  for (const d of (await userRef.collection("trips").get()).docs) addTrip(userRef.id, d.id, d.data());
+}
+
+let sentCount = 0;
+
+for (const [uid, trips] of Object.entries(tripsByUser)) {
+  const userRef = db.collection("users").doc(uid);
   const prefs = (await userRef.collection("meta").doc("prefs").get()).data() || {};
   if (prefs.emailReminders === false) continue;
 
-  const tripsSnap = await userRef.collection("trips").get();
-  const trips = Object.fromEntries(tripsSnap.docs.map((d) => [d.id, d.data()]));
   const sentRef = userRef.collection("meta").doc("reminders");
   const sent = (await sentRef.get()).data() || {};
 
