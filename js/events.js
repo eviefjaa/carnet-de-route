@@ -1,6 +1,6 @@
 // Réactions aux clics, saisies et envois de formulaires
 
-import { state, currentTrip, save, createTrip, deleteTrip, neighbours } from "./store.js";
+import { state, currentTrip, save, flush, createTrip, deleteTrip, neighbours } from "./store.js";
 import { render } from "./views/trip.js";
 import { linkRow, newStop, readStopForm } from "./views/stop.js";
 import { newTransport, readTransportForm } from "./views/transport.js";
@@ -267,7 +267,13 @@ function onAccountClick(act, b) {
       setAuthMode(b.dataset.mode);
       break;
     case "sign-out":
-      cloud.signOut().then(() => toast("Vous êtes déconnecté(e)"));
+      // On envoie d'abord les dernières modifications, encore en attente
+      flush().then(() => cloud.signOut()).then(() => toast("Vous êtes déconnecté(e)"));
+      return true;
+    case "resend-verification":
+      cloud.resendVerification()
+        .then(() => toast("E-mail de confirmation envoyé. Pensez à regarder dans vos spams."))
+        .catch((err) => toast(cloud.errorMessage(err)));
       return true;
     default:
       return false;
@@ -297,7 +303,10 @@ async function onAuthSubmit(f) {
   btn.disabled = true;
   try {
     if (mode === "signin") await cloud.signIn(email, password);
-    else if (mode === "signup") await cloud.signUp(email, password);
+    else if (mode === "signup") {
+      await cloud.signUp(email, password);
+      toast("Compte créé. Confirmez votre adresse avec le lien reçu par e-mail pour recevoir les rappels.");
+    }
     else {
       await cloud.resetPassword(email);
       show("E-mail envoyé. Pensez à regarder dans vos spams.", true);

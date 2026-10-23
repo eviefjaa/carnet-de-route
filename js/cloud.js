@@ -24,13 +24,26 @@ export async function init(onUser) {
   auth = a.getAuth(firebaseApp);
   auth.languageCode = "fr";
   db = f.getFirestore(firebaseApp);
-  a.onAuthStateChanged(auth, (u) => onUser(u ? { uid: u.uid, email: u.email } : null));
+  a.onAuthStateChanged(auth, (u) => onUser(u ? { uid: u.uid, email: u.email, emailVerified: u.emailVerified } : null));
   return true;
 }
 
 // ---------- Compte ----------
-export const signUp = (email, password) => fb.createUserWithEmailAndPassword(auth, email, password);
-export const signIn = (email, password) => fb.signInWithEmailAndPassword(auth, email, password);
+// Un e-mail de confirmation est envoyé : les rappels ne partent que vers une adresse confirmée
+export async function signUp(email, password) {
+  const cred = await fb.createUserWithEmailAndPassword(auth, email, password);
+  await fb.sendEmailVerification(cred.user).catch(() => {});
+  return cred;
+}
+export const resendVerification = () => fb.sendEmailVerification(auth.currentUser);
+
+// L'état « adresse confirmée » est gardé en mémoire par Firebase : on le redemande au serveur
+export async function refreshEmailVerified() {
+  await auth.currentUser.reload();
+  return auth.currentUser.emailVerified;
+}
+
+export const signIn =(email, password) => fb.signInWithEmailAndPassword(auth, email, password);
 export const signOut = () => fb.signOut(auth);
 export const resetPassword = (email) => fb.sendPasswordResetEmail(auth, email);
 

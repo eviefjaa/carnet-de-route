@@ -1,7 +1,7 @@
 // Navigation entre les pages du menu, via l'adresse (#destinations, #favoris…)
 // Les boutons Précédent / Suivant du navigateur fonctionnent, et chaque page a son lien.
 
-import { state } from "./store.js";
+import { state, resetUi } from "./store.js";
 
 export const PAGES = {
   trips: { hash: "voyages", label: "Mes voyages" },
@@ -32,6 +32,7 @@ export function readHash() {
 export function bindRouter(render) {
   window.addEventListener("hashchange", () => {
     readHash();
+    resetUi(); // une confirmation ou un formulaire ouvert ne suit pas sur la page suivante
     state.authOpen = false;
     closeMenu();
     render();

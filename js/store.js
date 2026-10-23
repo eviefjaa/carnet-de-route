@@ -17,6 +17,7 @@ export const state = {
   editingId: null,  // élément en cours de modification
   insertAt: null,   // { pos, draft } : nouvel élément en cours de création
   confirm: null,    // id de l'élément à confirmer pour suppression ("trip" pour le voyage)
+  todoAdding: null, // id de l'étape dont on remplit la checklist
   user: null,       // { uid, email } quand on est connecté
   authOpen: false,  // écran de connexion affiché
   loading: false,   // chargement des voyages du compte en cours
@@ -49,6 +50,12 @@ export function save() {
   if (!cloud) return saveLocal();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(flushCloud, 500);
+}
+
+// Envoie tout de suite les modifications en attente (avant une déconnexion)
+export function flush() {
+  clearTimeout(saveTimer);
+  return flushCloud();
 }
 
 function saveLocal() {
@@ -123,6 +130,7 @@ export function resetUi() {
   state.editingId = null;
   state.insertAt = null;
   state.confirm = null;
+  state.todoAdding = null;
 }
 
 export function selectTrip(id) {
@@ -163,7 +171,8 @@ export function tripEnd(t) {
     if (i.type === "transport" && i.arr) ds.push(i.arr.slice(0, 10));
   });
   ds.sort();
-  return ds[ds.length - 1] || null;
+  // Sans date de fin (ex. trajet sans heure d'arrivée), le voyage finit le jour où il commence
+  return ds[ds.length - 1] || tripStart(t);
 }
 
 // Étapes juste avant et juste après une position (pour pré-remplir un trajet)

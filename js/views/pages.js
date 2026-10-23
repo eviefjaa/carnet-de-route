@@ -81,7 +81,12 @@ export function settingsView() {
     <div class="panel">
       <h2>Rappels par e-mail</h2>
       <label class="radio"><input type="checkbox" id="emailReminders"${prefs.emailReminders !== false ? " checked" : ""}> Me prévenir par e-mail 3 jours avant une étape s'il reste des choses à réserver</label>
-      <p class="note">${state.user ? `Les rappels sont envoyés à ${esc(state.user.email)}.` : "Les rappels nécessitent un compte : connectez-vous pour les recevoir."}</p>
+      <p class="note">${!state.user
+        ? "Les rappels nécessitent un compte : connectez-vous pour les recevoir."
+        : state.user.emailVerified
+          ? `Les rappels sont envoyés à ${esc(state.user.email)}.`
+          : `Confirmez d'abord votre adresse ${esc(state.user.email)} avec le lien reçu par e-mail : les rappels ne partent que vers une adresse confirmée.`}</p>
+      ${state.user && !state.user.emailVerified ? `<div class="row-btns"><button class="btn" data-act="resend-verification" type="button">Renvoyer l'e-mail de confirmation</button></div>` : ""}
     </div>
 
     <div class="panel">

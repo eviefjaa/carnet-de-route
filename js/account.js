@@ -57,7 +57,7 @@ async function onUserChange(user) {
     usePrefsCloud(cloud, await cloud.loadPrefs(user.uid).catch(() => null));
 
     stopWatching = cloud.watchTrips(user.uid, (id, trip) => {
-      const editing = id === state.currentId && (state.editingId || state.insertAt || document.activeElement?.id === "tripName");
+      const editing = id === state.currentId && (state.editingId || state.insertAt || state.todoAdding || document.activeElement?.id === "tripName");
       if (editing || hasPendingChanges(id)) return;
       applyRemote(id, trip);
       render();
@@ -67,4 +67,13 @@ async function onUserChange(user) {
   }
   state.loading = false;
   render();
+
+  // L'adresse a peut-être été confirmée depuis la dernière visite
+  if (!user.emailVerified) {
+    const verified = await cloud.refreshEmailVerified().catch(() => false);
+    if (verified && state.user === user) {
+      user.emailVerified = true;
+      render();
+    }
+  }
 }

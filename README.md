@@ -64,7 +64,7 @@ Les fichiers JavaScript sont des modules : le site doit être ouvert via une adr
 
 ## Rappels par e-mail
 
-Chaque jour, GitHub Actions lance `scripts/reminders/send-reminders.js`. Pour chaque étape qui commence dans 3 jours ou moins et dont la checklist contient encore des éléments non cochés, un e-mail est envoyé à l'adresse du compte (une seule fois par étape).
+Chaque jour, GitHub Actions lance `scripts/reminders/send-reminders.js`. Pour chaque étape qui commence dans 3 jours ou moins et dont la checklist contient encore des éléments non cochés, un e-mail est envoyé à l'adresse du compte (une seule fois par étape). Seules les adresses confirmées reçoivent les rappels : un lien de confirmation est envoyé à la création du compte.
 
 Secrets à créer dans GitHub (Settings → Secrets and variables → Actions) :
 - `FIREBASE_SERVICE_ACCOUNT` : contenu du fichier JSON de la clé de compte de service Firebase

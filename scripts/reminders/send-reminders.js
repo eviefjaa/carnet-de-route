@@ -53,9 +53,12 @@ for (const userRef of users) {
   const due = findDueReminders(trips, today, DAYS_BEFORE, sent);
   if (!due.length) continue;
 
+  // Seulement vers une adresse confirmée : sinon n'importe qui pourrait
+  // créer un compte avec l'adresse d'un autre et lui faire envoyer des e-mails
   let email = null;
   try {
-    email = (await admin.auth().getUser(uid)).email;
+    const user = await admin.auth().getUser(uid);
+    if (user.emailVerified) email = user.email;
   } catch {}
   if (!email) continue;
 
