@@ -9,6 +9,9 @@ Sans compte, les voyages sont enregistrés dans le navigateur (localStorage). Av
 ```
 index.html            Page principale
 firestore.rules       Règles de sécurité Firestore (à copier dans la console Firebase)
+.github/workflows/
+  reminders.yml       Rappels par e-mail, lancés chaque jour par GitHub Actions
+scripts/reminders/    Programme d'envoi des rappels (Node.js)
 css/
   base.css            Couleurs (thèmes clair et sombre), polices
   layout.css          Menu de gauche et mise en page
@@ -19,6 +22,7 @@ css/
   autocomplete.css    Suggestions de lieux
   explore.css         Destinations, fiches pays, favoris, profil, paramètres
   budget.css          Budget et prix
+  checklist.css       Checklist des étapes
   trips.css           Page Mes voyages (cartes)
 js/
   app.js              Point d'entrée
@@ -45,6 +49,7 @@ js/
     transport.js      Trajet : affichage et formulaire
     actions.js        Boutons d'action et d'insertion
     budget.js         Section Budget (tableau des coûts)
+    checklist.js      Checklist « À faire et à réserver » de chaque étape
     auth.js           Écran de connexion et bouton de compte
     sidebar.js        Menu de gauche
     explore.js        Destinations, fiche pays, favoris
@@ -56,3 +61,14 @@ js/
 Le site est publié avec GitHub Pages (Settings → Pages → branche `main`, dossier `/ (root)`).
 
 Les fichiers JavaScript sont des modules : le site doit être ouvert via une adresse web (GitHub Pages ou un petit serveur local), pas en double-cliquant sur `index.html`.
+
+## Rappels par e-mail
+
+Chaque jour, GitHub Actions lance `scripts/reminders/send-reminders.js`. Pour chaque étape qui commence dans 3 jours ou moins et dont la checklist contient encore des éléments non cochés, un e-mail est envoyé à l'adresse du compte (une seule fois par étape).
+
+Secrets à créer dans GitHub (Settings → Secrets and variables → Actions) :
+- `FIREBASE_SERVICE_ACCOUNT` : contenu du fichier JSON de la clé de compte de service Firebase
+- `GMAIL_USER` : adresse Gmail qui envoie les rappels
+- `GMAIL_APP_PASSWORD` : mot de passe d'application Gmail
+
+Ne jamais ajouter le fichier JSON de la clé dans le dépôt : il est public.

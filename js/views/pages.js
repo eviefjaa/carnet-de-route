@@ -79,6 +79,12 @@ export function settingsView() {
     </div>
 
     <div class="panel">
+      <h2>Rappels par e-mail</h2>
+      <label class="radio"><input type="checkbox" id="emailReminders"${prefs.emailReminders !== false ? " checked" : ""}> Me prévenir par e-mail 3 jours avant une étape s'il reste des choses à réserver</label>
+      <p class="note">${state.user ? `Les rappels sont envoyés à ${esc(state.user.email)}.` : "Les rappels nécessitent un compte : connectez-vous pour les recevoir."}</p>
+    </div>
+
+    <div class="panel">
       <h2>Mes données</h2>
       <p class="note">${state.user ? "Vos voyages sont enregistrés dans votre compte." : "Vos voyages sont enregistrés uniquement dans ce navigateur."} Vous pouvez en télécharger une copie à tout moment.</p>
       <div class="row-btns"><button class="btn" data-act="export" type="button">Télécharger mes voyages (fichier JSON)</button></div>

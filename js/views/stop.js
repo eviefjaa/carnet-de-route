@@ -4,6 +4,7 @@ import { esc, uid, safeUrl, source, fmtDay, nights, plural, fmtMoney, priceInput
 import { tripStart } from "../store.js";
 import { itemActions } from "./actions.js";
 import { pickedPlace } from "../autocomplete.js";
+import { checklist } from "./checklist.js";
 
 export function stopCard(it, trip, idx) {
   const start = tripStart(trip);
@@ -32,6 +33,7 @@ export function stopCard(it, trip, idx) {
     ${links.length ? `<div class="links">${links.map(linkCard).join("")}</div>` : ""}
     ${it.notes ? `<div class="notes">${esc(it.notes)}</div>` : ""}
     ${maps ? `<div class="leg-extra"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Ouvrir dans Google Maps ↗</a></div>` : ""}
+    ${checklist(it)}
     ${itemActions(it, idx, trip)}
   </article>`;
 }

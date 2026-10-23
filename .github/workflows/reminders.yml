@@ -1,0 +1,35 @@
+# Rappels par e-mail des choses à réserver
+# Tourne chaque jour, et peut être lancé à la main depuis l'onglet Actions de GitHub.
+
+name: Rappels de réservation
+
+on:
+  schedule:
+    - cron: "0 8 * * *" # tous les jours à 8 h UTC (9 h ou 10 h en France)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Essai : afficher les rappels sans envoyer d'e-mail"
+        type: boolean
+        default: true
+
+jobs:
+  rappels:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scripts/reminders
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: node test.js
+      - run: node send-reminders.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SITE_URL: https://eviefjaa.github.io/carnet-de-route/
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}

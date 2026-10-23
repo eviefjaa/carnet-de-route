@@ -5,6 +5,7 @@ import { esc, nights, plural, fmtMoney, toDate } from "../utils.js";
 import { state, tripStart, tripEnd } from "../store.js";
 import { computeBudget } from "../budget.js";
 import { COUNTRIES, flag } from "../data/countries.js";
+import { tripPending } from "./checklist.js";
 
 const DAY = 86400000;
 const todayStr = () => {
@@ -70,6 +71,7 @@ function card(s) {
     <h2><a class="tc-link" href="#voyage-${esc(id)}">${esc(trip.name || "Sans titre")}</a></h2>
     <p class="tc-dates">${s.start ? esc(fmtRange(s.start, s.end)) : "Pas encore de dates"}</p>
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : `<p class="tc-route empty-route">Aucune étape pour l'instant</p>`}
+    ${tripPending(trip) ? `<span class="todo-alert">${tripPending(trip)} à réserver</span>` : ""}
     ${dots ? `<div class="tc-dots" aria-hidden="true">${dots}</div>` : ""}
     <dl class="tc-stats">
       <div><dt>Étapes</dt><dd>${stops.length}</dd></div>

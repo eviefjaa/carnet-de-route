@@ -124,9 +124,41 @@ function onClick(e) {
   refreshComputed();
 }
 
+// ---------- Checklist des étapes ----------
+function findStop(stopId) {
+  const t = currentTrip();
+  return t ? t.items.find((i) => i.id === stopId && i.type === "stop") : null;
+}
+function findTodo(stopId, todoId) {
+  const s = findStop(stopId);
+  return s && (s.todos || []).find((x) => x.id === todoId);
+}
+function focusTodoInput() {
+  const input = document.querySelector("form[data-todo-form] input[name=text]");
+  if (input) input.focus();
+}
+
 // ---------- Menu, destinations, favoris, paramètres ----------
 function onPageClick(act, b) {
   switch (act) {
+    case "todo-add":
+      state.todoAdding = b.dataset.stop;
+      render();
+      focusTodoInput();
+      return true;
+    case "todo-cancel":
+      state.todoAdding = null;
+      render();
+      return true;
+    case "todo-del": {
+      const s = findStop(b.dataset.stop);
+      if (s) {
+        s.todos = (s.todos || []).filter((x) => x.id !== b.dataset.todo);
+        save();
+        render();
+      }
+      return true;
+    }
     case "open-menu":
       openMenu();
       return true;
@@ -171,6 +203,22 @@ function onPageClick(act, b) {
 }
 
 function onSettingChange(el) {
+  if (el.id === "emailReminders") {
+    prefs.emailReminders = el.checked;
+    savePrefs();
+    toast(el.checked ? "Rappels par e-mail activés" : "Rappels par e-mail désactivés");
+    return true;
+  }
+  if (el.dataset && el.dataset.todo && el.type === "checkbox") {
+    const todo = findTodo(el.dataset.stop, el.dataset.todo);
+    if (todo) {
+      todo.done = el.checked;
+      save();
+      render();
+      if (el.checked) toast("Réservé ✓");
+    }
+    return true;
+  }
   if (el.name === "theme") {
     prefs.theme = el.value;
     applyTheme();
@@ -261,6 +309,19 @@ async function onAuthSubmit(f) {
 }
 
 function onSubmit(e) {
+  const todoForm = e.target.closest("form[data-todo-form]");
+  if (todoForm) {
+    e.preventDefault();
+    const text = todoForm.text.value.trim();
+    const s = findStop(todoForm.dataset.todoForm);
+    if (text && s) {
+      s.todos = [...(s.todos || []), { id: uid(), text, done: false }];
+      save();
+      render();
+      focusTodoInput(); // on peut enchaîner plusieurs ajouts
+    }
+    return;
+  }
   const auth = e.target.closest("form[data-auth]");
   if (auth) {
     e.preventDefault();
@@ -291,6 +352,7 @@ function onSubmit(e) {
       const old = t.items[i];
       // Garde la position sur la carte et le pays si le lieu n'a pas été rechoisi
       if (!item.geo && old.geo) item.geo = old.geo;
+      if (old.todos) item.todos = old.todos; // la checklist n'est pas dans le formulaire
       if (item.type === "stop" && item.country === undefined && old.country && old.place === item.place) item.country = old.country;
       t.items[i] = item;
     }

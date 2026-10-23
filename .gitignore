@@ -1,0 +1,8 @@
+# Ne jamais publier les clés secrètes (le dépôt est public)
+*firebase-adminsdk*.json
+service-account*.json
+.env
+
+# Fichiers techniques
+node_modules/
+.DS_Store

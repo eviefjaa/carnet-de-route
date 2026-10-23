@@ -16,6 +16,7 @@ import { exploreView, filterCountries, countryView, favoritesView } from "./expl
 import { profileView, settingsView } from "./pages.js";
 import { prefs } from "../prefs.js";
 import { tripsListView } from "./trips-list.js";
+import { tripPending } from "./checklist.js";
 
 export function render() {
   renderAccountBar();
@@ -102,6 +103,7 @@ function hero(t) {
       <span><b>${legs.length}</b> trajet${legs.length > 1 ? "s" : ""}</span>
       ${budget ? `<span><b>${esc(fmtMoney(budget, t.currency || "EUR"))}</b></span>` : ""}
     </div>
+    ${tripPending(t) ? `<span class="todo-alert">${tripPending(t)} chose${tripPending(t) > 1 ? "s" : ""} à réserver</span>` : ""}
     ${isEnabled() ? `<p class="sync-note">${state.user ? "Synchronisé avec votre compte" : "Enregistré sur cet appareil uniquement"}</p>` : ""}
     ${del}
   </section>`;
