@@ -1,0 +1,33 @@
+/* Budget : total du voyage et tableau par destination */
+
+.budget { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.budget-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.budget-head h2 { font-size: 20px; font-weight: 700; }
+
+.currency { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.currency select { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; max-width: 100%; }
+
+.budget-total { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.b-big { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 6vw, 34px); font-variant-numeric: tabular-nums; }
+
+.table-scroll { overflow-x: auto; }
+.budget-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.budget-table th, .budget-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.budget-table thead th { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); text-align: right; }
+.budget-table thead th:first-child, .budget-table tbody th, .budget-table tfoot th { text-align: left; }
+.budget-table tbody th { font-weight: 600; white-space: normal; }
+.budget-table td { text-align: right; font-family: var(--mono); }
+.budget-table tfoot th, .budget-table tfoot td { border-bottom: 0; border-top: 2px solid var(--ink); font-weight: 700; }
+.b-total { color: var(--accent); font-weight: 600; }
+
+/* Prix affiché sur les étapes et les trajets */
+.price { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--accent); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.price-sub { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+/* Sur téléphone : tableau plus compact pour que la colonne Total reste visible */
+@media (max-width: 480px) {
+  .budget { padding: 14px 12px; }
+  .budget-table { font-size: 12px; }
+  .budget-table th, .budget-table td { padding: 7px 4px; }
+  .budget-table thead th { font-size: 10px; letter-spacing: .02em; }
+}

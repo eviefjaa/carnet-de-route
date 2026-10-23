@@ -1,6 +1,6 @@
 // Affichage et formulaire d'une étape (lieu, dates, hébergement, liens de réservation)
 
-import { esc, uid, safeUrl, source, fmtDay, nights, plural } from "../utils.js";
+import { esc, uid, safeUrl, source, fmtDay, nights, plural, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
 import { tripStart } from "../store.js";
 import { itemActions } from "./actions.js";
 
@@ -11,6 +11,10 @@ export function stopCard(it, trip, idx) {
   const links = (it.links || []).filter((l) => safeUrl(l.url));
   const where = it.address || it.place;
   const maps = where ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(where)}` : "";
+  const cur = trip.currency || "EUR";
+  const price = hasPrice(it.price)
+    ? `<div><span class="price">${esc(fmtMoney(it.price, cur))}</span>${n ? ` <span class="price-sub">soit ${esc(fmtMoney(Math.round((it.price / n) * 100) / 100, cur))} / nuit</span>` : ""}</div>`
+    : "";
 
   return `<article class="item stop">
     <div class="stop-head">
@@ -21,6 +25,7 @@ export function stopCard(it, trip, idx) {
       ${it.arrive ? esc(fmtDay(it.arrive)) : "date à définir"}${it.depart ? " → " + esc(fmtDay(it.depart)) : ""}
       ${n ? `<span class="nights">${plural(n, "nuit")}</span>` : ""}
     </div>
+    ${price}
     ${it.address ? `<div class="addr">${esc(it.address)}</div>` : ""}
     ${links.length ? `<div class="links">${links.map(linkCard).join("")}</div>` : ""}
     ${it.notes ? `<div class="notes">${esc(it.notes)}</div>` : ""}
@@ -46,7 +51,8 @@ export function stopForm(it, isNew) {
       <label class="f full">Lieu<input name="place" id="f-place-${it.id}" value="${esc(it.place)}" placeholder="Ex. Rio de Janeiro" required></label>
       <label class="f">Arrivée<input type="date" name="arrive" id="f-arr-${it.id}" value="${esc(it.arrive)}"></label>
       <label class="f">Départ<input type="date" name="depart" id="f-dep-${it.id}" value="${esc(it.depart)}" min="${esc(it.arrive)}"></label>
-      <label class="f full">Adresse de l'hébergement<input name="address" id="f-addr-${it.id}" value="${esc(it.address)}" placeholder="Optionnel : sert aussi à placer l'étape sur la carte"></label>
+      <label class="f">Prix de l'hébergement (séjour complet)<input name="price" id="f-price-${it.id}" value="${esc(priceInput(it.price))}" inputmode="decimal" placeholder="Ex. 450"></label>
+      <label class="f">Adresse de l'hébergement<input name="address" id="f-addr-${it.id}" value="${esc(it.address)}" placeholder="Optionnel : sert aussi à placer l'étape sur la carte"></label>
     </div>
     <div class="computed" data-nights></div>
     <div class="f-label">
@@ -73,6 +79,7 @@ export function linkRow(l) {
 export function readStopForm(f) {
   const o = { id: f.dataset.id, type: "stop" };
   ["place", "arrive", "depart", "address", "notes"].forEach((k) => (o[k] = f[k].value.trim()));
+  o.price = parsePrice(f.price.value);
   o.links = [...f.querySelectorAll("[data-link]")]
     .map((r) => ({
       id: r.dataset.link,
@@ -84,5 +91,5 @@ export function readStopForm(f) {
 }
 
 export function newStop(place = "", arrive = "") {
-  return { id: uid(), type: "stop", place, arrive, depart: "", address: "", notes: "", links: [] };
+  return { id: uid(), type: "stop", place, arrive, depart: "", address: "", notes: "", links: [], price: null };
 }

@@ -50,7 +50,7 @@ export function selectTrip(id) {
 
 export function createTrip() {
   const id = "v-" + uid();
-  state.trips[id] = { name: "Nouveau voyage", createdAt: Date.now(), items: [] };
+  state.trips[id] = { name: "Nouveau voyage", currency: "EUR", createdAt: Date.now(), items: [] };
   selectTrip(id);
   return id;
 }

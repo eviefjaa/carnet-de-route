@@ -83,3 +83,39 @@ export function duration(a, b) {
 }
 
 export const plural = (n, word) => `${n} ${word}${n > 1 ? "s" : ""}`;
+
+// ---------- Prix ----------
+export const CURRENCIES = {
+  EUR: "Euro (€)",
+  BRL: "Real brésilien (R$)",
+  USD: "Dollar américain ($)",
+  GBP: "Livre sterling (£)",
+  CHF: "Franc suisse (CHF)",
+  CAD: "Dollar canadien ($ CA)",
+};
+
+// Accepte "120", "120,50", "1 200.5" ; renvoie un nombre ou null si vide / invalide
+export function parsePrice(s) {
+  const t = String(s ?? "").replace(/\s/g, "").replace(",", ".");
+  if (!t) return null;
+  const n = Number(t);
+  return isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
+}
+
+export const hasPrice = (n) => typeof n === "number" && isFinite(n);
+
+export function fmtMoney(n, currency = "EUR") {
+  if (!hasPrice(n)) return "";
+  try {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: Number.isInteger(n) ? 0 : 2,
+    }).format(n);
+  } catch {
+    return n.toFixed(2) + " " + currency;
+  }
+}
+
+// Valeur affichée dans un champ prix (virgule à la française)
+export const priceInput = (n) => (hasPrice(n) ? String(n).replace(".", ",") : "");

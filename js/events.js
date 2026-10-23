@@ -13,6 +13,12 @@ export function bindEvents() {
   document.addEventListener("input", onInput);
   // Safari ne signale pas toujours les changements de date par "input" : on écoute aussi "change"
   document.addEventListener("change", (e) => {
+    if (e.target.id === "tripCurrency") {
+      currentTrip().currency = e.target.value;
+      save();
+      render();
+      return;
+    }
     const f = e.target.closest("form[data-form]");
     if (f) { keepEndAfterStart(f); refreshComputed(); }
   });

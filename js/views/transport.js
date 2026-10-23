@@ -1,6 +1,6 @@
 // Affichage et formulaire d'un trajet (moyen de transport, lieux, horaires, durée)
 
-import { esc, uid, safeUrl, MODES, duration, fmtDateTime } from "../utils.js";
+import { esc, uid, safeUrl, MODES, duration, fmtDateTime, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
 import { itemActions } from "./actions.js";
 
 export function transportCard(it, trip, idx) {
@@ -16,6 +16,7 @@ export function transportCard(it, trip, idx) {
         <span>Départ <b>${esc(fmtDateTime(it.dep))}</b></span>
         <span>Arrivée <b>${esc(fmtDateTime(it.arr))}</b></span>
         ${d ? `<span class="dur">${esc(d)}</span>` : ""}
+        ${hasPrice(it.price) ? `<span class="price">${esc(fmtMoney(it.price, trip.currency || "EUR"))}</span>` : ""}
       </div>
       ${hasExtra ? `<div class="leg-extra">
         ${it.company ? `<span>${esc(it.company)}</span>` : ""}
@@ -43,8 +44,9 @@ export function transportForm(it, isNew) {
       <label class="f">Départ (date et heure)<input type="datetime-local" name="dep" id="t-dep-${it.id}" value="${esc(it.dep)}"></label>
       <label class="f">Arrivée (date et heure)<input type="datetime-local" name="arr" id="t-arr-${it.id}" value="${esc(it.arr)}" min="${esc(it.dep)}"></label>
       <div class="computed full" data-duration></div>
+      <label class="f">Prix<input name="price" id="t-price-${it.id}" value="${esc(priceInput(it.price))}" inputmode="decimal" placeholder="Ex. 80"></label>
       <label class="f">N° de réservation<input name="ref" id="t-ref-${it.id}" value="${esc(it.ref)}"></label>
-      <label class="f">Lien de réservation<input name="url" id="t-url-${it.id}" value="${esc(it.url)}" placeholder="https://…" inputmode="url"></label>
+      <label class="f full">Lien de réservation<input name="url" id="t-url-${it.id}" value="${esc(it.url)}" placeholder="https://…" inputmode="url"></label>
       <label class="f full">Notes<input name="notes" id="t-notes-${it.id}" value="${esc(it.notes)}" placeholder="Quai, siège, bagages…"></label>
     </div>
     <div class="form-actions">
@@ -57,9 +59,10 @@ export function transportForm(it, isNew) {
 export function readTransportForm(f) {
   const o = { id: f.dataset.id, type: "transport" };
   ["mode", "from", "to", "dep", "arr", "company", "ref", "url", "notes"].forEach((k) => (o[k] = f[k].value.trim()));
+  o.price = parsePrice(f.price.value);
   return o;
 }
 
 export function newTransport(from = "", to = "", dep = "") {
-  return { id: uid(), type: "transport", mode: "bus", from, to, dep, arr: "", company: "", ref: "", url: "", notes: "" };
+  return { id: uid(), type: "transport", mode: "bus", from, to, dep, arr: "", company: "", ref: "", url: "", notes: "", price: null };
 }

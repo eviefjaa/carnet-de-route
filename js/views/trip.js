@@ -1,10 +1,12 @@
 // Page d'un voyage : en-tête, résumé, carte et itinéraire
 
-import { esc, fmtDay, nights, plural } from "../utils.js";
+import { esc, fmtDay, nights, plural, fmtMoney } from "../utils.js";
 import { state, currentTrip, tripStart, tripEnd } from "../store.js";
 import { stopCard, stopForm } from "./stop.js";
 import { transportCard, transportForm } from "./transport.js";
 import { insertRow } from "./actions.js";
+import { budgetSection } from "./budget.js";
+import { computeBudget } from "../budget.js";
 import { drawMap } from "../map.js";
 import { scheduleGeo } from "../geocode.js";
 
@@ -23,7 +25,7 @@ export function render() {
   }
 
   const stops = t.items.filter((i) => i.type === "stop");
-  app.innerHTML = hero(t) + (stops.length ? mapSection() : "") + itinerary(t);
+  app.innerHTML = hero(t) + (stops.length ? mapSection() : "") + (t.items.length ? budgetSection(t) : "") + itinerary(t);
   drawMap();
   scheduleGeo();
 }
@@ -42,6 +44,7 @@ function hero(t) {
   const legs = t.items.filter((i) => i.type === "transport");
   const totalNights = stops.reduce((s, i) => s + (nights(i.arrive, i.depart) || 0), 0);
   const start = tripStart(t), end = tripEnd(t);
+  const budget = computeBudget(t).total.total;
 
   const del = state.confirm === "trip"
     ? `<div class="confirm">Supprimer « ${esc(t.name)} » et tout son contenu ?
@@ -57,6 +60,7 @@ function hero(t) {
       <span><b>${stops.length}</b> étape${stops.length > 1 ? "s" : ""}</span>
       <span><b>${plural(totalNights, "nuit")}</b></span>
       <span><b>${legs.length}</b> trajet${legs.length > 1 ? "s" : ""}</span>
+      ${budget ? `<span><b>${esc(fmtMoney(budget, t.currency || "EUR"))}</b></span>` : ""}
     </div>
     ${del}
   </section>`;
