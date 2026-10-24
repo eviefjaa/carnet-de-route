@@ -198,7 +198,7 @@ function readOnlyItem(it) {
       <h2>${esc(it.place || "Étape")}</h2>
       ${it.country ? `<span class="stop-country">${esc(it.country)}</span>` : ""}
     </div>
-    ${it.nights ? `<div class="dates"><span class="nights">${plural(+it.nights, "nuit")}</span></div>` : ""}
+    ${it.nights === 0 ? `<div class="dates"><span class="nights is-halt">Arrêt</span></div>` : it.nights ? `<div class="dates"><span class="nights">${plural(+it.nights, "nuit")}</span></div>` : ""}
     ${todos.length ? `<section class="checklist"><div class="cl-head"><h3>À faire</h3></div>
       <ul class="post-todos">${todos.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></section>` : ""}
   </article>`;

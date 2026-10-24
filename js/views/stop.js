@@ -33,7 +33,7 @@ export function stopCard(it, trip, idx) {
       </div>
       <div class="dates">
         ${it.arrive ? esc(fmtDay(it.arrive)) : "date à définir"}${it.depart ? " → " + esc(fmtDay(it.depart)) : ""}
-        ${n ? `<span class="nights">${plural(n, "nuit")}</span>` : ""}
+        ${n === 0 ? `<span class="nights is-halt">Arrêt</span>` : n ? `<span class="nights">${plural(n, "nuit")}</span>` : ""}
       </div>
       ${toBook.length ? `<p class="to-book">À réserver : ${toBook.slice(0, 3).map(esc).join(", ")}${toBook.length > 3 ? ` et ${toBook.length - 3} autre${toBook.length > 4 ? "s" : ""}` : ""}</p>` : ""}
     </div>

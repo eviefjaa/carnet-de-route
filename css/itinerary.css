@@ -14,7 +14,9 @@
 .stop-head h2 { font-size: 22px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
 .day { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--accent); }
 .dates { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.nights { display: inline-block; font-family: var(--mono); font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--bg); color: var(--ink); }
+.nights { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--night-bg); color: var(--night-ink); }
+/* Étape sans nuit sur place (arrivée et départ le même jour) */
+.nights.is-halt { background: var(--halt-bg); color: var(--halt-ink); }
 .addr { font-size: 14px; color: var(--muted); }
 .notes { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 

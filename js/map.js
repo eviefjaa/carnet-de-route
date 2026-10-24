@@ -83,7 +83,7 @@ function marker(it, n, ll) {
   const nb = it.nights ?? nights(it.arrive, it.depart);
   // Publication : « Jour 3 » au lieu des dates
   const dates = it.day ? `Jour ${+it.day}` : `${it.arrive ? esc(fmtDay(it.arrive)) : ""}${it.depart ? " → " + esc(fmtDay(it.depart)) : ""}`;
-  const popup = `<b>${n}. ${esc(it.place)}</b><br>${dates}${nb ? " · " + plural(nb, "nuit") : ""}`;
+  const popup = `<b>${n}. ${esc(it.place)}</b><br>${dates}${nb === 0 ? " · arrêt" : nb ? " · " + plural(nb, "nuit") : ""}`;
   return L.marker(ll, {
     title: it.place,
     icon: L.divIcon({ className: "pin", html: `<span>${n}</span>`, iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14] }),

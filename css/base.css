@@ -14,6 +14,9 @@
   --danger: #b3261e;
   --heart: #d6336c;
   --focus: #0f6b5c;
+  /* Badge des nuits (bleu) et des arrêts sans nuit (jaune) */
+  --night-bg: #1e3a8a; --night-ink: #ffffff;
+  --halt-bg: #e8a800; --halt-ink: #12302b;
   --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -25,6 +28,7 @@
     --bg: #0e1917; --surface: #15231f; --ink: #e3eeea; --muted: #94a9a3; --line: #2a3d38;
     --route: #f2bf2e; --accent: #4cc3a9; --accent-ink: #062a23; --accent-soft: #1b3a33; --ticket: #2a2617;
     --danger: #ff8a80; --heart: #ff6b9a; --focus: #4cc3a9;
+    --night-bg: #9cc3ff; --night-ink: #0b1d3a; --halt-bg: #f2bf2e; --halt-ink: #12302b;
     color-scheme: dark;
   }
 }
@@ -33,6 +37,7 @@
   --bg: #0e1917; --surface: #15231f; --ink: #e3eeea; --muted: #94a9a3; --line: #2a3d38;
   --route: #f2bf2e; --accent: #4cc3a9; --accent-ink: #062a23; --accent-soft: #1b3a33; --ticket: #2a2617;
   --danger: #ff8a80; --heart: #ff6b9a; --focus: #4cc3a9;
+  --night-bg: #9cc3ff; --night-ink: #0b1d3a; --halt-bg: #f2bf2e; --halt-ink: #12302b;
   color-scheme: dark;
 }
 
