@@ -63,3 +63,17 @@
 
 /* Page seule (404), sans le menu du site */
 .standalone .wrap { max-width: 720px; margin: 0 auto; padding: clamp(24px, 6vh, 64px) 16px; }
+
+/* Glisser une carte vers la gauche : poubelle rouge (js/swipe.js) */
+.swipe { position: relative; border-radius: 16px; overflow: hidden; }
+.swipe > .trip-card { touch-action: pan-y; transition: transform .2s ease, border-color .15s; height: 100%; }
+.swipe > .trip-card.dragging { transition: none; }
+.swipe.open > .trip-card { transform: translateX(-88px); }
+.swipe-action { position: absolute; top: 0; right: 0; bottom: 0; width: 88px; border: 0; border-radius: 0 16px 16px 0; background: var(--danger); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: 600 12px/1 var(--body); cursor: pointer; }
+/* Au clavier : la poubelle se dévoile quand elle reçoit le focus */
+.swipe:has(.swipe-action:focus-visible) > .trip-card { transform: translateX(-88px); }
+.swipe-action:focus-visible { outline: 3px solid var(--focus); outline-offset: -6px; }
+.swipe-confirm { justify-content: center; gap: 12px; border-color: var(--danger); }
+.swipe-confirm p { margin: 0; font-weight: 600; }
+.btn.danger-solid { background: var(--danger); border-color: var(--danger); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .swipe > .trip-card { transition: none; } }

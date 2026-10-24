@@ -6,6 +6,7 @@ import { bindEvents } from "./events.js";
 import { render, renderSync } from "./views/trip.js";
 import { startAccounts } from "./account.js";
 import { bindAutocomplete } from "./autocomplete.js";
+import { bindSwipe } from "./swipe.js";
 import { readHash, bindRouter } from "./router.js";
 import { onSocialLoaded, resetSocial, refreshNotifications } from "./social.js";
 import { renderSidebar } from "./views/sidebar.js";
@@ -16,6 +17,7 @@ replaceTrips(loadLocal());
 readHash();
 bindEvents();
 bindAutocomplete();
+bindSwipe();
 // Profils, fils et commentaires rechargés à chaque page : on voit les nouveautés des autres
 window.addEventListener("hashchange", resetSocial);
 bindRouter(render);

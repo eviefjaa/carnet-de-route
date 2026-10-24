@@ -264,6 +264,28 @@ function onPageClick(act, b) {
       state.inviteOpen = false;
       render();
       return true;
+    case "swipe-delete":
+      state.confirm = "swipe:" + b.dataset.trip;
+      render();
+      return true;
+    case "swipe-cancel":
+      state.confirm = null;
+      render();
+      return true;
+    case "swipe-delete-yes": {
+      const id = b.dataset.trip;
+      const trip = state.trips[id];
+      state.confirm = null;
+      if (!trip) return render(), true;
+      if (isOwner(trip)) {
+        deleteTrip(id); // ses billets sont supprimés avec lui dans le compte
+        toast("Voyage supprimé");
+      } else {
+        leaveTrip(id);
+      }
+      render();
+      return true;
+    }
     case "invite-join":
     case "invite-decline":
       answerInvitation(b.dataset.trip, act === "invite-join");

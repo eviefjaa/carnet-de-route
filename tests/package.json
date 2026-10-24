@@ -7,7 +7,7 @@
     "test": "npm run test:unit && npm run test:rules",
     "test:unit": "node unit/run.mjs",
     "test:rules": "firebase emulators:exec --config ../firebase.json --only firestore --project demo-carnet \"node rules/voyages.test.mjs && node rules/social.test.mjs\"",
-    "test:e2e": "firebase emulators:exec --config ../firebase.json --only auth,firestore --project carnet-de-route-23ffc \"node e2e/parcours.test.mjs\"",
+    "test:e2e": "firebase emulators:exec --config ../firebase.json --only auth,firestore --project carnet-de-route-23ffc \"node e2e/parcours.test.mjs && node e2e/glisser.test.mjs\"",
     "test:tout": "npm test && npm run test:e2e"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@
 // Un clic sur la carte ouvre le voyage (#voyage-<id>).
 
 import { esc, nights, plural, fmtMoney, toDate } from "../utils.js";
-import { state, tripStart, tripEnd } from "../store.js";
+import { state, tripStart, tripEnd, isOwner } from "../store.js";
 import { computeBudget } from "../budget.js";
 import { COUNTRIES } from "../data/countries.js";
 import { tripPending } from "./checklist.js";
@@ -83,7 +83,26 @@ function card(s) {
   const route = places.length > 4 ? [...places.slice(0, 3), `+${places.length - 3}`] : places;
   const dots = stops.slice(0, 12).map(() => "<i></i>").join("");
 
-  return `<article class="trip-card is-${s.status.key}">
+  const owner = isOwner(trip);
+  const name = trip.name || "Sans titre";
+  // Confirmation après la poubelle (une suppression efface aussi les billets, sans retour possible)
+  if (state.confirm === "swipe:" + id) {
+    return `<div class="swipe"><div class="trip-card swipe-confirm" role="group" aria-label="Confirmation">
+      <p>${owner ? `Supprimer « ${esc(name)} » et tout son contenu ?` : `Quitter « ${esc(name)} » ? Il disparaîtra de vos voyages.`}</p>
+      <div class="row-btns">
+        <button class="btn danger-solid" data-act="swipe-delete-yes" data-trip="${esc(id)}" type="button">${owner ? "Supprimer" : "Quitter"}</button>
+        <button class="btn" data-act="swipe-cancel" type="button">Annuler</button>
+      </div>
+    </div></div>`;
+  }
+
+  // Glisser vers la gauche fait apparaître la poubelle (js/swipe.js)
+  return `<div class="swipe">
+    <button class="swipe-action" data-act="swipe-delete" data-trip="${esc(id)}" type="button" aria-label="${owner ? "Supprimer" : "Quitter"} le voyage « ${esc(name)} »">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+      <span>${owner ? "Supprimer" : "Quitter"}</span>
+    </button>
+    <article class="trip-card is-${s.status.key}">
     <div class="tc-top">
       <span class="tc-status">${esc(s.status.label)}</span>
       ${(trip.members || []).length > 1 ? `<span class="tc-shared">Partagé · ${trip.members.length}</span>` : ""}
@@ -99,7 +118,8 @@ function card(s) {
       <div><dt>Nuits</dt><dd>${s.nights}</dd></div>
       <div><dt>Budget</dt><dd>${s.budget ? esc(fmtMoney(s.budget, trip.currency || "EUR")) : "–"}</dd></div>
     </dl>
-  </article>`;
+  </article>
+  </div>`;
 }
 
 export function tripsListView() {
