@@ -55,7 +55,7 @@ export function postCard(p) {
     <h2><a class="tc-link" href="#publication-${esc(p.id)}">${esc(p.title)}</a></h2>
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
     <p class="tc-dates">${plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
-    ${p.owner === me() ? `<span class="vis-badge">${esc(social.VISIBILITIES[p.visibility] || "")}</span>` : ""}
+    ${p.owner === me() ? `<span class="vis-badge is-published">Publié · ${esc(social.VISIBILITIES[p.visibility] || "")}</span>` : ""}
   </article>`;
 }
 
@@ -462,7 +462,7 @@ export function notificationsView() {
 // Page d'une liste de Mon profil : demandes, abonnés, abonnements ou publications
 export function networkView(tab) {
   const title = NETWORK_PAGES[tab] || "Mon profil";
-  const head = `<a class="back" href="#profil">← Mon profil</a><header class="page-head"><h1>${esc(title)}</h1></header>`;
+  const head = `${tab === "mes-publications" ? "" : `<a class="back" href="#profil">← Mon profil</a>`}<header class="page-head"><h1>${esc(title)}</h1>${tab === "mes-publications" ? `<p class="lead">Les copies figées de vos voyages que vous avez publiées. Vos voyages, eux, restent modifiables dans Mes voyages.</p>` : ""}</header>`;
   if (!state.user) return `<section class="page">${head}${signInPanel("Connectez-vous pour voir vos abonnés et vos publications.")}</section>`;
 
   const person = (f, buttons) => `<li>

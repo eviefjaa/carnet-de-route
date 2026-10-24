@@ -123,6 +123,11 @@ await alice.type('[name="recoNote"]', "Les meilleurs ramens du quartier.");
 await alice.type('[name="recoUrl"]', "javascript:alert(1)");
 await alice.click('[data-publish-form] button[type="submit"]');
 await sleep(3000);
+check("après publication : page Mes publications", (await alice.evaluate(() => location.hash)) === "#mes-publications");
+check("statut affiché : Publié · Tout le monde", (await text(alice)).includes("Publié · Tout le monde"));
+check("Mes publications dans le menu", !!(await alice.$('#sidebar a[href="#mes-publications"]')));
+await alice.click(".post-card .tc-link");
+await sleep(2500);
 const postHash = await alice.evaluate(() => location.hash);
 check("publication créée", postHash.startsWith("#publication-"));
 const postText = await text(alice);
@@ -131,6 +136,9 @@ check("publication : « Jour 1 » au lieu des dates", postText.includes("JOUR 1"
 check("recommandation affichée", postText.includes("Chez Jo") && postText.includes("Les meilleurs ramens"));
 check("lien javascript: non publié", !(await alice.$('a[href^="javascript"]')));
 check("publication : ni prix, ni notes, ni adresse", !postText.includes("999") && !postText.includes("4321") && !postText.includes("secrète"));
+
+await goHash(alice, "voyages");
+check("Mes voyages : le voyage reste sans pastille « Publié »", (await text(alice)).includes("Japon en train") && !(await text(alice)).includes("Publié"));
 
 // ---------- Alice : trajet avec un billet PDF, ouverture du billet ----------
 await goHash(alice, tripHash.slice(1));

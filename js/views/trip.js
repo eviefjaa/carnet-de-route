@@ -31,6 +31,7 @@ const PAGE_META = {
   settings: ["Paramètres", "Thème, devise par défaut, rappels par e-mail et export de vos voyages."],
   feed: ["Fil d'actualité", "Les derniers itinéraires des voyageurs que vous suivez."],
   discover: ["Découvrir", "Les derniers itinéraires publiés par la communauté Carnet de route."],
+  publications: ["Mes publications", "Vos itinéraires publiés et leur visibilité."],
   notifications: ["Notifications", "Commentaires, abonnements et voyageurs qui rejoignent vos voyages."],
 };
 
@@ -66,7 +67,7 @@ export function render() {
   renderSidebar();
   const app = document.getElementById("app");
   const busy = state.authOpen || state.loading;
-  document.getElementById("wrap").classList.toggle("wide", ["trips", "explore", "country", "favorites", "feed", "discover", "person"].includes(state.view) && !busy);
+  document.getElementById("wrap").classList.toggle("wide", ["trips", "explore", "country", "favorites", "feed", "discover", "person", "publications"].includes(state.view) && !busy);
 
   if (state.authOpen) {
     app.innerHTML = authScreen();
@@ -102,6 +103,9 @@ export function render() {
       return;
     case "discover":
       app.innerHTML = discoverView();
+      return;
+    case "publications":
+      app.innerHTML = networkView("mes-publications");
       return;
     case "network":
       app.innerHTML = networkView(state.networkTab);

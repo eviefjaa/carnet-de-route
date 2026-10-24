@@ -82,3 +82,6 @@
 /* Cœur des itinéraires publiés */
 .post-card .tc-top .fav.small { margin-left: 4px; }
 .post-actions { align-items: center; }
+
+/* Statut de ses propres publications */
+.vis-badge.is-published { background: var(--accent-soft); color: var(--accent); }

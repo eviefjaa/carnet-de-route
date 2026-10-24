@@ -60,7 +60,7 @@ export function onSocialClick(act, b) {
       attempt(async () => {
         await social.deletePost(b.dataset.post);
         toast("Publication supprimée");
-        go("profil");
+        go("mes-publications");
       }, "Impossible de supprimer la publication. Vérifiez votre connexion.");
       return true;
     case "add-reco-row": {
@@ -125,10 +125,10 @@ export function onSocialSubmit(e) {
       stop: r.querySelector('[name="recoStop"]').value === "" ? null : +r.querySelector('[name="recoStop"]').value,
     }));
     attempt(async () => {
-      const id = await social.publish(t, { title, visibility: f.elements.visibility.value, recos });
+      await social.publish(t, { title, visibility: f.elements.visibility.value, recos });
       state.publishOpen = false;
-      toast("Itinéraire publié");
-      go("publication-" + id);
+      toast("Itinéraire publié : il est dans Mes publications");
+      go("mes-publications");
     }, "Publication impossible pour le moment. Vérifiez votre connexion.");
     return true;
   }

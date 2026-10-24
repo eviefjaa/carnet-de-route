@@ -4,10 +4,11 @@
 import { state, resetUi } from "./store.js";
 
 // Listes ouvertes depuis Mon profil
-const NETWORK = ["demandes", "abonnes", "abonnements", "mes-publications"];
+const NETWORK = ["demandes", "abonnes", "abonnements"];
 
 export const PAGES = {
   trips: { hash: "voyages", label: "Mes voyages" },
+  publications: { hash: "mes-publications", label: "Mes publications" },
   feed: { hash: "fil", label: "Fil d'actualité" },
   discover: { hash: "decouvrir", label: "Découvrir" },
   notifications: { hash: "notifications", label: "Notifications" },
