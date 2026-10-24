@@ -94,9 +94,11 @@ Dans « Mon profil », on crée un profil public (nom, pseudo unique, bio) et on
 
 Sur la page d'un voyage, « Publier l'itinéraire » crée une copie figée, que personne ne peut modifier, visible par « Tout le monde » (même sans compte, avec le lien), « Mes abonnés » ou « Moi seul(e) ». La visibilité se change et la publication se supprime à tout moment. Sont publiés : les étapes, les activités, les trajets et la carte (positions arrondies à environ 2 km), avec « Jour 1, Jour 2… » à la place des dates. Ne sont jamais publiés : dates, prix, notes, adresses, liens et numéros de réservation, billets, co-voyageurs.
 
+En publiant, on peut ajouter des recommandations facultatives : restaurants, hébergements, adresses ou activités, avec un lieu, un mot et un lien. Les itinéraires publiés peuvent être commentés par les personnes qui les voient et qui ont un profil public. Un commentaire est supprimé par son auteur ou par l'auteur de l'itinéraire, et il n'est jamais modifié.
+
 Pages : « Fil d'actualité » (publications des personnes suivies), « Découvrir » (derniers itinéraires publics et recherche de personnes), `#personne-…` (profil) et `#publication-…` (itinéraire publié).
 
-Données Firestore : `profiles/{uid}`, `handles/{pseudo}`, `follows/{abonné}_{suivi}`, `posts/{id}`. Qui voit et modifie quoi : `firestore.rules`.
+Données Firestore : `profiles/{uid}`, `handles/{pseudo}`, `follows/{abonné}_{suivi}`, `posts/{id}` (avec `recos`) et `posts/{id}/comments/{id}`. Qui voit et modifie quoi : `firestore.rules`.
 
 Tests en local avec les émulateurs Firebase : lancer `firebase emulators:start --only auth,firestore` (Java 11 ou plus récent), puis ouvrir le site sur `http://localhost:…/?emulateur`.
 

@@ -3,7 +3,8 @@
 //   profiles/{uid}        { name, nameLower, handle, bio, visibility: "public" | "private" }
 //   handles/{pseudo}      { uid } : réserve un pseudo unique
 //   follows/{abonné_suivi} { follower, followed, status: "accepted" | "pending", createdAt }
-//   posts/{id}            { owner, ownerName, ownerHandle, title, visibility, publishedAt, trip }
+//   posts/{id}            { owner, ownerName, ownerHandle, title, visibility, publishedAt, trip, recos }
+//   posts/{id}/comments/{id} { author, authorName, authorHandle, text, createdAt }
 //
 // Les identifiants des publications commencent par un compte à rebours de l'heure :
 // Firestore les rend donc de la plus récente à la plus ancienne, sans index à créer.
@@ -11,13 +12,22 @@
 
 import * as cloud from "./cloud.js";
 import { state } from "./store.js";
-import { uid } from "./utils.js";
+import { uid, safeUrl } from "./utils.js";
 import { publicCopy } from "./publish.js";
 
 const F = () => cloud.firestore();
 const me = () => (state.user ? state.user.uid : null);
 
 export const HANDLE_RE = /^[a-z0-9_.]{3,20}$/;
+// Types de recommandations
+export const RECO_KINDS = {
+  resto: "Restaurant",
+  logement: "Hébergement",
+  adresse: "Adresse",
+  activite: "Activité",
+  autre: "Autre",
+};
+
 export const VISIBILITIES = {
   public: "Tout le monde",
   followers: "Mes abonnés",
@@ -148,12 +158,25 @@ const newPostId = () => `p${String(1e13 - Date.now()).padStart(13, "0")}${uid()}
 const docs = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 const newestFirst = (a, b) => (a.id < b.id ? -1 : 1);
 
-export async function publish(trip, { title, visibility }) {
+// Recommandations nettoyées : type connu, textes coupés, lien http(s) seulement
+const cleanRecos = (recos) => (recos || [])
+  .filter((r) => r.name && r.name.trim())
+  .slice(0, 50)
+  .map((r) => ({
+    kind: RECO_KINDS[r.kind] ? r.kind : "autre",
+    name: r.name.trim().slice(0, 100),
+    where: (r.where || "").trim().slice(0, 120),
+    note: (r.note || "").trim().slice(0, 500),
+    url: safeUrl(r.url),
+    stop: Number.isInteger(r.stop) ? r.stop : null,
+  }));
+
+export async function publish(trip, { title, visibility, recos }) {
   const p = state.profile;
   const id = newPostId();
   await F().fb.setDoc(F().fb.doc(F().db, "posts", id), {
     owner: me(), ownerName: p.name, ownerHandle: p.handle,
-    title, visibility, publishedAt: Date.now(), trip: publicCopy(trip),
+    title, visibility, publishedAt: Date.now(), trip: publicCopy(trip), recos: cleanRecos(recos),
   });
   resetSocial();
   return id;
@@ -169,9 +192,38 @@ export async function setPostVisibility(id, visibility) {
   resetSocial();
 }
 
+// Les commentaires sont supprimés avec la publication
 export async function deletePost(id) {
-  await F().fb.deleteDoc(F().fb.doc(F().db, "posts", id));
+  const { fb, db } = F();
+  const comments = await fb.getDocs(fb.collection(db, "posts", id, "comments"));
+  await Promise.all(comments.docs.map((d) => fb.deleteDoc(d.ref)));
+  await fb.deleteDoc(fb.doc(db, "posts", id));
   resetSocial();
+}
+
+// ---------- Commentaires ----------
+export async function listComments(postId) {
+  const { fb, db } = F();
+  const snap = await fb.getDocs(fb.query(fb.collection(db, "posts", postId, "comments"), fb.orderBy("createdAt"), fb.limit(200)));
+  return snap.docs.map((d) => {
+    const c = d.data();
+    return { id: d.id, ...c, createdAt: c.createdAt && c.createdAt.toMillis ? c.createdAt.toMillis() : Date.now() };
+  });
+}
+
+export async function addComment(postId, text) {
+  const { fb, db } = F();
+  const p = state.profile;
+  await fb.addDoc(fb.collection(db, "posts", postId, "comments"), {
+    author: me(), authorName: p.name, authorHandle: p.handle, text, createdAt: fb.serverTimestamp(),
+  });
+  cache.delete("comments:" + postId);
+}
+
+export async function deleteComment(postId, commentId) {
+  const { fb, db } = F();
+  await fb.deleteDoc(fb.doc(db, "posts", postId, "comments", commentId));
+  cache.delete("comments:" + postId);
 }
 
 // Publications d'une personne, selon ce que j'ai le droit de voir

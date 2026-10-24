@@ -1,7 +1,7 @@
 // Pages sociales : fil d'actualité, Découvrir (et recherche de personnes), profil d'une
 // personne, publication d'un itinéraire ; sections « Publier » d'un voyage et « Profil public »
 
-import { esc, plural, MODES } from "../utils.js";
+import { esc, plural, MODES, safeUrl } from "../utils.js";
 import { state } from "../store.js";
 import { isEnabled } from "../cloud.js";
 import * as social from "../social.js";
@@ -174,6 +174,8 @@ export function postView(id) {
     </header>
     ${stops.some((s) => s.geo) ? `<section class="map-box" aria-label="Carte de l'itinéraire"><div id="mapSlot"></div></section>` : ""}
     <section class="route" aria-label="Itinéraire">${items.map(readOnlyItem).join("")}</section>
+    ${recosSection(p)}
+    ${commentsSection(p)}
   </section>`;
 }
 
@@ -216,7 +218,7 @@ export function publishPanel(t) {
   if (!state.profile) {
     return `<div class="publish panel">
       <h2>Publier l'itinéraire</h2>
-      <p class="note">Pour publier, créez d'abord votre profil public : un nom et un pseudo.</p>
+      <p class="note">Pour publier, créez d'abord votre profil : un nom et un pseudo.</p>
       <div class="row-btns"><a class="btn primary" href="#profil">Créer mon profil</a>
         <button class="btn" data-act="close-publish" type="button">Annuler</button></div>
     </div>`;
@@ -231,6 +233,11 @@ export function publishPanel(t) {
     <p class="note"><b>Publié :</b> les étapes, les activités, les trajets et la carte (positions arrondies à environ 2 km), avec « Jour 1, Jour 2… » à la place des dates.<br>
       <b>Jamais publié :</b> dates, prix, notes, adresses, liens et numéros de réservation, billets, co-voyageurs.<br>
       La publication est une copie : vos modifications du voyage ne s'y reportent pas, et personne ne peut la modifier.</p>
+    <div class="f-label">Recommandations (facultatif)
+      <p class="note">Vos bonnes adresses : un restaurant, un hébergement, un lieu à voir. Elles seront visibles par les mêmes personnes que l'itinéraire.</p>
+      <div class="recos-edit" data-recos></div>
+    </div>
+    <div><button class="btn small" data-act="add-reco-row" type="button">+ Ajouter une recommandation</button></div>
     <div class="row-btns">
       <button class="btn primary" type="submit">Publier</button>
       <button class="btn" data-act="close-publish" type="button">Annuler</button>
@@ -291,4 +298,83 @@ export function socialTitle() {
   const e = social.peek("post:" + state.postId);
   const p = e.status === "ok" && e.data;
   return p ? [p.title, `Itinéraire publié par ${p.ownerName} sur Carnet de route.`] : ["Itinéraire", "Itinéraire publié sur Carnet de route."];
+}
+
+// ---------- Recommandations ----------
+// Une recommandation dans le panneau de publication (étapes du voyage proposées)
+export function recoRow(trip) {
+  const id = Math.random().toString(36).slice(2, 8);
+  const stops = trip.items.map((it, i) => (it.type === "stop" ? `<option value="${i}">${esc(it.place || "Étape")}</option>` : "")).join("");
+  return `<div class="reco-edit" data-reco-row>
+    <div class="grid">
+      <label class="f">Type<select name="recoKind" id="rk-${id}">${Object.entries(social.RECO_KINDS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select></label>
+      <label class="f">Nom<input name="recoName" id="rn-${id}" maxlength="100" placeholder="Ex. Chez Jo" required></label>
+      <label class="f">Où<input name="recoWhere" id="rw-${id}" maxlength="120" placeholder="Ville, quartier ou adresse"></label>
+      <label class="f">Étape<select name="recoStop" id="rs-${id}"><option value="">Tout le voyage</option>${stops}</select></label>
+      <label class="f full">Pourquoi<textarea name="recoNote" id="ro-${id}" maxlength="500" placeholder="Ce qui vous a plu, ce qu'il faut commander, à quelle heure y aller…"></textarea></label>
+      <label class="f full">Lien (facultatif)<input name="recoUrl" id="ru-${id}" inputmode="url" placeholder="https://…"></label>
+    </div>
+    <div><button class="btn ghost small" data-act="rm-reco-row" type="button">Retirer cette recommandation</button></div>
+  </div>`;
+}
+
+// Recommandations d'une publication, regroupées par type
+function recosSection(p) {
+  const recos = p.recos || [];
+  if (!recos.length) return "";
+  const items = (p.trip && p.trip.items) || [];
+  const groups = Object.entries(social.RECO_KINDS)
+    .map(([kind, label]) => [label, recos.filter((r) => r.kind === kind)])
+    .filter(([, list]) => list.length);
+  return `<section class="recos" aria-label="Recommandations">
+    <h2>Recommandations</h2>
+    ${groups.map(([label, list]) => `<h3 class="reco-kind">${esc(label)}</h3>
+      <ul class="reco-list">${list.map((r) => {
+        const stop = Number.isInteger(r.stop) && items[r.stop] && items[r.stop].type === "stop" ? items[r.stop].place : "";
+        const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([r.name, r.where].filter(Boolean).join(", "))}`;
+        const url = safeUrl(r.url);
+        return `<li class="reco">
+          <h4>${esc(r.name)}</h4>
+          ${r.where || stop ? `<p class="reco-where">${esc([r.where, stop && `étape : ${stop}`].filter(Boolean).join(" · "))}</p>` : ""}
+          ${r.note ? `<p class="reco-note">${esc(r.note)}</p>` : ""}
+          <p class="reco-links"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Voir sur la carte ↗</a>
+            ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow ugc">Site ↗</a>` : ""}</p>
+        </li>`;
+      }).join("")}</ul>`).join("")}
+  </section>`;
+}
+
+// ---------- Commentaires ----------
+const fmtDateTime = (ms) => new Date(ms).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+function commentsSection(p) {
+  const e = social.load("comments:" + p.id, () => social.listComments(p.id));
+  const list = e.status === "ok" ? e.data : [];
+  const canDelete = (c) => state.user && (c.author === me() || p.owner === me());
+  const items = list.map((c) => `<li class="comment">
+      <div class="comment-head">
+        <a class="post-author" href="#personne-${esc(c.author)}">${avatar({ name: c.authorName })}<span>${esc(c.authorName)} <span class="handle">@${esc(c.authorHandle)}</span></span></a>
+        <span class="comment-date">${esc(fmtDateTime(c.createdAt))}</span>
+      </div>
+      <p class="comment-text">${esc(c.text)}</p>
+      ${!canDelete(c) ? "" : state.confirm === "comment:" + c.id
+        ? `<div class="confirm">Supprimer ce commentaire ?
+            <button class="btn small danger" data-act="delete-comment-yes" data-post="${esc(p.id)}" data-comment="${esc(c.id)}" type="button">Supprimer</button>
+            <button class="btn small" data-act="cancel-confirm" type="button">Annuler</button></div>`
+        : `<div><button class="link-btn" data-act="delete-comment" data-comment="${esc(c.id)}" type="button">Supprimer</button></div>`}
+    </li>`).join("");
+
+  const form = !isEnabled() ? ""
+    : !state.user ? `<p class="note">Connectez-vous pour commenter. <button class="link-btn" data-act="open-auth" data-mode="signin" type="button">Se connecter</button></p>`
+    : !state.profile ? `<p class="note">Pour commenter, créez d'abord votre profil (un nom et un pseudo), que votre compte soit public ou privé. <a href="#profil">Créer mon profil</a></p>`
+    : `<form class="comment-form" data-comment-form="${esc(p.id)}">
+        <label class="f">Votre commentaire<textarea name="text" maxlength="1000" required placeholder="Une question, un conseil, un merci…"></textarea></label>
+        <div><button class="btn primary small" type="submit">Publier le commentaire</button></div>
+      </form>`;
+
+  return `<section class="comments" aria-label="Commentaires">
+    <h2>Commentaires${list.length ? ` (${list.length})` : ""}</h2>
+    ${e.status === "loading" ? loadingNote : e.status === "error" ? errorNote("Impossible de charger les commentaires.") : list.length ? `<ul class="comment-list">${items}</ul>` : `<p class="note">Aucun commentaire pour l'instant.</p>`}
+    ${form}
+  </section>`;
 }

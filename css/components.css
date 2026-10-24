@@ -47,7 +47,7 @@ label.f input[type="date"], label.f input[type="datetime-local"] {
 }
 label.f input::-webkit-date-and-time-value { text-align: left; margin: 0; min-height: 22px; }
 label.f input::-webkit-datetime-edit { padding: 0; }
-.computed { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.computed { font-family: var(--mono); font-size: 13px; color: var(--muted); min-height: 1.5em; } /* place réservée : le calcul ne décale pas les boutons */
 
 .links-edit { display: flex; flex-direction: column; gap: 6px; }
 .link-edit { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 6px; }
@@ -65,3 +65,5 @@ label.f input::-webkit-datetime-edit { padding: 0; }
 
 /* Message temporaire */
 .toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 2000; }
+/* Le message ne bloque pas les boutons qu'il recouvre (en bas de l'écran sur téléphone) */
+.toast { pointer-events: none; }

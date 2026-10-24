@@ -2,7 +2,7 @@
 
 import { state, currentTrip } from "./store.js";
 import { render } from "./views/trip.js";
-import { peopleList } from "./views/social.js";
+import { peopleList, recoRow } from "./views/social.js";
 import * as social from "./social.js";
 import { toast } from "./toast.js";
 import { go } from "./router.js";
@@ -32,7 +32,7 @@ export function onSocialClick(act, b) {
       return true;
     case "follow":
       if (!state.profile) {
-        toast("Créez d'abord votre profil public pour vous abonner.");
+        toast("Créez d'abord votre profil (un nom et un pseudo) pour vous abonner.");
         go("profil");
         return true;
       }
@@ -62,6 +62,28 @@ export function onSocialClick(act, b) {
         go("profil");
       }, "Impossible de supprimer la publication. Vérifiez votre connexion.");
       return true;
+    case "add-reco-row": {
+      const box = b.closest("form").querySelector("[data-recos]");
+      const t = currentTrip();
+      if (!box || !t) return true;
+      box.insertAdjacentHTML("beforeend", recoRow(t));
+      box.lastElementChild.querySelector('[name="recoName"]').focus();
+      return true;
+    }
+    case "rm-reco-row":
+      b.closest("[data-reco-row]").remove();
+      return true;
+    case "delete-comment":
+      state.confirm = "comment:" + b.dataset.comment;
+      render();
+      return true;
+    case "delete-comment-yes":
+      state.confirm = null;
+      attempt(async () => {
+        await social.deleteComment(b.dataset.post, b.dataset.comment);
+        toast("Commentaire supprimé");
+      }, "Impossible de supprimer le commentaire. Vérifiez votre connexion.");
+      return true;
     case "copy-link":
       navigator.clipboard.writeText(location.href).then(
         () => toast("Lien copié : vous pouvez le partager"),
@@ -79,12 +101,39 @@ export function onSocialSubmit(e) {
     const t = currentTrip();
     const title = f.elements.title.value.trim();
     if (!t || !title) return true;
+    // Recommandations remplies (les lignes sans nom sont ignorées)
+    const recos = [...f.querySelectorAll("[data-reco-row]")].map((r) => ({
+      kind: r.querySelector('[name="recoKind"]').value,
+      name: r.querySelector('[name="recoName"]').value,
+      where: r.querySelector('[name="recoWhere"]').value,
+      note: r.querySelector('[name="recoNote"]').value,
+      url: r.querySelector('[name="recoUrl"]').value,
+      stop: r.querySelector('[name="recoStop"]').value === "" ? null : +r.querySelector('[name="recoStop"]').value,
+    }));
     attempt(async () => {
-      const id = await social.publish(t, { title, visibility: f.elements.visibility.value });
+      const id = await social.publish(t, { title, visibility: f.elements.visibility.value, recos });
       state.publishOpen = false;
       toast("Itinéraire publié");
       go("publication-" + id);
     }, "Publication impossible pour le moment. Vérifiez votre connexion.");
+    return true;
+  }
+  if (f.matches("[data-comment-form]")) {
+    e.preventDefault();
+    const text = f.elements.text.value.trim();
+    if (!text) return toast("Écrivez votre commentaire."), true;
+    const btn = f.querySelector("button[type=submit]");
+    btn.disabled = true;
+    // En cas d'échec, la page n'est pas réaffichée : le texte tapé reste dans le champ
+    social.addComment(f.dataset.commentForm, text.slice(0, 1000))
+      .then(() => {
+        toast("Commentaire publié");
+        render();
+      })
+      .catch(() => {
+        btn.disabled = false;
+        toast("Commentaire non publié. Vérifiez votre connexion.");
+      });
     return true;
   }
   if (f.matches("[data-profile-form]")) {

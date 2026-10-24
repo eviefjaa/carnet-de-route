@@ -139,18 +139,41 @@ service cloud.firestore {
         || (request.auth != null && (resource.data.owner == request.auth.uid
             || (resource.data.visibility == "followers" && isFollower(resource.data.owner))));
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(["owner", "ownerName", "ownerHandle", "title", "visibility", "publishedAt", "trip"])
+        && request.resource.data.keys().hasOnly(["owner", "ownerName", "ownerHandle", "title", "visibility", "publishedAt", "trip", "recos"])
         && request.resource.data.owner == request.auth.uid
         && request.resource.data.ownerName == profile().name
         && request.resource.data.ownerHandle == profile().handle
         && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 200
         && request.resource.data.visibility in ["public", "followers", "private"]
-        && request.resource.data.trip is map;
+        && request.resource.data.trip is map
+        // Recommandations facultatives (restos, hébergements, adresses…) : 50 au plus
+        && (!("recos" in request.resource.data) || (request.resource.data.recos is list && request.resource.data.recos.size() <= 50));
       // Non modifiable : seul son auteur change la visibilité ou la supprime
       allow update: if request.auth != null && resource.data.owner == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["visibility"])
         && request.resource.data.visibility in ["public", "followers", "private"];
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+
+      // Commentaires : lisibles par qui voit l'itinéraire ; écrits par qui le voit et a un profil.
+      // Supprimés par leur auteur, ou par l'auteur de l'itinéraire. Jamais modifiés.
+      match /comments/{commentId} {
+        function post() { return get(/databases/$(database)/documents/posts/$(postId)).data; }
+        function canSeePost() {
+          return post().visibility == "public"
+            || (request.auth != null && (post().owner == request.auth.uid
+                || (post().visibility == "followers" && isFollower(post().owner))));
+        }
+        allow read: if canSeePost();
+        allow create: if request.auth != null && canSeePost()
+          && request.resource.data.keys().hasOnly(["author", "authorName", "authorHandle", "text", "createdAt"])
+          && request.resource.data.author == request.auth.uid
+          && request.resource.data.authorName == profile().name
+          && request.resource.data.authorHandle == profile().handle
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+          && request.resource.data.createdAt == request.time;
+        allow delete: if request.auth != null
+          && (resource.data.author == request.auth.uid || post().owner == request.auth.uid);
+      }
     }
   }
 }
