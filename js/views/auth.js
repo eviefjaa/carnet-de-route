@@ -71,3 +71,18 @@ export function authScreen() {
     </div>
   </section>`;
 }
+
+// Juste après la création du compte : confirmer son adresse e-mail (aussi possible plus tard dans Paramètres)
+export function verifyScreen() {
+  return `<section class="auth verify">
+    <h2>Confirmez votre adresse e-mail</h2>
+    <p>Nous venons d'envoyer un lien à <b>${esc(state.user.email)}</b>. Ouvrez-le pour confirmer votre adresse, puis revenez ici. Pensez à regarder dans les spams.</p>
+    <p class="note">Une adresse confirmée permet de recevoir les rappels de réservation et de rejoindre les voyages auxquels on vous invite.</p>
+    <p class="auth-error" id="verify-msg" role="alert" hidden></p>
+    <button class="btn primary auth-submit" data-act="verify-check" type="button">J'ai confirmé mon adresse</button>
+    <div class="auth-links">
+      <button class="link-btn" data-act="resend-verification" type="button">Renvoyer l'e-mail</button>
+      <button class="link-btn" data-act="verify-later" type="button">Plus tard</button>
+    </div>
+  </section>`;
+}

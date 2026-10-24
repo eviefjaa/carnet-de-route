@@ -9,7 +9,7 @@ import { budgetSection } from "./budget.js";
 import { computeBudget } from "../budget.js";
 import { drawMap } from "../map.js";
 import { scheduleGeo } from "../geocode.js";
-import { authScreen, renderAccountBar, syncNote } from "./auth.js";
+import { authScreen, renderAccountBar, syncNote, verifyScreen } from "./auth.js";
 import { isEnabled } from "../cloud.js";
 import { renderSidebar } from "./sidebar.js";
 import { exploreView, filterCountries, countryView, favoritesView, detailsReady, loadDetails } from "./explore.js";
@@ -39,6 +39,7 @@ function setMeta() {
   const country = state.view === "country" ? countryByCode(state.country) : null;
   const [title, description] =
     state.authOpen ? ["Connexion", "Connectez-vous pour retrouver vos voyages sur tous vos appareils."]
+    : state.verifyOpen && state.user && !state.user.emailVerified ? ["Confirmez votre adresse", "Confirmez votre adresse e-mail pour recevoir les rappels et rejoindre les voyages partagés."]
     : t ? [t.name || "Voyage", PAGE_META.trips[1]]
     : country ? [country.name, country.tagline]
     : ["person", "post"].includes(state.view) ? socialTitle()
@@ -73,6 +74,10 @@ export function render() {
   }
   if (state.loading) {
     app.innerHTML = `<p class="note">Chargement de vos voyages…</p>`;
+    return;
+  }
+  if (state.verifyOpen && state.user && !state.user.emailVerified) {
+    app.innerHTML = verifyScreen();
     return;
   }
 

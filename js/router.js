@@ -57,6 +57,7 @@ export function bindRouter(render) {
     readHash();
     resetUi(); // une confirmation ou un formulaire ouvert ne suit pas sur la page suivante
     state.authOpen = false;
+    state.verifyOpen = false; // quitter l'écran de confirmation par le menu = « Plus tard »
     closeMenu();
     render();
     window.scrollTo(0, 0);

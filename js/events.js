@@ -358,6 +358,14 @@ function onAccountClick(act, b) {
       // On envoie d'abord les dernières modifications, encore en attente
       flush().then(() => cloud.signOut()).then(() => toast("Vous êtes déconnecté(e)"));
       return true;
+    case "verify-check":
+      checkVerified(b);
+      return true;
+    case "verify-later":
+      state.verifyOpen = false;
+      render();
+      toast("Vous pourrez confirmer votre adresse plus tard dans Paramètres.");
+      return true;
     case "resend-verification":
       cloud.resendVerification()
         .then(() => toast("E-mail de confirmation envoyé. Pensez à regarder dans vos spams."))
@@ -370,6 +378,30 @@ function onAccountClick(act, b) {
   const email = document.getElementById("auth-email");
   if (email) email.focus();
   return true;
+}
+
+// « J'ai confirmé mon adresse » : on le demande à Firebase, puis on rejoint les voyages en attente
+async function checkVerified(btn) {
+  const msg = document.getElementById("verify-msg");
+  btn.disabled = true;
+  try {
+    const verified = await cloud.refreshEmailVerified();
+    if (!verified) {
+      msg.textContent = "Votre adresse n'est pas encore confirmée. Ouvrez le lien reçu par e-mail, puis réessayez.";
+      msg.hidden = false;
+      btn.disabled = false;
+      return;
+    }
+    state.user.emailVerified = true;
+    state.verifyOpen = false;
+    const joined = await cloud.acceptInvites().catch(() => []);
+    toast(joined.length ? `Adresse confirmée. Vous avez rejoint « ${joined[0]} »${joined.length > 1 ? ` et ${joined.length - 1} autre${joined.length > 2 ? "s" : ""} voyage${joined.length > 2 ? "s" : ""}` : ""}.` : "Adresse confirmée, merci !");
+    render();
+  } catch (err) {
+    msg.textContent = cloud.errorMessage(err);
+    msg.hidden = false;
+    btn.disabled = false;
+  }
 }
 
 async function onAuthSubmit(f) {
@@ -393,7 +425,9 @@ async function onAuthSubmit(f) {
     if (mode === "signin") await cloud.signIn(email, password);
     else if (mode === "signup") {
       await cloud.signUp(email, password);
-      toast("Compte créé. Confirmez votre adresse avec le lien reçu par e-mail pour recevoir les rappels.");
+      // Écran de confirmation de l'adresse, tout de suite après la création du compte
+      state.verifyOpen = true;
+      render();
     }
     else {
       await cloud.resetPassword(email);

@@ -21,6 +21,7 @@ export const state = {
   formTickets: { pending: [], removed: [] }, // billets choisis dans le formulaire d'un trajet
   user: null,       // { uid, email } quand on est connecté
   authOpen: false,  // écran de connexion affiché
+  verifyOpen: false, // écran « Confirmez votre adresse e-mail », juste après la création du compte
   loading: false,   // chargement des voyages du compte en cours
   view: "trips",    // page affichée : trips, explore, country, favorites, profile, settings
   country: null,    // code du pays affiché dans sa fiche

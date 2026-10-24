@@ -31,6 +31,7 @@ async function onUserChange(user) {
     state.user = null;
     state.profile = null;
     state.notifs = null;
+    state.verifyOpen = false;
     resetSocial();
     if (wasConnected) resetPrefs();
     resetUi();
