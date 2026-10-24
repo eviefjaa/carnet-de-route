@@ -65,22 +65,23 @@
 /* Page seule (404), sans le menu du site */
 .standalone .wrap { max-width: 720px; margin: 0 auto; padding: clamp(24px, 6vh, 64px) 16px; }
 
-/* Glisser une carte vers la gauche : poubelle rouge (js/swipe.js) */
-.swipe { position: relative; border-radius: 16px; overflow: hidden; }
-.swipe > .trip-card {
-  touch-action: pan-y; height: 100%; will-change: transform;
-  transition: transform .25s cubic-bezier(.2, .8, .2, 1), border-color .15s;
-  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; /* pas de sélection ni d'aperçu de lien pendant le geste */
+/* Glisser une carte vers la gauche : la carte et la poubelle défilent côte à côte (js/swipe.js).
+   Défilement natif du téléphone, aimanté sur « fermé » ou « ouvert ». */
+.swipe {
+  display: flex; border-radius: 16px;
+  overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
-.swipe.dragging > .trip-card { transition: none; }
-.swipe.open > .trip-card { transform: translateX(-88px); }
-.swipe-action { position: absolute; top: 1px; right: 1px; bottom: 1px; width: 87px; border: 0; border-radius: 0 15px 15px 0; background: var(--danger); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: 600 12px/1 var(--body); cursor: pointer; visibility: hidden; }
-/* La poubelle n'existe à l'écran que pendant le geste ou une fois ouverte (sinon ses bords rouges dépassent des coins) */
-.swipe.dragging .swipe-action, .swipe.open .swipe-action, .swipe-action:focus-visible { visibility: visible; }
-/* Au clavier : la poubelle se dévoile quand elle reçoit le focus */
-.swipe:has(.swipe-action:focus-visible) > .trip-card { transform: translateX(-88px); }
+.swipe::-webkit-scrollbar { display: none; }
+.swipe > .trip-card { flex: 0 0 100%; scroll-snap-align: start; -webkit-touch-callout: none; z-index: 1; } /* au-dessus de la poubelle */
+.swipe-action {
+  flex: 0 0 104px; scroll-snap-align: end; margin-left: -16px; padding-left: 16px; /* 88 px visibles, 16 px sous le coin arrondi de la carte */
+  border: 0; border-radius: 0 16px 16px 0; background: var(--danger); color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font: 600 12px/1 var(--body); cursor: pointer;
+}
 .swipe-action:focus-visible { outline: 3px solid var(--focus); outline-offset: -6px; }
+.swipe.is-confirm { overflow: visible; }
 .swipe-confirm { justify-content: center; gap: 12px; border-color: var(--danger); }
 .swipe-confirm p { margin: 0; font-weight: 600; }
 .btn.danger-solid { background: var(--danger); border-color: var(--danger); color: #fff; }
-@media (prefers-reduced-motion: reduce) { .swipe > .trip-card { transition: none; } }

@@ -1,83 +1,60 @@
 // Glisser une carte de « Mes voyages » vers la gauche : une poubelle rouge apparaît à droite.
-// Au doigt comme à la souris ; le défilement vertical de la page reste normal.
-// La carte suit le doigt image par image (requestAnimationFrame) ; un geste rapide suffit à ouvrir.
+//
+// La carte et la poubelle sont côte à côte dans un bandeau (.swipe) qui défile horizontalement,
+// avec un aimantage sur « fermé » et « ouvert » (scroll-snap). C'est donc le défilement natif du
+// téléphone qui fait le geste : fluide, avec l'élan du doigt. Ce fichier ne fait que le reste :
+// refermer les autres cartes, refermer une carte ouverte quand on la touche, et le glisser à la souris.
 
-const OPEN = 88;      // largeur de la poubelle (px)
-let drag = null;      // { box, card, x, y, base, dx, moved, wasOpen, lastX, lastT, speed }
-let frame = 0;
-let swallowClick = false;
-
-const closeAll = (except) =>
-  document.querySelectorAll(".swipe.open").forEach((b) => b !== except && b.classList.remove("open"));
-
-function paint() {
-  frame = 0;
-  if (drag && drag.moved) drag.card.style.transform = `translateX(${drag.dx}px)`;
-}
-
-function swallowNextClick() {
-  swallowClick = true;
-  setTimeout(() => (swallowClick = false), 400);
-}
+const OPEN = 88; // largeur de la poubelle (px)
+const isOpen = (box) => box.scrollLeft > OPEN / 2;
+const close = (box) => box.scrollTo({ left: 0, behavior: "smooth" });
 
 export function bindSwipe() {
-  document.addEventListener("pointerdown", (e) => {
-    const card = e.target.closest(".swipe > .trip-card");
-    if (!card || !e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) {
-      if (!e.target.closest(".swipe")) closeAll(); // toucher ailleurs referme
-      return;
-    }
-    const box = card.parentElement;
-    closeAll(box);
-    const wasOpen = box.classList.contains("open");
-    drag = { box, card, x: e.clientX, y: e.clientY, base: wasOpen ? -OPEN : 0, dx: 0, moved: false, wasOpen, lastX: e.clientX, lastT: e.timeStamp, speed: 0 };
-  });
-
-  document.addEventListener("pointermove", (e) => {
-    if (!drag || !e.isPrimary) return;
-    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-    if (!drag.moved) {
-      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { drag = null; return; } // défilement vertical
-      if (Math.abs(dx) < 10) return;
-      drag.moved = true;
-      drag.box.classList.add("dragging");
-    }
-    // Vitesse (px/ms), pour qu'un geste rapide et court suffise
-    const dt = e.timeStamp - drag.lastT;
-    if (dt > 0) drag.speed = (e.clientX - drag.lastX) / dt;
-    drag.lastX = e.clientX;
-    drag.lastT = e.timeStamp;
-    // Au-delà de la poubelle, la carte résiste (comme sur iPhone)
-    let x = drag.base + dx;
-    if (x < -OPEN) x = -OPEN + (x + OPEN) * 0.3;
-    drag.dx = Math.min(0, x);
-    if (!frame) frame = requestAnimationFrame(paint);
-  });
-
-  const end = () => {
-    if (!drag) return;
-    const { box, card, moved, dx, speed, wasOpen } = drag;
-    drag = null;
-    if (frame) { cancelAnimationFrame(frame); frame = 0; }
-    box.classList.remove("dragging");
-    card.style.transform = "";
-    if (!moved) {
-      // Toucher une carte ouverte la referme, sans ouvrir le voyage
-      if (wasOpen) { box.classList.remove("open"); swallowNextClick(); }
-      return;
-    }
-    swallowNextClick(); // le relâchement ne doit pas ouvrir le voyage
-    const open = speed < -0.4 || (speed <= 0.4 && dx < -OPEN / 2);
+  // Une carte s'ouvre : les autres se referment ; la classe « open » sert aux styles et aux tests
+  document.addEventListener("scroll", (e) => {
+    const box = e.target;
+    if (!(box instanceof Element) || !box.classList.contains("swipe")) return;
+    const open = isOpen(box);
     box.classList.toggle("open", open);
-  };
-  document.addEventListener("pointerup", end);
-  document.addEventListener("pointercancel", end);
+    if (box.scrollLeft > 4) document.querySelectorAll(".swipe").forEach((b) => b !== box && b.scrollLeft > 0 && close(b));
+  }, true);
 
+  // Toucher une carte ouverte la referme, sans ouvrir le voyage ; toucher ailleurs referme tout
   document.addEventListener("click", (e) => {
-    if (swallowClick && e.target.closest(".swipe")) {
-      swallowClick = false;
+    const box = e.target.closest(".swipe");
+    if (box && box.scrollLeft > 4 && !e.target.closest(".swipe-action")) {
       e.preventDefault();
       e.stopPropagation();
+      close(box);
+      return;
     }
+    if (!box) document.querySelectorAll(".swipe").forEach((b) => b.scrollLeft > 0 && close(b));
   }, true);
+
+  // À la souris (ordinateur sans pavé tactile) : glisser la carte en maintenant le bouton
+  let drag = null;
+  document.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    const box = e.target.closest(".swipe");
+    if (box && !e.target.closest(".swipe-action")) drag = { box, x: e.clientX, left: box.scrollLeft, moved: false };
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (Math.abs(dx) > 6) drag.moved = true;
+    if (drag.moved) {
+      drag.box.style.scrollSnapType = "none";
+      drag.box.scrollLeft = drag.left - dx;
+    }
+  });
+  document.addEventListener("pointerup", () => {
+    if (!drag) return;
+    const { box, moved } = drag;
+    drag = null;
+    box.style.scrollSnapType = "";
+    if (!moved) return;
+    box.scrollTo({ left: box.scrollLeft > OPEN / 2 ? OPEN : 0, behavior: "smooth" });
+    // Le relâchement ne doit pas ouvrir le voyage
+    document.addEventListener("click", (ev) => { ev.preventDefault(); ev.stopPropagation(); }, { capture: true, once: true });
+  });
 }
