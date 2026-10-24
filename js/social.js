@@ -122,7 +122,7 @@ export async function removeFollower(follower) {
   resetSocial();
 }
 export async function acceptFollower(follower) {
-  await F().fb.updateDoc(followDoc(follower, me()), { status: "accepted" });
+  await F().fb.updateDoc(followDoc(follower, me()), { status: "accepted", acceptedAt: F().fb.serverTimestamp() });
   resetSocial();
 }
 
@@ -250,4 +250,72 @@ export async function feed() {
 export async function discover() {
   const { fb } = F();
   return docs(await fb.getDocs(fb.query(postsCol(), fb.where("visibility", "==", "public"), fb.limit(30)))).sort(newestFirst);
+}
+
+// ---------- Notifications ----------
+// Déduites de ce qui existe déjà (abonnements, commentaires) : personne ne peut en fabriquer.
+//   comment   quelqu'un a commenté un de mes itinéraires
+//   follow    quelqu'un s'est abonné à moi
+//   request   quelqu'un demande à s'abonner (compte privé)
+//   accepted  quelqu'un a accepté ma demande d'abonnement
+//   joined    quelqu'un a rejoint un de mes voyages partagés
+const toMs = (v) => (v && v.toMillis ? v.toMillis() : v && typeof v.seconds === "number" ? v.seconds * 1000 : typeof v === "number" ? v : 0);
+
+async function loadNotifications() {
+  const { fb, db } = F();
+  const col = fb.collection(db, "follows");
+  const [toMe, mine, posts] = await Promise.all([
+    fb.getDocs(fb.query(col, fb.where("followed", "==", me()))),
+    fb.getDocs(fb.query(col, fb.where("follower", "==", me()), fb.where("status", "==", "accepted"))),
+    postsOf(me()),
+  ]);
+  const items = [];
+  toMe.docs.forEach((d) => {
+    const f = d.data();
+    items.push({ type: f.status === "pending" ? "request" : "follow", who: f.follower, at: toMs(f.createdAt) });
+  });
+  mine.docs.forEach((d) => {
+    const f = d.data();
+    if (f.acceptedAt) items.push({ type: "accepted", who: f.followed, at: toMs(f.acceptedAt) });
+  });
+  const comments = await Promise.all(posts.slice(0, 30).map((p) =>
+    listComments(p.id)
+      .then((list) => list.filter((c) => c.author !== me()).map((c) => ({
+        type: "comment", who: c.author, name: c.authorName, handle: c.authorHandle, at: c.createdAt,
+        postId: p.id, postTitle: p.title, text: c.text,
+      })))
+      .catch(() => [])));
+  items.push(...comments.flat());
+
+  // Voyageurs qui ont rejoint mes voyages (toujours dans le voyage)
+  Object.entries(state.trips).forEach(([tripId, t]) => {
+    Object.entries(t.joined || {}).forEach(([u, when]) => {
+      if (u === me() || !(t.members || []).includes(u)) return;
+      items.push({ type: "joined", who: u, at: toMs(when), tripId, tripName: t.name || "Sans titre", email: (t.emails || {})[u] || "" });
+    });
+  });
+
+  // Noms des personnes qui se sont abonnées
+  const missing = [...new Set(items.filter((i) => !i.name).map((i) => i.who))];
+  const profiles = Object.fromEntries(await Promise.all(missing.map(async (u) => [u, await getProfile(u).catch(() => null)])));
+  items.forEach((i) => {
+    if (i.name) return;
+    i.name = profiles[i.who] ? profiles[i.who].name : i.email || "Quelqu'un";
+    i.handle = profiles[i.who] ? profiles[i.who].handle : "";
+  });
+  return items.sort((a, b) => b.at - a.at).slice(0, 60);
+}
+
+// Rechargées à la connexion, à l'ouverture de la page, au retour sur l'onglet et toutes les 3 minutes
+let notifLoading = false;
+export async function refreshNotifications() {
+  if (!state.user || notifLoading) return;
+  notifLoading = true;
+  try {
+    if (await cloud.ready) state.notifs = { list: await loadNotifications(), at: Date.now() };
+  } catch {
+    // hors ligne : on garde la dernière liste
+  }
+  notifLoading = false;
+  rerender();
 }

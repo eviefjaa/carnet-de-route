@@ -8,14 +8,18 @@ let mode = "signin"; // "signin" | "signup" | "reset"
 export const setAuthMode = (m) => (mode = m);
 export const authMode = () => mode;
 
+// Barre réaffichée seulement si elle change : sinon un bouton touché à ce moment-là disparaît sous le doigt
+let lastBar = null;
 export function renderAccountBar() {
   const box = document.getElementById("account");
   if (!box) return;
-  if (!isEnabled()) { box.innerHTML = ""; return; }
-  box.innerHTML = state.user
+  const html = !isEnabled() ? "" : state.user
     ? `${syncBadge()}<span class="account-email" title="${esc(state.user.email)}">${esc(state.user.email)}</span>
        <button class="btn ghost small" data-act="sign-out" type="button">Se déconnecter</button>`
     : `<button class="btn primary" data-act="open-auth" type="button">Se connecter</button>`;
+  if (html === lastBar && box.childElementCount) return;
+  lastBar = html;
+  box.innerHTML = html;
 }
 
 // « Enregistré dans le compte » / « Enregistrement… » / « Non synchronisé »

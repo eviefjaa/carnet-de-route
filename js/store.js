@@ -26,6 +26,7 @@ export const state = {
   country: null,    // code du pays affiché dans sa fiche
   explore: { q: "", continent: "", tag: "" }, // filtres des destinations
   profile: null,    // mon profil public { uid, name, handle, bio, visibility }, une fois créé
+  notifs: null,     // notifications { list, at } (voir social.js)
   publishOpen: false, // panneau « Publier l'itinéraire » ouvert
   inviteOpen: false,  // champ « Inviter une personne » ouvert
   openItems: new Set(), // étapes et trajets dépliés (le détail s'affiche au clic sur leur carte)

@@ -3,6 +3,7 @@
 
 import { esc, plural, MODES, safeUrl } from "../utils.js";
 import { state } from "../store.js";
+import { prefs, savePrefs } from "../prefs.js";
 import { isEnabled } from "../cloud.js";
 import * as social from "../social.js";
 import { COUNTRIES } from "../data/countries.js";
@@ -376,5 +377,58 @@ function commentsSection(p) {
     <h2>Commentaires${list.length ? ` (${list.length})` : ""}</h2>
     ${e.status === "loading" ? loadingNote : e.status === "error" ? errorNote("Impossible de charger les commentaires.") : list.length ? `<ul class="comment-list">${items}</ul>` : `<p class="note">Aucun commentaire pour l'instant.</p>`}
     ${form}
+  </section>`;
+}
+
+// ---------- Notifications ----------
+export const unreadNotifications = () =>
+  state.user && state.notifs ? state.notifs.list.filter((n) => n.at > (prefs.notifSeen || 0)).length : 0;
+
+// La page ouverte : tout est lu (la mise en avant reste visible jusqu'au prochain affichage)
+export function markNotificationsSeen() {
+  if (!unreadNotifications()) return;
+  prefs.notifSeen = Date.now();
+  savePrefs();
+}
+
+function ago(ms) {
+  const min = Math.round((Date.now() - ms) / 60000);
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `il y a ${h} h`;
+  const d = Math.round(h / 24);
+  if (d === 1) return "hier";
+  if (d < 7) return `il y a ${d} jours`;
+  return new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+}
+
+function notifLine(n, seen) {
+  const who = `<b>${esc(n.name)}</b>`;
+  const [text, href] =
+    n.type === "comment" ? [`${who} a commenté « ${esc(n.postTitle)} » : <span class="notif-quote">${esc(n.text.length > 90 ? n.text.slice(0, 90) + "…" : n.text)}</span>`, `#publication-${n.postId}`]
+    : n.type === "request" ? [`${who} demande à s'abonner à vous. Vous pouvez accepter ou refuser dans Mon profil.`, "#profil"]
+    : n.type === "accepted" ? [`${who} a accepté votre demande d'abonnement.`, `#personne-${n.who}`]
+    : n.type === "joined" ? [`${who} a rejoint votre voyage « ${esc(n.tripName)} ».`, `#voyage-${n.tripId}`]
+    : [`${who} s'est abonné(e) à vous.`, `#personne-${n.who}`];
+  const fresh = n.at > seen;
+  return `<li class="notif${fresh ? " is-new" : ""}">
+    <a href="${esc(href)}">${avatar({ name: n.name })}
+      <span class="notif-text"><span class="notif-msg">${text}</span><span class="notif-time">${esc(ago(n.at))}${fresh ? " · nouveau" : ""}</span></span>
+    </a>
+  </li>`;
+}
+
+export function notificationsView() {
+  const head = `<header class="page-head"><h1>Notifications</h1><p class="lead">Commentaires, abonnements et voyageurs qui rejoignent vos voyages.</p></header>`;
+  if (!isEnabled()) return `<section class="page">${head}${errorNote("Les comptes ne sont pas activés sur ce site.")}</section>`;
+  if (!state.user) return `<section class="page">${head}${signInPanel("Connectez-vous pour voir qui commente vos itinéraires et qui s'abonne à vous.")}</section>`;
+  if (!state.notifs) return `<section class="page">${head}${loadingNote}</section>`;
+  const list = state.notifs.list;
+  const seen = prefs.notifSeen || 0;
+  return `<section class="page">${head}
+    ${list.length
+      ? `<ul class="notifs">${list.map((n) => notifLine(n, seen)).join("")}</ul>`
+      : `<p class="note">Rien pour l'instant. Les commentaires sur vos itinéraires, vos nouveaux abonnés et les voyageurs qui rejoignent vos voyages apparaîtront ici.</p>`}
   </section>`;
 }

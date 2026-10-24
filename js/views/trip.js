@@ -18,7 +18,8 @@ import { prefs } from "../prefs.js";
 import { tripsListView } from "./trips-list.js";
 import { tripPending } from "./checklist.js";
 import { shareSection, travellers } from "./share.js";
-import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel, socialTitle } from "./social.js";
+import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel, socialTitle, notificationsView, markNotificationsSeen } from "./social.js";
+import { refreshNotifications } from "../social.js";
 import { countryByCode } from "../data/countries.js";
 
 // Titre de l'onglet et description de chaque page
@@ -30,6 +31,7 @@ const PAGE_META = {
   settings: ["Paramètres", "Thème, devise par défaut, rappels par e-mail et export de vos voyages."],
   feed: ["Fil d'actualité", "Les derniers itinéraires des voyageurs que vous suivez."],
   discover: ["Découvrir", "Les derniers itinéraires publiés par la communauté Carnet de route."],
+  notifications: ["Notifications", "Commentaires, abonnements et voyageurs qui rejoignent vos voyages."],
 };
 
 function setMeta() {
@@ -94,6 +96,12 @@ export function render() {
       return;
     case "discover":
       app.innerHTML = discoverView();
+      return;
+    case "notifications":
+      app.innerHTML = notificationsView();
+      // Liste rechargée si elle date de plus de 30 secondes, puis tout est marqué comme lu
+      if (state.user && (!state.notifs || Date.now() - state.notifs.at > 30000)) refreshNotifications();
+      else if (state.notifs) markNotificationsSeen();
       return;
     case "person":
       app.innerHTML = personView(state.personId);

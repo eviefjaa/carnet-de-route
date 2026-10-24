@@ -5,7 +5,7 @@ import { state, setCloud, replaceTrips, loadLocal, clearLocal, applyRemote, hasP
 import { render } from "./views/trip.js";
 import { toast } from "./toast.js";
 import { usePrefsCloud, resetPrefs } from "./prefs.js";
-import { loadMyProfile, resetSocial } from "./social.js";
+import { loadMyProfile, resetSocial, refreshNotifications } from "./social.js";
 
 let stopWatching = null;
 
@@ -30,6 +30,7 @@ async function onUserChange(user) {
     if (!wasConnected) return;
     state.user = null;
     state.profile = null;
+    state.notifs = null;
     resetSocial();
     if (wasConnected) resetPrefs();
     resetUi();
@@ -45,8 +46,8 @@ async function onUserChange(user) {
   render();
 
   try {
-    // L'adresse a peut-être été confirmée depuis la dernière visite
-    if (!user.emailVerified) user.emailVerified = await cloud.refreshEmailVerified().catch(() => false);
+    // L'adresse a peut-être été confirmée depuis la dernière visite (et le jeton doit le savoir)
+    user.emailVerified = await cloud.refreshEmailVerified().catch(() => user.emailVerified);
     cloud.useAccount(user);
     await cloud.moveOldTrips(user.uid);
     // Voyages auxquels on a été invité : il faut une adresse confirmée
@@ -70,6 +71,7 @@ async function onUserChange(user) {
     usePrefsCloud(cloud, await cloud.loadPrefs(user.uid).catch(() => null));
     resetSocial();
     await loadMyProfile();
+    refreshNotifications();
     if (joined.length) toast(joined.length > 1 ? `Vous avez rejoint ${joined.length} voyages` : `Vous avez rejoint le voyage « ${joined[0]} »`);
 
     stopWatching = cloud.watchTrips(user.uid, (id, trip) => {

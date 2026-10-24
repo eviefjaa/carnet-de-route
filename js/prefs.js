@@ -5,7 +5,7 @@
 import { toast } from "./toast.js";
 
 const KEY = "carnet-route-prefs";
-const DEFAULTS = { favorites: [], currency: "EUR", theme: "auto", name: "", emailReminders: true };
+const DEFAULTS = { favorites: [], currency: "EUR", theme: "auto", name: "", emailReminders: true, notifSeen: 0 };
 
 export const prefs = { ...DEFAULTS };
 let cloud = null;

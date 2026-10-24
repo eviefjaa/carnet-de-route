@@ -7,7 +7,8 @@ import { render, renderSync } from "./views/trip.js";
 import { startAccounts } from "./account.js";
 import { bindAutocomplete } from "./autocomplete.js";
 import { readHash, bindRouter } from "./router.js";
-import { onSocialLoaded, resetSocial } from "./social.js";
+import { onSocialLoaded, resetSocial, refreshNotifications } from "./social.js";
+import { renderSidebar } from "./views/sidebar.js";
 import { state } from "./store.js";
 
 loadPrefs();
@@ -25,7 +26,13 @@ const typing = () => {
   const el = document.activeElement;
   return !!el && !!el.closest("#app form") && !!el.value;
 };
-onSocialLoaded(() => ["feed", "discover", "person", "post", "profile"].includes(state.view) && !state.authOpen && !typing() && render());
+onSocialLoaded(() => {
+  if (["feed", "discover", "person", "post", "profile", "notifications"].includes(state.view) && !state.authOpen && !typing()) render();
+  else renderSidebar(); // nombre de notifications dans le menu
+});
+// Nouvelles notifications : toutes les 3 minutes, et au retour sur l'onglet
+setInterval(() => document.visibilityState === "visible" && refreshNotifications(), 180000);
+document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && refreshNotifications());
 startAccounts();
 
 // Prévient avant de fermer la page si des modifications ne sont pas encore dans le compte

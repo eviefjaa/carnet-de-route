@@ -7,6 +7,7 @@ export const PAGES = {
   trips: { hash: "voyages", label: "Mes voyages" },
   feed: { hash: "fil", label: "Fil d'actualité" },
   discover: { hash: "decouvrir", label: "Découvrir" },
+  notifications: { hash: "notifications", label: "Notifications" },
   explore: { hash: "destinations", label: "Choisir une destination" },
   favorites: { hash: "favoris", label: "Favoris" },
   profile: { hash: "profil", label: "Mon profil" },

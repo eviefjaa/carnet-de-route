@@ -9,7 +9,7 @@ service cloud.firestore {
 
     // Voyages, partagés entre leurs voyageurs :
     //   owner (créateur), members (uid des voyageurs), invites (e-mails invités, en minuscules),
-    //   emails ({ uid: e-mail } des voyageurs)
+    //   emails ({ uid: e-mail } des voyageurs), joined ({ uid: date d'arrivée }, pour les notifications)
     match /trips/{tripId} {
       function signedIn() { return request.auth != null; }
       function uid() { return request.auth.uid; }
@@ -46,17 +46,21 @@ service cloud.firestore {
             && resource.data.members.hasAll(newData().members)
             && resource.data.emails.keys().hasAll(newData().emails.keys()))
         // Un voyageur modifie le contenu ou invite quelqu'un (sans retirer d'invitation)
-        || (isMember() && !changed().hasAny(["owner", "members", "emails"])
+        || (isMember() && !changed().hasAny(["owner", "members", "emails", "joined"])
             && newData().invites.hasAll(resource.data.invites))
         // Un voyageur quitte le voyage
         || (isMember() && !isOwner() && changed().hasOnly(["members", "emails"])
             && newData().members == resource.data.members.removeAll([uid()])
             && !(uid() in newData().emails))
         // Une personne invitée rejoint le voyage
-        || (isInvited() && !isMember() && changed().hasOnly(["members", "invites", "emails"])
+        || (isInvited() && !isMember() && changed().hasOnly(["members", "invites", "emails", "joined"])
             && newData().members == resource.data.members.concat([uid()])
             && newData().invites == resource.data.invites.removeAll([email()])
-            && newData().emails.diff(resource.data.emails).affectedKeys().hasOnly([uid()]))
+            && newData().emails.diff(resource.data.emails).affectedKeys().hasOnly([uid()])
+            // Date d'arrivée : la sienne seulement, fixée par Firebase
+            && (!("joined" in newData())
+                || (newData().joined.diff("joined" in resource.data ? resource.data.joined : {}).affectedKeys().hasOnly([uid()])
+                    && newData().joined[uid()] == request.time)))
       );
 
       // Billets des trajets (un fichier par document, encodé en base64) :
@@ -120,10 +124,11 @@ service cloud.firestore {
         && (request.resource.data.status == "pending"
             || (request.resource.data.status == "accepted"
                 && get(/databases/$(database)/documents/profiles/$(request.resource.data.followed)).data.visibility == "public"));
-      // La personne suivie accepte une demande
+      // La personne suivie accepte une demande (la date d'acceptation sert aux notifications)
       allow update: if request.auth != null && request.auth.uid == resource.data.followed
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])
-        && request.resource.data.status == "accepted";
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "acceptedAt"])
+        && request.resource.data.status == "accepted"
+        && request.resource.data.acceptedAt == request.time;
     }
 
     // Publication : copie figée d'un itinéraire, sans prix, notes, adresses, liens ni billets.

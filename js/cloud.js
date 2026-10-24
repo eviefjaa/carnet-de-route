@@ -68,12 +68,17 @@ export async function signUp(email, password) {
 }
 export const resendVerification = () => fb.sendEmailVerification(auth.currentUser);
 
-// L'état « adresse confirmée » est gardé en mémoire par Firebase : on le redemande au serveur
+// L'état « adresse confirmée » est gardé en mémoire par Firebase : on le redemande au serveur.
+// Le jeton présenté aux règles Firestore, lui, n'est renouvelé que toutes les heures : s'il dit
+// encore « non confirmée », on en demande un nouveau (sinon une invitation est refusée une heure).
 export async function refreshEmailVerified() {
-  await auth.currentUser.reload();
-  // Nouveau jeton : les règles Firestore voient aussi l'adresse comme confirmée
-  if (auth.currentUser.emailVerified) await auth.currentUser.getIdToken(true);
-  return auth.currentUser.emailVerified;
+  const u = auth.currentUser;
+  await u.reload();
+  if (u.emailVerified) {
+    const token = await u.getIdTokenResult();
+    if (token.claims.email_verified !== true) await u.getIdToken(true);
+  }
+  return u.emailVerified;
 }
 
 export const signIn = (email, password) => authReady().then(() => fb.signInWithEmailAndPassword(auth, email, password));
@@ -105,7 +110,8 @@ export function errorMessage(e) {
 //   members  uid des voyageurs (le créateur compris)
 //   invites  adresses e-mail invitées qui n'ont pas encore rejoint (en minuscules)
 //   emails   { uid: adresse e-mail } des voyageurs, pour les afficher
-export const SHARING = ["owner", "members", "invites", "emails"];
+//   joined   { uid: date à laquelle la personne a rejoint le voyage }, pour les notifications
+export const SHARING = ["owner", "members", "invites", "emails", "joined"];
 
 const tripDoc = (id) => fb.doc(db, "trips", id);
 const myTrips = (uid) => fb.query(fb.collection(db, "trips"), fb.where("members", "array-contains", uid));
@@ -183,7 +189,10 @@ export async function acceptInvites() {
   const joined = [];
   for (const d of snap.docs) {
     try {
-      await fb.updateDoc(d.ref, { members: fb.arrayUnion(me.uid), invites: fb.arrayRemove(email), [`emails.${me.uid}`]: me.email });
+      await fb.updateDoc(d.ref, {
+        members: fb.arrayUnion(me.uid), invites: fb.arrayRemove(email),
+        [`emails.${me.uid}`]: me.email, [`joined.${me.uid}`]: fb.serverTimestamp(),
+      });
       joined.push(d.data().name || "Sans titre");
     } catch {}
   }
