@@ -80,7 +80,12 @@
 .people.panel { padding: 8px 12px; gap: 2px; }
 
 /* Cœur des itinéraires publiés */
-.post-card .tc-top .fav.small { margin-left: 4px; }
+/* Dans la ligne du haut (auteur, pays, cœur) : jamais par-dessus les codes pays */
+.post-card .tc-top { gap: 8px; }
+.post-card .tc-top .post-author { flex: 1; min-width: 0; }
+.post-card .tc-top .post-author > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.post-card .tc-top .tc-flags { flex: none; }
+.post-card .tc-top .fav.small { position: relative; top: auto; right: auto; flex: none; margin: -6px -6px -6px 0; }
 .post-actions { align-items: center; }
 
 /* Statut de ses propres publications */

@@ -21,7 +21,8 @@
 }
 .is-upcoming .tc-status { background: var(--accent-soft); color: var(--accent); }
 .is-now .tc-status { background: var(--route); color: #1d1600; }
-.is-past { opacity: .8; }
+/* Voyage terminé : contenu atténué, mais fond opaque (la poubelle ne doit pas transparaître) */
+.is-past > * { opacity: .8; }
 .tc-flags { font-family: var(--body); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--muted); }
 
 .trip-card h2 { font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
@@ -66,10 +67,16 @@
 
 /* Glisser une carte vers la gauche : poubelle rouge (js/swipe.js) */
 .swipe { position: relative; border-radius: 16px; overflow: hidden; }
-.swipe > .trip-card { touch-action: pan-y; transition: transform .2s ease, border-color .15s; height: 100%; }
-.swipe > .trip-card.dragging { transition: none; }
+.swipe > .trip-card {
+  touch-action: pan-y; height: 100%; will-change: transform;
+  transition: transform .25s cubic-bezier(.2, .8, .2, 1), border-color .15s;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; /* pas de sélection ni d'aperçu de lien pendant le geste */
+}
+.swipe.dragging > .trip-card { transition: none; }
 .swipe.open > .trip-card { transform: translateX(-88px); }
-.swipe-action { position: absolute; top: 0; right: 0; bottom: 0; width: 88px; border: 0; border-radius: 0 16px 16px 0; background: var(--danger); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: 600 12px/1 var(--body); cursor: pointer; }
+.swipe-action { position: absolute; top: 1px; right: 1px; bottom: 1px; width: 87px; border: 0; border-radius: 0 15px 15px 0; background: var(--danger); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: 600 12px/1 var(--body); cursor: pointer; visibility: hidden; }
+/* La poubelle n'existe à l'écran que pendant le geste ou une fois ouverte (sinon ses bords rouges dépassent des coins) */
+.swipe.dragging .swipe-action, .swipe.open .swipe-action, .swipe-action:focus-visible { visibility: visible; }
 /* Au clavier : la poubelle se dévoile quand elle reçoit le focus */
 .swipe:has(.swipe-action:focus-visible) > .trip-card { transform: translateX(-88px); }
 .swipe-action:focus-visible { outline: 3px solid var(--focus); outline-offset: -6px; }

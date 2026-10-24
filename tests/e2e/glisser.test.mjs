@@ -27,19 +27,30 @@ page.on("pageerror", (e) => check(`erreur JS : ${e.message}`, false));
 await page.goto(`http://localhost:${PORT}/index.html#voyages`, { waitUntil: "networkidle0" });
 await page.evaluate(() => localStorage.setItem("carnet-route-trips", JSON.stringify({
   "v-a": { name: "Lyon et Paris", currency: "EUR", createdAt: 2, items: [{ id: "a", type: "stop", place: "Lyon", arrive: "2026-11-02", depart: "2026-11-04" }] },
-  "v-b": { name: "Japon", currency: "JPY", createdAt: 1, items: [] } })));
+  "v-b": { name: "Japon", currency: "JPY", createdAt: 1, items: [] },
+  "v-c": { name: "Rome (terminé)", currency: "EUR", createdAt: 0, items: [{ id: "r", type: "stop", place: "Rome", arrive: "2020-05-01", depart: "2020-05-03" }] } })));
 await page.reload({ waitUntil: "networkidle0" });
 await sleep(800);
 
-async function swipe(i, dx) {
+async function swipe(i, dx, steps = 8, pause = 15) {
   const b = await page.$$eval(".swipe > .trip-card", (l, i) => { const r = l[i].getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }, i);
   const y = b.y + b.h / 2, x = b.x + b.w * 0.7;
   await page.touchscreen.touchStart(x, y);
-  for (let k = 1; k <= 8; k++) { await page.touchscreen.touchMove(x + (dx * k) / 8, y + 2); await sleep(15); }
+  for (let k = 1; k <= steps; k++) { await page.touchscreen.touchMove(x + (dx * k) / steps, y + 2); await sleep(pause); }
   await page.touchscreen.touchEnd();
   await sleep(400);
 }
 const names = () => page.$$eval(".swipe > .trip-card h2", (l) => l.map((e) => e.textContent.trim()).join(", "));
+const trashVisible = () => page.$$eval(".swipe-action", (l) => l.filter((b) => getComputedStyle(b).visibility === "visible").length);
+
+check("au repos, aucune poubelle rouge visible (voyage terminé compris)", (await trashVisible()) === 0);
+// Geste rapide et court : la carte s'ouvre quand même
+await swipe(0, -60, 3, 5);
+check("geste rapide et court : la poubelle apparaît", !!(await page.$(".swipe.open")));
+// Toucher la carte ouverte : elle se referme, sans ouvrir le voyage
+{ const b = await page.$eval(".swipe.open > .trip-card", (c) => { const r = c.getBoundingClientRect(); return { x: r.x + 40, y: r.y + r.height / 2 }; });
+  await page.touchscreen.tap(b.x, b.y); await sleep(400); }
+check("toucher la carte ouverte la referme", !(await page.$(".swipe.open")) && (await page.evaluate(() => location.hash)) === "#voyages");
 
 await swipe(0, -20);
 check("petit glissement : rien ne s'ouvre", !(await page.$(".swipe.open")) && (await page.evaluate(() => location.hash)) === "#voyages");
@@ -50,16 +61,16 @@ await sleep(400);
 check("confirmation avant suppression", (await page.$eval(".swipe-confirm p", (e) => e.textContent)).includes("Supprimer « Lyon et Paris »"));
 await page.tap('[data-act="swipe-cancel"]');
 await sleep(400);
-check("Annuler garde le voyage", (await names()) === "Lyon et Paris, Japon");
+check("Annuler garde le voyage", (await names()).startsWith("Lyon et Paris, Japon"));
 await swipe(0, -150);
 await page.tap(".swipe.open .swipe-action");
 await sleep(300);
 await page.tap('[data-act="swipe-delete-yes"]');
 await sleep(600);
-check("Supprimer efface le voyage", (await names()) === "Japon" && (await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem("carnet-route-trips"))).join(","))) === "v-b");
+check("Supprimer efface le voyage", !(await names()).includes("Lyon") && !(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem("carnet-route-trips"))))).includes("v-a"));
 await page.tap(".swipe > .trip-card .tc-link");
 await sleep(600);
-check("un simple toucher ouvre toujours le voyage", (await page.evaluate(() => location.hash)) === "#voyage-v-b");
+check("un simple toucher ouvre toujours le voyage", (await page.evaluate(() => location.hash)).startsWith("#voyage-v-"));
 
 console.log(`Glisser pour supprimer : ${ok} vérifications réussies, ${ko} échec(s).`);
 await browser.close();
