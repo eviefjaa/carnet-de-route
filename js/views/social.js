@@ -246,6 +246,22 @@ export function publishPanel(t) {
   </form>`;
 }
 
+// Lien vers une page de liste : nom, nombre et flèche (« urgent » : nombre en rouge)
+const chevronRight = `<svg class="link-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`;
+const listLink = (hash, title, count, urgent = false) => `<li><a class="list-link" href="#${hash}">
+    <span>${esc(title)}</span>
+    <span class="fold-count${urgent ? " is-urgent" : ""}">${count}</span>
+    ${chevronRight}
+  </a></li>`;
+
+// Pages des listes de Mon profil
+export const NETWORK_PAGES = {
+  demandes: "Demandes d'abonnement",
+  abonnes: "Abonnés",
+  abonnements: "Abonnements",
+  "mes-publications": "Mes publications",
+};
+
 // ---------- Profil public, abonnés et publications (page Mon profil) ----------
 export function socialProfileSection() {
   if (!isEnabled() || !state.user) return "";
@@ -267,26 +283,16 @@ export function socialProfileSection() {
 
   const net = social.load("network", social.myNetwork);
   const mine = social.load("mine", () => social.postsOf(me()));
-  const person = (f, buttons) => `<li>
-      <a class="person" href="#personne-${esc(f.profile.uid)}">${avatar(f.profile)}<span><b>${esc(f.profile.name)}</b>${f.profile.handle ? ` <span class="handle">@${esc(f.profile.handle)}</span>` : ""}</span></a>
-      <span class="row-btns">${buttons}</span>
-    </li>`;
-  const list = (items, empty, buttons) => (items.length ? `<ul class="people">${items.map((f) => person(f, buttons(f))).join("")}</ul>` : `<p class="note">${empty}</p>`);
+  const n = (e, f) => (e.status === "ok" ? f(e.data) : "…");
+  const requests = net.status === "ok" ? net.data.requests.length : 0;
 
-  const network = net.status === "loading" ? loadingNote : net.status === "error" ? errorNote() : `
-    ${net.data.requests.length ? `<div class="panel"><h2>Demandes d'abonnement (${net.data.requests.length})</h2>
-      ${list(net.data.requests, "", (f) => `<button class="btn small primary" data-act="accept-follower" data-uid="${esc(f.follower)}" type="button">Accepter</button>
-        <button class="btn small" data-act="remove-follower" data-uid="${esc(f.follower)}" type="button">Refuser</button>`)}</div>` : ""}
-    <div class="panel"><h2>Abonnés (${net.data.followers.length})</h2>
-      ${list(net.data.followers, "Personne ne vous suit encore.", (f) => `<button class="btn small" data-act="remove-follower" data-uid="${esc(f.follower)}" type="button">Retirer</button>`)}</div>
-    <div class="panel"><h2>Abonnements (${net.data.following.filter((f) => f.status === "accepted").length})</h2>
-      ${list(net.data.following, "Vous ne suivez personne. Trouvez des voyageurs dans Découvrir.", (f) => `${f.status === "pending" ? `<span class="follow-state">En attente</span>` : ""}
-        <button class="btn small" data-act="unfollow" data-uid="${esc(f.followed)}" type="button">${f.status === "pending" ? "Annuler" : "Se désabonner"}</button>`)}</div>`;
-
-  const posts = mine.status === "loading" ? loadingNote : mine.status === "error" ? errorNote()
-    : postGrid(mine.data, "Vous n'avez rien publié. Ouvrez un voyage et choisissez « Publier l'itinéraire ».");
-
-  return `${form}${network}<h2 class="section-title">Mes publications</h2>${posts}`;
+  return `${form}
+    <ul class="panel list-links">
+      ${requests ? listLink("demandes", "Demandes d'abonnement", requests, true) : ""}
+      ${listLink("abonnes", "Abonnés", n(net, (d) => d.followers.length))}
+      ${listLink("abonnements", "Abonnements", n(net, (d) => d.following.filter((f) => f.status === "accepted").length))}
+      ${listLink("mes-publications", "Mes publications", n(mine, (d) => d.length))}
+    </ul>`;
 }
 
 // Titre et description de l'onglet pour un profil ou une publication déjà chargés
@@ -431,4 +437,35 @@ export function notificationsView() {
       ? `<ul class="notifs">${list.map((n) => notifLine(n, seen)).join("")}</ul>`
       : `<p class="note">Rien pour l'instant. Les commentaires sur vos itinéraires, vos nouveaux abonnés et les voyageurs qui rejoignent vos voyages apparaîtront ici.</p>`}
   </section>`;
+}
+
+// Page d'une liste de Mon profil : demandes, abonnés, abonnements ou publications
+export function networkView(tab) {
+  const title = NETWORK_PAGES[tab] || "Mon profil";
+  const head = `<a class="back" href="#profil">← Mon profil</a><header class="page-head"><h1>${esc(title)}</h1></header>`;
+  if (!state.user) return `<section class="page">${head}${signInPanel("Connectez-vous pour voir vos abonnés et vos publications.")}</section>`;
+
+  const person = (f, buttons) => `<li>
+      <a class="person" href="#personne-${esc(f.profile.uid)}">${avatar(f.profile)}<span><b>${esc(f.profile.name)}</b>${f.profile.handle ? ` <span class="handle">@${esc(f.profile.handle)}</span>` : ""}</span></a>
+      <span class="row-btns">${buttons}</span>
+    </li>`;
+  const list = (items, empty, buttons) => (items.length ? `<ul class="people panel">${items.map((f) => person(f, buttons(f))).join("")}</ul>` : `<p class="note">${empty}</p>`);
+
+  if (tab === "mes-publications") {
+    const mine = social.load("mine", () => social.postsOf(me()));
+    const body = mine.status === "loading" ? loadingNote : mine.status === "error" ? errorNote()
+      : postGrid(mine.data, "Vous n'avez rien publié. Ouvrez un voyage et choisissez « Publier l'itinéraire ».");
+    return `<section class="page">${head}${body}</section>`;
+  }
+
+  const net = social.load("network", social.myNetwork);
+  if (net.status !== "ok") return `<section class="page">${head}${net.status === "loading" ? loadingNote : errorNote()}</section>`;
+  const d = net.data;
+  const body =
+    tab === "demandes" ? list(d.requests, "Aucune demande en attente.", (f) => `<button class="btn small primary" data-act="accept-follower" data-uid="${esc(f.follower)}" type="button">Accepter</button>
+        <button class="btn small" data-act="remove-follower" data-uid="${esc(f.follower)}" type="button">Refuser</button>`)
+    : tab === "abonnes" ? list(d.followers, "Personne ne vous suit encore.", (f) => `<button class="btn small" data-act="remove-follower" data-uid="${esc(f.follower)}" type="button">Retirer</button>`)
+    : list(d.following, "Vous ne suivez personne. Trouvez des voyageurs dans Découvrir.", (f) => `${f.status === "pending" ? `<span class="follow-state">En attente</span>` : ""}
+        <button class="btn small" data-act="unfollow" data-uid="${esc(f.followed)}" type="button">${f.status === "pending" ? "Annuler" : "Se désabonner"}</button>`);
+  return `<section class="page">${head}${body}</section>`;
 }

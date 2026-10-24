@@ -3,6 +3,9 @@
 
 import { state, resetUi } from "./store.js";
 
+// Listes ouvertes depuis Mon profil
+const NETWORK = ["demandes", "abonnes", "abonnements", "mes-publications"];
+
 export const PAGES = {
   trips: { hash: "voyages", label: "Mes voyages" },
   feed: { hash: "fil", label: "Fil d'actualité" },
@@ -22,6 +25,11 @@ export function readHash() {
   if (h.startsWith("voyage-")) {
     state.view = "trip";
     state.tripId = h.slice("voyage-".length);
+    return;
+  }
+  if (NETWORK.includes(h)) {
+    state.view = "network";
+    state.networkTab = h;
     return;
   }
   // Profil d'une personne (#personne-<uid>) et publication (#publication-<id>)

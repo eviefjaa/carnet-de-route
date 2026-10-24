@@ -67,3 +67,14 @@
 .nav-count.is-new { background: var(--danger); color: #fff; }
 .menu-btn { position: relative; }
 .menu-btn.has-new::after { content: attr(data-count); position: absolute; top: 0; right: -2px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 99px; background: var(--danger); color: #fff; font: 600 11px/18px var(--body); text-align: center; }
+
+/* Liens de Mon profil vers les pages Abonnés, Abonnements, Mes publications */
+.list-links { list-style: none; margin: 0; padding: 4px 0; gap: 0; }
+.list-links li + li { border-top: 1px solid var(--line); }
+.list-link { display: flex; align-items: center; gap: 10px; padding: 14px 18px; color: var(--ink); text-decoration: none; font-family: var(--display); font-size: 18px; font-weight: 700; }
+.list-link:hover { background: var(--bg); }
+.list-link:hover .link-chevron { color: var(--ink); }
+.link-chevron { margin-left: auto; color: var(--muted); }
+.fold-count { font-family: var(--mono); font-size: 13px; font-weight: 600; padding: 1px 9px; border-radius: 99px; background: var(--bg); color: var(--ink); }
+.fold-count.is-urgent { background: var(--danger); color: #fff; }
+.people.panel { padding: 8px 12px; gap: 2px; }

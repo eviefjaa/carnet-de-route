@@ -18,7 +18,7 @@ import { prefs } from "../prefs.js";
 import { tripsListView } from "./trips-list.js";
 import { tripPending } from "./checklist.js";
 import { shareSection, travellers } from "./share.js";
-import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel, socialTitle, notificationsView, markNotificationsSeen } from "./social.js";
+import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel, socialTitle, notificationsView, markNotificationsSeen, networkView, NETWORK_PAGES } from "./social.js";
 import { refreshNotifications } from "../social.js";
 import { countryByCode } from "../data/countries.js";
 
@@ -42,6 +42,7 @@ function setMeta() {
     : t ? [t.name || "Voyage", PAGE_META.trips[1]]
     : country ? [country.name, country.tagline]
     : ["person", "post"].includes(state.view) ? socialTitle()
+    : state.view === "network" ? [NETWORK_PAGES[state.networkTab] || "Mon profil", PAGE_META.profile[1]]
     : PAGE_META[state.view] || PAGE_META.trips;
   document.title = `${title} · Carnet de route`;
   document.querySelector('meta[name="description"]')?.setAttribute("content", description);
@@ -96,6 +97,9 @@ export function render() {
       return;
     case "discover":
       app.innerHTML = discoverView();
+      return;
+    case "network":
+      app.innerHTML = networkView(state.networkTab);
       return;
     case "notifications":
       app.innerHTML = notificationsView();

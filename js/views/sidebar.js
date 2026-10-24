@@ -22,7 +22,7 @@ export const icon = (name) =>
 
 export function renderSidebar() {
   const el = document.getElementById("sidebar");
-  const current = { country: "explore", trip: "trips", person: "discover", post: "discover" }[state.view] || state.view;
+  const current = { country: "explore", trip: "trips", person: "discover", post: "discover", network: "profile" }[state.view] || state.view;
   const counts = {
     trips: Object.keys(state.trips).length,
     favorites: prefs.favorites.length,

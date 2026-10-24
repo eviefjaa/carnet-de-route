@@ -30,6 +30,7 @@ export const state = {
   publishOpen: false, // panneau « Publier l'itinéraire » ouvert
   inviteOpen: false,  // champ « Inviter une personne » ouvert
   openItems: new Set(), // étapes et trajets dépliés (le détail s'affiche au clic sur leur carte)
+  networkTab: null,  // liste affichée depuis Mon profil (#abonnes, #abonnements, #mes-publications, #demandes)
   personId: null,   // personne affichée (#personne-…)
   postId: null,     // publication affichée (#publication-…)
 };
