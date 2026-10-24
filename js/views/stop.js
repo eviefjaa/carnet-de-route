@@ -1,7 +1,7 @@
 // Affichage et formulaire d'une étape (lieu, dates, hébergement, liens de réservation)
 
 import { esc, uid, safeUrl, source, fmtDay, nights, plural, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
-import { tripStart } from "../store.js";
+import { state, tripStart } from "../store.js";
 import { itemActions } from "./actions.js";
 import { pickedPlace } from "../autocomplete.js";
 import { checklist } from "./checklist.js";
@@ -18,16 +18,26 @@ export function stopCard(it, trip, idx) {
     ? `<div><span class="price">${esc(fmtMoney(it.price, cur))}</span>${n ? ` <span class="price-sub">soit ${esc(fmtMoney(Math.round((it.price / n) * 100) / 100, cur))} / nuit</span>` : ""}</div>`
     : "";
 
-  return `<article class="item stop">
-    <div class="stop-head">
-      ${dayN ? `<span class="day">JOUR ${dayN}</span>` : ""}
-      <h2>${esc(it.place || "Étape sans nom")}</h2>
-      ${it.country ? `<span class="stop-country">${esc(it.country)}</span>` : ""}
+  // Carte repliée : l'essentiel, et ce qui reste à réserver en rouge. Un clic l'ouvre.
+  const open = state.openStops.has(it.id);
+  const toBook = (it.todos || []).filter((t) => !t.done).map((t) => t.text);
+  const detailId = `stop-detail-${esc(it.id)}`;
+
+  return `<article class="item stop${open ? " open" : ""}">
+    <div class="stop-summary">
+      <div class="stop-head">
+        ${dayN ? `<span class="day">JOUR ${dayN}</span>` : ""}
+        <h2><button class="stop-toggle" data-act="toggle-stop" data-id="${esc(it.id)}" type="button" aria-expanded="${open}" aria-controls="${detailId}">${esc(it.place || "Étape sans nom")}</button></h2>
+        ${it.country ? `<span class="stop-country">${esc(it.country)}</span>` : ""}
+        <svg class="stop-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+      <div class="dates">
+        ${it.arrive ? esc(fmtDay(it.arrive)) : "date à définir"}${it.depart ? " → " + esc(fmtDay(it.depart)) : ""}
+        ${n ? `<span class="nights">${plural(n, "nuit")}</span>` : ""}
+      </div>
+      ${toBook.length ? `<p class="to-book">À réserver : ${toBook.slice(0, 3).map(esc).join(", ")}${toBook.length > 3 ? ` et ${toBook.length - 3} autre${toBook.length > 4 ? "s" : ""}` : ""}</p>` : ""}
     </div>
-    <div class="dates">
-      ${it.arrive ? esc(fmtDay(it.arrive)) : "date à définir"}${it.depart ? " → " + esc(fmtDay(it.depart)) : ""}
-      ${n ? `<span class="nights">${plural(n, "nuit")}</span>` : ""}
-    </div>
+    ${open ? `<div class="stop-detail" id="${detailId}">
     ${price}
     ${it.address ? `<div class="addr">${esc(it.address)}</div>` : ""}
     ${links.length ? `<div class="links">${links.map(linkCard).join("")}</div>` : ""}
@@ -35,6 +45,7 @@ export function stopCard(it, trip, idx) {
     ${maps ? `<div class="leg-extra"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Ouvrir dans Google Maps ↗</a></div>` : ""}
     ${checklist(it)}
     ${itemActions(it, idx, trip)}
+    </div>` : ""}
   </article>`;
 }
 

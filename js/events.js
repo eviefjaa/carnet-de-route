@@ -92,6 +92,12 @@ function onClick(e) {
       resetFormTickets();
       break;
     }
+    case "toggle-stop": {
+      const id = b.dataset.id;
+      if (state.openStops.has(id)) state.openStops.delete(id);
+      else state.openStops.add(id);
+      break;
+    }
     case "edit":
       state.editingId = b.dataset.id;
       state.insertAt = null;

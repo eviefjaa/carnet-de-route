@@ -45,3 +45,16 @@
 .insert:hover, .insert:focus-within { opacity: 1; }
 .insert .btn { font-size: 12px; padding: 3px 9px; border-style: dashed; background: transparent; }
 @media (hover: none) { .insert { opacity: 1; } }
+
+/* Étape repliée : un clic n'importe où sur le résumé l'ouvre ou la referme */
+.stop-summary { position: relative; display: flex; flex-direction: column; gap: 8px; }
+.stop-toggle { all: unset; cursor: pointer; }
+.stop-toggle::after { content: ""; position: absolute; inset: -16px -18px; border-radius: 12px; }
+.stop-toggle:focus-visible { outline: none; }
+.stop-toggle:focus-visible::after { outline: 2px solid var(--focus); outline-offset: -2px; }
+.stop-chevron { margin-left: auto; align-self: center; color: var(--muted); transition: transform .15s; }
+.stop.open .stop-chevron { transform: rotate(180deg); }
+.stop:not(.open):hover { border-color: var(--accent); }
+.stop-detail { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+/* Ce qui reste à réserver, visible même carte repliée */
+.to-book { margin: 0; font-size: 14px; font-weight: 600; color: var(--danger); overflow-wrap: anywhere; }
