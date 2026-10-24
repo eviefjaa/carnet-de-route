@@ -202,13 +202,13 @@ function mapSection() {
 }
 
 function itinerary(t) {
-  let html = `<section class="route" aria-label="Itinéraire">` + insertRow(0);
+  let html = `<section class="route" aria-label="Itinéraire">` + insertRow(0, !t.items.length);
   t.items.forEach((it, idx) => {
     const editing = state.editingId === it.id;
     if (it.type === "stop") html += editing ? stopForm(it) : stopCard(it, t, idx);
     else html += editing ? transportForm(it) : transportCard(it, t, idx);
     html += insertRow(idx + 1);
   });
-  if (!t.items.length) html += `<p class="note">Commencez par ajouter votre première étape.</p>`;
+  if (!t.items.length && !state.insertAt) html += `<p class="note">Commencez par une étape (un lieu où vous passez la nuit ou un simple arrêt) ou par un trajet (train, avion, voiture…).</p>`;
   return html + `</section>`;
 }

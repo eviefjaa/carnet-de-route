@@ -21,12 +21,13 @@ export function itemActions(it, idx, trip) {
   </div>`;
 }
 
-export function insertRow(pos) {
+// big : voyage encore vide, les deux boutons sont affichés en grand pour bien démarrer
+export function insertRow(pos, big = false) {
   if (state.insertAt && state.insertAt.pos === pos) {
     const d = state.insertAt.draft;
     return d.type === "stop" ? stopForm(d, true) : transportForm(d, true);
   }
-  return `<div class="insert">
+  return `<div class="insert${big ? " is-big" : ""}">
     <button class="btn" data-act="add-stop" data-pos="${pos}" type="button">+ Étape</button>
     <button class="btn" data-act="add-leg" data-pos="${pos}" type="button">+ Trajet</button>
   </div>`;

@@ -28,7 +28,7 @@
 .tc-link { color: var(--ink); text-decoration: none; }
 .tc-link::after { content: ""; position: absolute; inset: 0; border-radius: 16px; } /* toute la carte est cliquable */
 
-.tc-dates { margin: 0; font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.tc-dates { margin: 0; font-family: var(--body); font-size: 14px; color: var(--muted); }
 .tc-route { margin: 0; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
 .tc-route span { color: var(--route); font-weight: 700; }
 .empty-route { color: var(--muted); font-weight: 400; }

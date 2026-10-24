@@ -12,9 +12,9 @@
 .stop::before { content: ""; position: absolute; left: -31px; top: 18px; width: 17px; height: 17px; border-radius: 50%; background: var(--surface); border: 4px solid var(--route); }
 .stop-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
 .stop-head h2 { font-size: 22px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
-.day { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--accent); }
-.dates { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.nights { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--night-bg); color: var(--night-ink); }
+.day { font-family: var(--body); font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--muted); }
+.dates { font-family: var(--body); font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.nights { display: inline-block; font-family: var(--body); font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--night-bg); color: var(--night-ink); }
 /* Étape sans nuit sur place (arrivée et départ le même jour) */
 .nights.is-halt { background: var(--halt-bg); color: var(--halt-ink); }
 .addr { font-size: 14px; color: var(--muted); }
@@ -36,8 +36,8 @@
 .mode { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; background: var(--ink); color: var(--bg); padding: 3px 8px; border-radius: 4px; }
 .leg { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .leg-places { font-weight: 600; overflow-wrap: anywhere; }
-.leg-times { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: 2px 14px; color: var(--muted); }
-.leg-times b { color: var(--ink); font-weight: 600; }
+.leg-times { font-family: var(--body); font-size: 14px; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: 2px 14px; color: var(--muted); }
+.leg-times b { color: var(--muted); font-weight: 600; }
 .dur { color: var(--ink); font-weight: 600; }
 .leg-extra { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .leg-extra a { color: var(--accent); }
@@ -46,6 +46,10 @@
 .insert { display: flex; gap: 6px; padding: 6px 0; opacity: .55; transition: opacity .15s; }
 .insert:hover, .insert:focus-within { opacity: 1; }
 .insert .btn { font-size: 12px; padding: 3px 9px; border-style: dashed; background: transparent; }
+/* Voyage encore vide : les deux boutons en grand */
+.insert.is-big { opacity: 1; gap: 12px; padding: 12px 0 6px; flex-wrap: wrap; }
+.insert.is-big .btn { flex: 1 1 140px; font-size: 17px; font-weight: 600; padding: 16px 20px; border: 2px dashed var(--accent); background: var(--surface); color: var(--accent); border-radius: 12px; }
+.insert.is-big .btn:hover { background: var(--accent-soft); }
 @media (hover: none) { .insert { opacity: 1; } }
 
 /* Étape repliée : un clic n'importe où sur le résumé l'ouvre ou la referme */

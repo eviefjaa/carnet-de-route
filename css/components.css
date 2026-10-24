@@ -19,7 +19,7 @@ a.btn { display: inline-block; text-decoration: none; color: var(--ink); }
 .hero h1 { font-size: clamp(28px, 6vw, 42px); font-weight: 700; }
 .hero h1 input { font: inherit; border: 0; background: transparent; width: 100%; padding: 0; border-bottom: 2px dashed transparent; }
 .hero h1 input:hover, .hero h1 input:focus { border-bottom-color: var(--line); outline: none; }
-.stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--body); font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .stats b { color: var(--ink); font-weight: 600; }
 .hero-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
@@ -47,7 +47,7 @@ label.f input[type="date"], label.f input[type="datetime-local"] {
 }
 label.f input::-webkit-date-and-time-value { text-align: left; margin: 0; min-height: 22px; }
 label.f input::-webkit-datetime-edit { padding: 0; }
-.computed { font-family: var(--mono); font-size: 13px; color: var(--muted); min-height: 1.5em; } /* place réservée : le calcul ne décale pas les boutons */
+.computed { font-family: var(--body); font-size: 14px; color: var(--muted); min-height: 1.5em; } /* place réservée : le calcul ne décale pas les boutons */
 
 .links-edit { display: flex; flex-direction: column; gap: 6px; }
 .link-edit { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 6px; }
