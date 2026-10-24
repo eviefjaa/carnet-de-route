@@ -49,10 +49,11 @@
 /* Étape repliée : un clic n'importe où sur le résumé l'ouvre ou la referme */
 .stop-summary { position: relative; display: flex; flex-direction: column; gap: 8px; }
 .stop-toggle { all: unset; cursor: pointer; }
-.stop-toggle::after { content: ""; position: absolute; inset: -16px -18px; border-radius: 12px; }
+.stop-toggle::after { content: ""; position: absolute; inset: -16px -18px -6px; border-radius: 12px; z-index: 1; }
 .stop-toggle:focus-visible { outline: none; }
 .stop-toggle:focus-visible::after { outline: 2px solid var(--focus); outline-offset: -2px; }
-.stop-chevron { margin-left: auto; align-self: center; color: var(--muted); transition: transform .15s; }
+/* La flèche laisse passer le toucher vers la carte (sinon on ne pouvait pas refermer en la touchant) */
+.stop-chevron { margin-left: auto; align-self: center; color: var(--muted); transition: transform .15s; pointer-events: none; }
 .stop.open .stop-chevron { transform: rotate(180deg); }
 .stop:not(.open):hover { border-color: var(--accent); }
 .stop-detail { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
