@@ -99,11 +99,11 @@ Sur la page d'un voyage, « Publier l'itinéraire » crée une copie figée, que
 
 En publiant, on peut ajouter des recommandations facultatives : restaurants, hébergements, adresses ou activités, avec un lieu, un mot et un lien. Les itinéraires publiés peuvent être commentés par les personnes qui les voient et qui ont un profil public. Un commentaire est supprimé par son auteur ou par l'auteur de l'itinéraire, et il n'est jamais modifié.
 
-La page « Notifications » signale les commentaires sur ses itinéraires, les nouveaux abonnés, les demandes d'abonnement, les demandes acceptées et les voyageurs qui rejoignent ses voyages. Elles sont déduites des abonnements et des commentaires existants (aucun autre compte ne peut en écrire), rechargées toutes les 3 minutes et au retour sur l'onglet. Le nombre de nouveautés s'affiche dans le menu et sur son bouton, sur téléphone.
+La page « Notifications » signale les commentaires sur ses itinéraires, les mises en favori de ses itinéraires (par des personnes qui ont un profil), les nouveaux abonnés, les demandes d'abonnement, les demandes acceptées et les voyageurs qui rejoignent ses voyages. Elles sont déduites des abonnements et des commentaires existants (aucun autre compte ne peut en écrire), rechargées toutes les 3 minutes et au retour sur l'onglet. Le nombre de nouveautés s'affiche dans le menu et sur son bouton, sur téléphone.
 
 Pages : « Fil d'actualité » (publications des personnes suivies), « Découvrir » (derniers itinéraires publics et recherche de personnes), `#personne-…` (profil) et `#publication-…` (itinéraire publié).
 
-Données Firestore : `profiles/{uid}`, `handles/{pseudo}`, `follows/{abonné}_{suivi}`, `posts/{id}` (avec `recos`) et `posts/{id}/comments/{id}`. Qui voit et modifie quoi : `firestore.rules`.
+Données Firestore : `profiles/{uid}`, `handles/{pseudo}`, `follows/{abonné}_{suivi}`, `posts/{id}` (avec `recos`), `posts/{id}/comments/{id}` et `posts/{id}/likes/{uid}` (mises en favori, visibles par l'auteur seulement). Qui voit et modifie quoi : `firestore.rules`.
 
 Tests en local avec les émulateurs Firebase : lancer `firebase emulators:start --only auth,firestore` (Java 11 ou plus récent), puis ouvrir le site sur `http://localhost:…/?emulateur`.
 

@@ -5,7 +5,7 @@
 import { toast } from "./toast.js";
 
 const KEY = "carnet-route-prefs";
-const DEFAULTS = { favorites: [], currency: "EUR", theme: "auto", name: "", emailReminders: true, notifSeen: 0 };
+const DEFAULTS = { favorites: [], favoritePosts: [], currency: "EUR", theme: "auto", name: "", emailReminders: true, notifSeen: 0 };
 
 export const prefs = { ...DEFAULTS };
 let cloud = null;
@@ -14,6 +14,7 @@ export function loadPrefs() {
   try {
     Object.assign(prefs, JSON.parse(localStorage.getItem(KEY) || "{}"));
   } catch {}
+  if (!Array.isArray(prefs.favoritePosts)) prefs.favoritePosts = [];
   applyTheme();
 }
 
@@ -27,7 +28,8 @@ export function usePrefsCloud(c, remote) {
   cloud = c;
   if (remote) {
     const favorites = [...new Set([...(remote.favorites || []), ...prefs.favorites])];
-    Object.assign(prefs, remote, { favorites });
+    const favoritePosts = [...new Set([...(Array.isArray(remote.favoritePosts) ? remote.favoritePosts : []), ...prefs.favoritePosts])];
+    Object.assign(prefs, remote, { favorites, favoritePosts });
   }
   applyTheme();
   if (c) savePrefs();
@@ -37,7 +39,7 @@ export function usePrefsCloud(c, remote) {
 export function resetPrefs() {
   cloud = null;
   const theme = prefs.theme;
-  Object.assign(prefs, DEFAULTS, { favorites: [], theme });
+  Object.assign(prefs, DEFAULTS, { favorites: [], favoritePosts: [], theme });
   savePrefs();
 }
 
@@ -53,4 +55,19 @@ export function toggleFavorite(code) {
   prefs.favorites = isFavorite(code) ? prefs.favorites.filter((c) => c !== code) : [...prefs.favorites, code];
   savePrefs();
   return isFavorite(code);
+}
+
+// Itinéraires publiés mis en favori (identifiants des publications)
+export const isFavoritePost = (id) => prefs.favoritePosts.includes(id);
+
+export function toggleFavoritePost(id) {
+  prefs.favoritePosts = isFavoritePost(id) ? prefs.favoritePosts.filter((p) => p !== id) : [...prefs.favoritePosts, id];
+  savePrefs();
+  return isFavoritePost(id);
+}
+
+// Retire des favoris les itinéraires supprimés ou devenus invisibles
+export function forgetFavoritePosts(ids) {
+  prefs.favoritePosts = prefs.favoritePosts.filter((p) => !ids.includes(p));
+  savePrefs();
 }

@@ -5,6 +5,7 @@
 //   follows/{abonné_suivi} { follower, followed, status: "accepted" | "pending", createdAt }
 //   posts/{id}            { owner, ownerName, ownerHandle, title, visibility, publishedAt, trip, recos }
 //   posts/{id}/comments/{id} { author, authorName, authorHandle, text, createdAt }
+//   posts/{id}/likes/{uid}   { name, handle, at } : mis en favori (visible par l'auteur seulement)
 //
 // Les identifiants des publications commencent par un compte à rebours de l'heure :
 // Firestore les rend donc de la plus récente à la plus ancienne, sans index à créer.
@@ -219,13 +220,29 @@ export async function setPostVisibility(id, visibility) {
   resetSocial();
 }
 
-// Les commentaires sont supprimés avec la publication
+// Les commentaires et les mises en favori sont supprimés avec la publication
 export async function deletePost(id) {
   const { fb, db } = F();
-  const comments = await fb.getDocs(fb.collection(db, "posts", id, "comments"));
-  await Promise.all(comments.docs.map((d) => fb.deleteDoc(d.ref)));
+  const [comments, likes] = await Promise.all([
+    fb.getDocs(fb.collection(db, "posts", id, "comments")),
+    fb.getDocs(fb.collection(db, "posts", id, "likes")),
+  ]);
+  await Promise.all([...comments.docs, ...likes.docs].map((d) => fb.deleteDoc(d.ref)));
   await fb.deleteDoc(fb.doc(db, "posts", id));
   resetSocial();
+}
+
+// ---------- Mises en favori (pour prévenir l'auteur) ----------
+// Sans profil, le favori reste seulement dans mes préférences : l'auteur n'est pas prévenu
+export async function likePost(id) {
+  if (!state.user || !state.profile) return;
+  const { fb, db } = F();
+  await fb.setDoc(fb.doc(db, "posts", id, "likes", me()), { name: state.profile.name, handle: state.profile.handle, at: fb.serverTimestamp() });
+}
+export async function unlikePost(id) {
+  if (!state.user) return;
+  const { fb, db } = F();
+  await fb.deleteDoc(fb.doc(db, "posts", id, "likes", me()));
 }
 
 // ---------- Commentaires ----------
@@ -286,6 +303,7 @@ export async function discover() {
 //   request   quelqu'un demande à s'abonner (compte privé)
 //   accepted  quelqu'un a accepté ma demande d'abonnement
 //   joined    quelqu'un a rejoint un de mes voyages partagés
+//   favorite  quelqu'un a mis un de mes itinéraires en favori
 
 async function loadNotifications() {
   const { fb, db } = F();
@@ -312,6 +330,15 @@ async function loadNotifications() {
       })))
       .catch(() => [])));
   items.push(...comments.flat());
+
+  const likes = await Promise.all(posts.slice(0, 30).map((p) =>
+    fb.getDocs(fb.collection(db, "posts", p.id, "likes"))
+      .then((snap) => snap.docs.map((d) => {
+        const l = d.data();
+        return { type: "favorite", who: d.id, name: text(l.name, 40) || "Quelqu'un", handle: text(l.handle, 20), at: toMs(l.at), postId: p.id, postTitle: p.title };
+      }))
+      .catch(() => [])));
+  items.push(...likes.flat());
 
   // Voyageurs qui ont rejoint mes voyages (toujours dans le voyage)
   Object.entries(state.trips).forEach(([tripId, t]) => {

@@ -3,7 +3,7 @@
 
 import { esc, plural, MODES, safeUrl } from "../utils.js";
 import { state } from "../store.js";
-import { prefs, savePrefs } from "../prefs.js";
+import { prefs, savePrefs, isFavoritePost } from "../prefs.js";
 import { invitationsBlock } from "./share.js";
 import { isEnabled } from "../cloud.js";
 import * as social from "../social.js";
@@ -19,6 +19,17 @@ const signInPanel = (text) => `<div class="panel">
     <p class="note">${text}</p>
     <div class="row-btns"><button class="btn primary" data-act="open-auth" data-mode="signin" type="button">Se connecter</button></div>
   </div>`;
+
+// Cœur « favori » d'un itinéraire publié (pas sur ses propres itinéraires)
+export function postFavButton(p, small = false) {
+  if (p.owner === me()) return "";
+  const on = isFavoritePost(p.id);
+  const label = on ? "Retirer des favoris" : "Ajouter aux favoris";
+  return `<button class="fav${on ? " on" : ""}${small ? " small" : ""}" data-act="fav-post" data-post="${esc(p.id)}" type="button" aria-pressed="${on}" aria-label="${label}" title="${label}">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+    ${small ? "" : `<span>${on ? "Dans mes favoris" : "Ajouter aux favoris"}</span>`}
+  </button>`;
+}
 
 // ---------- Carte d'une publication (dans les listes) ----------
 function flagsOf(trip) {
@@ -39,6 +50,7 @@ export function postCard(p) {
     <div class="tc-top">
       <a class="post-author" href="#personne-${esc(p.owner)}">${avatar({ name: p.ownerName })}<span>${esc(p.ownerName)} <span class="handle">@${esc(p.ownerHandle)}</span></span></a>
       <span class="tc-flags" aria-hidden="true">${flagsOf(trip)}</span>
+      ${postFavButton(p, true)}
     </div>
     <h2><a class="tc-link" href="#publication-${esc(p.id)}">${esc(p.title)}</a></h2>
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
@@ -172,7 +184,10 @@ export function postView(id) {
           <label class="currency">Visible par <select data-post-visibility="${esc(p.id)}">${options}</select></label>
           ${del}
         </div>` : ""}
-      ${p.visibility === "public" ? `<div><button class="btn small" data-act="copy-link" type="button">Copier le lien de partage</button></div>` : ""}
+      <div class="row-btns post-actions">
+        ${postFavButton(p)}
+        ${p.visibility === "public" ? `<button class="btn small" data-act="copy-link" type="button">Copier le lien de partage</button>` : ""}
+      </div>
     </header>
     ${stops.some((s) => s.geo) ? `<section class="map-box" aria-label="Carte de l'itinéraire"><div id="mapSlot"></div></section>` : ""}
     <section class="route" aria-label="Itinéraire">${items.map(readOnlyItem).join("")}</section>
@@ -419,6 +434,7 @@ function notifLine(n, seen) {
     : n.type === "request" ? [`${who} demande à s'abonner à vous. Vous pouvez accepter ou refuser dans Mon profil.`, "#profil"]
     : n.type === "accepted" ? [`${who} a accepté votre demande d'abonnement.`, `#personne-${n.who}`]
     : n.type === "joined" ? [`${who} a rejoint votre voyage « ${esc(n.tripName)} ».`, `#voyage-${n.tripId}`]
+    : n.type === "favorite" ? [`${who} a ajouté « ${esc(n.postTitle)} » à ses favoris.`, `#publication-${n.postId}`]
     : [`${who} s'est abonné(e) à vous.`, `#personne-${n.who}`];
   const fresh = n.at > seen;
   return `<li class="notif${fresh ? " is-new" : ""}">
@@ -429,7 +445,7 @@ function notifLine(n, seen) {
 }
 
 export function notificationsView() {
-  const head = `<header class="page-head"><h1>Notifications</h1><p class="lead">Commentaires, abonnements et voyageurs qui rejoignent vos voyages.</p></header>`;
+  const head = `<header class="page-head"><h1>Notifications</h1><p class="lead">Commentaires, favoris, abonnements et voyageurs qui rejoignent vos voyages.</p></header>`;
   if (!isEnabled()) return `<section class="page">${head}${errorNote("Les comptes ne sont pas activés sur ce site.")}</section>`;
   if (!state.user) return `<section class="page">${head}${signInPanel("Connectez-vous pour voir qui commente vos itinéraires et qui s'abonne à vous.")}</section>`;
   if (!state.notifs) return `<section class="page">${head}${loadingNote}</section>`;
@@ -472,4 +488,19 @@ export function networkView(tab) {
     : list(d.following, "Vous ne suivez personne. Trouvez des voyageurs dans Découvrir.", (f) => `${f.status === "pending" ? `<span class="follow-state">En attente</span>` : ""}
         <button class="btn small" data-act="unfollow" data-uid="${esc(f.followed)}" type="button">${f.status === "pending" ? "Annuler" : "Se désabonner"}</button>`);
   return `<section class="page">${head}${body}</section>`;
+}
+
+// Page Favoris : les itinéraires publiés mis en favori
+export function favoritePostsSection() {
+  const ids = prefs.favoritePosts;
+  if (!ids.length) return "";
+  const e = social.load("fav-posts:" + ids.join(","), async () => {
+    const posts = await Promise.all(ids.map((id) => social.getPost(id).catch(() => null)));
+    return { found: posts.filter(Boolean), missing: ids.filter((id, i) => !posts[i]) };
+  });
+  const body = e.status === "loading" ? loadingNote : e.status === "error" ? errorNote()
+    : `${postGrid(e.data.found, "")}
+      ${e.data.missing.length ? `<p class="note">${e.data.missing.length > 1 ? `${e.data.missing.length} itinéraires ne sont plus disponibles` : "Un itinéraire n'est plus disponible"} (supprimé, ou plus visible pour vous).
+        <button class="link-btn" data-act="forget-missing-posts" data-posts="${esc(e.data.missing.join(","))}" type="button">Les retirer des favoris</button></p>` : ""}`;
+  return `<h2 class="section-title">Itinéraires</h2>${body}`;
 }

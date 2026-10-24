@@ -151,19 +151,25 @@ function highlightCards(list, country) {
   }).join("")}</ol>`;
 }
 
-export function favoritesView(codes) {
+// postsSection : itinéraires publiés mis en favori (views/social.js), vide s'il n'y en a pas
+export function favoritesView(codes, postsSection = "") {
   const list = codes.map(countryByCode).filter(Boolean);
+  if (!list.length && !postsSection) {
+    return `<section class="page">
+      <header class="page-head"><h1>Favoris</h1></header>
+      <div class="empty">
+        <h2>Aucun favori pour l'instant</h2>
+        <p class="note">Touchez le cœur sur une destination ou sur un itinéraire publié pour le retrouver ici.</p>
+        <div class="row-btns"><a class="btn primary" href="#destinations">Choisir une destination</a><a class="btn" href="#decouvrir">Découvrir des itinéraires</a></div>
+      </div>
+    </section>`;
+  }
   return `<section class="page">
     <header class="page-head">
       <h1>Favoris</h1>
-      <p class="lead">Les destinations qui vous font rêver.</p>
+      <p class="lead">Les destinations et les itinéraires qui vous font rêver.</p>
     </header>
-    ${list.length
-      ? `<div class="country-grid">${list.map(countryCard).join("")}</div>`
-      : `<div class="empty">
-          <h2>Aucun favori pour l'instant</h2>
-          <p class="note">Touchez le cœur sur une destination pour la retrouver ici.</p>
-          <a class="btn primary" href="#destinations">Choisir une destination</a>
-        </div>`}
+    ${list.length ? `<h2 class="section-title">Destinations</h2><div class="country-grid">${list.map(countryCard).join("")}</div>` : ""}
+    ${postsSection}
   </section>`;
 }

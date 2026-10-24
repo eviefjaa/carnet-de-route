@@ -1,6 +1,7 @@
 // Réactions aux clics et formulaires des pages sociales (profil public, abonnements, publications)
 
 import { state, currentTrip } from "./store.js";
+import { toggleFavoritePost, forgetFavoritePosts } from "./prefs.js";
 import { render } from "./views/trip.js";
 import { peopleList, recoRow } from "./views/social.js";
 import * as social from "./social.js";
@@ -83,6 +84,19 @@ export function onSocialClick(act, b) {
         await social.deleteComment(b.dataset.post, b.dataset.comment);
         toast("Commentaire supprimé");
       }, "Impossible de supprimer le commentaire. Vérifiez votre connexion.");
+      return true;
+    case "fav-post": {
+      const on = toggleFavoritePost(b.dataset.post);
+      toast(on ? "Itinéraire ajouté aux favoris" : "Itinéraire retiré des favoris");
+      // L'auteur est prévenu (si j'ai un profil) ; un échec n'empêche pas le favori
+      (on ? social.likePost(b.dataset.post) : social.unlikePost(b.dataset.post)).catch(() => {});
+      render();
+      return true;
+    }
+    case "forget-missing-posts":
+      forgetFavoritePosts(b.dataset.posts.split(","));
+      toast("Itinéraires indisponibles retirés des favoris");
+      render();
       return true;
     case "copy-link":
       navigator.clipboard.writeText(location.href).then(

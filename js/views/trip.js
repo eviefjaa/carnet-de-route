@@ -18,7 +18,7 @@ import { prefs } from "../prefs.js";
 import { tripsListView } from "./trips-list.js";
 import { tripPending } from "./checklist.js";
 import { shareSection, travellers } from "./share.js";
-import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel, socialTitle, notificationsView, markNotificationsSeen, networkView, NETWORK_PAGES } from "./social.js";
+import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel, socialTitle, notificationsView, markNotificationsSeen, networkView, NETWORK_PAGES, favoritePostsSection } from "./social.js";
 import { refreshNotifications } from "../social.js";
 import { countryByCode } from "../data/countries.js";
 
@@ -95,7 +95,7 @@ export function render() {
       if (!detailsReady()) loadDetails().then(() => state.view === "country" && !state.authOpen && render());
       return;
     case "favorites":
-      app.innerHTML = favoritesView(prefs.favorites);
+      app.innerHTML = favoritesView(prefs.favorites, favoritePostsSection());
       return;
     case "feed":
       app.innerHTML = feedView();

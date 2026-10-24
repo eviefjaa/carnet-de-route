@@ -205,6 +205,25 @@ service cloud.firestore {
         allow delete: if request.auth != null
           && (resource.data.author == request.auth.uid || post().owner == request.auth.uid);
       }
+
+      // Mises en favori : likes/{uid} = { name, handle, at }. Chacun s'ajoute ou se retire lui-même ;
+      // seul l'auteur de l'itinéraire voit qui l'a mis en favori (pour ses notifications).
+      match /likes/{userId} {
+        function post() { return get(/databases/$(database)/documents/posts/$(postId)).data; }
+        function canSeePost() {
+          return post().visibility == "public"
+            || post().owner == request.auth.uid
+            || (post().visibility == "followers" && isFollower(post().owner));
+        }
+        allow read: if request.auth != null && (request.auth.uid == userId || post().owner == request.auth.uid);
+        allow create: if request.auth != null && request.auth.uid == userId
+          && post().owner != userId && canSeePost()
+          && request.resource.data.keys().hasOnly(["name", "handle", "at"])
+          && request.resource.data.name == profile().name
+          && request.resource.data.handle == profile().handle
+          && request.resource.data.at == request.time;
+        allow delete: if request.auth != null && (request.auth.uid == userId || post().owner == request.auth.uid);
+      }
     }
   }
 }

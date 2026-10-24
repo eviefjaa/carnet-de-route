@@ -25,7 +25,7 @@ export function renderSidebar() {
   const current = { country: "explore", trip: "trips", person: "discover", post: "discover", network: "profile" }[state.view] || state.view;
   const counts = {
     trips: Object.keys(state.trips).length,
-    favorites: prefs.favorites.length,
+    favorites: prefs.favorites.length + prefs.favoritePosts.length,
     notifications: unreadNotifications(),
   };
 

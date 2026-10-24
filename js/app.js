@@ -27,7 +27,7 @@ const typing = () => {
   return !!el && !!el.closest("#app form") && !!el.value;
 };
 onSocialLoaded(() => {
-  if (["feed", "discover", "person", "post", "profile", "notifications", "network"].includes(state.view) && !state.authOpen && !typing()) render();
+  if (["feed", "discover", "person", "post", "profile", "notifications", "network", "favorites"].includes(state.view) && !state.authOpen && !typing()) render();
   else renderSidebar(); // nombre de notifications dans le menu
 });
 // Nouvelles notifications : toutes les 3 minutes, et au retour sur l'onglet

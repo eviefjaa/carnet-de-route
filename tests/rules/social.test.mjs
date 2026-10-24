@@ -102,6 +102,19 @@ await t("alice lit les commentaires « moi seul » de bob", getDocs(collection(a
 await setDoc(doc(carla, `posts/${P.p7}/comments/c9`), comment(carla, "carla", "Carla", "carla"));
 await t("carla supprime son commentaire", deleteDoc(doc(carla, `posts/${P.p7}/comments/c9`)), true);
 
+// ---------- Mises en favori ----------
+const like = (name, handle, extra = {}) => ({ name, handle, at: serverTimestamp(), ...extra });
+await t("carla met en favori un itinéraire public", setDoc(doc(carla, `posts/${P.p7}/likes/carla`), like("Carla", "carla")), true);
+await t("carla s'ajoute au nom d'alice", setDoc(doc(carla, `posts/${P.p7}/likes/alice`), like("Alice", "alice")), false);
+await t("favori avec un faux nom", setDoc(doc(alice, `posts/${P.p7}/likes/alice`), like("Bob", "bob.voyage")), false);
+await t("favori avec une fausse date", setDoc(doc(alice, `posts/${P.p7}/likes/alice`), like("Alice", "alice", { at: 1 })), false);
+await t("bob met en favori son propre itinéraire", setDoc(doc(bob, `posts/${P.p7}/likes/bob`), like("Bob", "bob.voyage")), false);
+await t("favori sur un itinéraire « moi seul »", setDoc(doc(alice, `posts/${P.p3}/likes/alice`), like("Alice", "alice")), false);
+await t("sans compte : favori", setDoc(doc(anon, `posts/${P.p7}/likes/x`), { name: "x", handle: "x", at: serverTimestamp() }), false);
+await t("l'auteur voit qui a mis en favori", getDocs(collection(bob, `posts/${P.p7}/likes`)), true);
+await t("un autre ne voit pas la liste", getDocs(collection(alice, `posts/${P.p7}/likes`)), false);
+await t("carla retire son favori", deleteDoc(doc(carla, `posts/${P.p7}/likes/carla`)), true);
+
 await t("carla modifie la publication de bob", updateDoc(doc(carla, `posts/${P.p1}`), { title: "volé" }), false);
 await t("bob modifie le contenu", updateDoc(doc(bob, `posts/${P.p1}`), { title: "Autre" }), false);
 await t("bob change la visibilité", updateDoc(doc(bob, `posts/${P.p1}`), { visibility: "private" }), true);

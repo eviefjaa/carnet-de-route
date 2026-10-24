@@ -171,6 +171,17 @@ await goHash(bob, "fil");
 await sleep(2000);
 check("le fil de Bob montre la publication", (await text(bob)).includes("Japon en train"));
 
+// ---------- Bob met l'itinéraire d'Alice en favori ----------
+await bob.click('.post-card [data-act="fav-post"]');
+await sleep(800);
+await goHash(bob, "favoris");
+await sleep(2500);
+check("favori : l'itinéraire d'Alice dans les favoris de Bob", (await text(bob)).includes("Itinéraires") && (await text(bob)).includes("Japon en train"));
+check("cœur sur l'itinéraire d'un autre", !!(await bob.$('.post-card [data-act="fav-post"]')));
+await goHash(alice, postHash.slice(1));
+await sleep(1500);
+check("pas de cœur sur son propre itinéraire", (await text(alice)).includes("Japon en train") && !(await alice.$('[data-act="fav-post"]')));
+
 // ---------- Bob commente (texte piégé), Alice supprime le commentaire ----------
 await bob.goto(SITE + postHash);
 await bob.waitForSelector("[data-comment-form] textarea", { timeout: 10000 });
@@ -189,6 +200,7 @@ await sleep(2500);
 const notifText = await text(alice);
 check("notification d'abonnement", notifText.includes("Bob s'est abonné(e) à vous"));
 check("notification de commentaire", notifText.includes("Bob a commenté « Japon en train »"));
+check("notification de favori", notifText.includes("Bob a ajouté « Japon en train » à ses favoris"));
 await goHash(alice, "voyages");
 check("notifications marquées comme lues", !/\d/.test(await alice.$eval('#sidebar a[href="#notifications"]', (a) => a.innerText)));
 await goHash(alice, "decouvrir");
