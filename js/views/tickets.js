@@ -9,8 +9,10 @@ import { state } from "../store.js";
 import { isEnabled } from "../cloud.js";
 
 // Taille lisible : « 240 Ko », « 1,2 Mo »
-export const fmtSize = (bytes) =>
-  bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} Ko` : `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} Mo`;
+export function fmtSize(bytes) {
+  const b = Number(bytes) || 0;
+  return b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} Ko` : `${(b / 1024 / 1024).toFixed(1).replace(".", ",")} Mo`;
+}
 
 const kind = (type) => (type === "application/pdf" ? "PDF" : "IMG");
 const target = (itemId, todoId) => `data-item="${esc(itemId)}"${todoId ? ` data-tk-todo="${esc(todoId)}"` : ""}`;

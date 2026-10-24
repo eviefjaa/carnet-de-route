@@ -7,6 +7,7 @@
 import { uid } from "./utils.js";
 import { toast } from "./toast.js";
 import { prefs } from "./prefs.js";
+import { mergeTrip } from "./merge.js";
 
 const TRIPS_KEY = "carnet-route-trips";
 const CURRENT_KEY = "carnet-route-current";
@@ -51,6 +52,9 @@ const snapshot = (t) => JSON.stringify(t);
 export const sync = { status: "local", error: "" };
 let onSync = () => {};
 export const onSyncChange = (fn) => (onSync = fn);
+// Des modifications d'autres voyageurs viennent d'être fusionnées dans un voyage
+let onMerged = () => {};
+export const onTripsMerged = (fn) => (onMerged = fn);
 
 export function setSync(status, error = "") {
   sync.status = status;
@@ -61,7 +65,7 @@ export function setSync(status, error = "") {
 // Explication lisible d'une erreur Firestore
 export function syncError(err) {
   const code = (err && err.code) || "";
-  if (code === "permission-denied") return "Firebase refuse l'accès : les règles Firestore ne sont sans doute pas publiées.";
+  if (code === "permission-denied") return "Firebase refuse l'accès : vous n'avez peut-être plus accès à ce voyage, ou les règles Firestore ne sont pas à jour.";
   if (code === "unavailable" || code === "deadline-exceeded") return "Pas de connexion avec Firebase.";
   if (code === "unauthenticated") return "Votre session a expiré : reconnectez-vous.";
   return `Erreur Firebase${code ? ` (${code})` : ""}.`;
@@ -114,7 +118,20 @@ async function flushCloud() {
     const isNew = !(id in saved);
     if (!t.owner) Object.assign(t, c.newTripSharing());
     const s = snapshot(t);
-    if (saved[id] !== s) jobs.push(c.saveTrip(id, t, isNew).then(() => (saved[id] = s)));
+    if (saved[id] === s) return;
+    const base = saved[id] ? JSON.parse(saved[id]) : null;
+    jobs.push(c.saveTrip(id, t, isNew, base).then((merged) => {
+      if (!merged) { saved[id] = s; return; }
+      // Le serveur contient maintenant la version fusionnée. Si j'ai encore modifié le voyage
+      // pendant l'envoi, mes nouvelles modifications sont reportées sur cette version.
+      const cur = state.trips[id];
+      if (!cur) return;
+      const next = snapshot(cur) === s ? merged : mergeTrip(JSON.parse(s), cur, merged);
+      const changed = snapshot(next) !== snapshot(cur);
+      state.trips[id] = next;
+      saved[id] = snapshot(merged);
+      if (changed) onMerged(id);
+    }));
   });
   Object.keys(saved).forEach((id) => {
     if (!state.trips[id]) jobs.push(c.deleteTrip(id).then(() => delete saved[id]));

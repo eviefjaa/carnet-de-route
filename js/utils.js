@@ -82,7 +82,15 @@ export function duration(a, b) {
   return h ? `${h} h${m ? " " + String(m).padStart(2, "0") : ""}` : `${m} min`;
 }
 
-export const plural = (n, word) => `${n} ${word}${n > 1 ? "s" : ""}`;
+// Le nombre est forcé en vrai nombre : une valeur venue d'un autre compte ne s'insère jamais telle quelle
+export function plural(n, word) {
+  const x = Number(n);
+  const v = Number.isFinite(x) ? x : 0;
+  return `${v} ${word}${v > 1 ? "s" : ""}`;
+}
+
+// Nombre fini, sinon la valeur par défaut (données d'un autre compte : jamais du texte)
+export const num = (v, fallback = null) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 
 // ---------- Prix ----------
 export const CURRENCIES = {

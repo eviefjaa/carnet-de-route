@@ -102,8 +102,8 @@ function segment(from, to, leg, color, tripId) {
   });
   if (leg) {
     const d = leg.duration ?? duration(leg.dep, leg.arr);
-    const km = route ? ` · ${route.km.toLocaleString("fr-FR")} km par la route` : "";
-    line.bindTooltip(`${esc(MODES[leg.mode] || "Trajet")}${d ? " · " + esc(d) : ""}${km}`, { sticky: true });
+    const km = route && Number.isFinite(+route.km) ? ` · ${(+route.km).toLocaleString("fr-FR")} km par la route` : "";
+    line.bindTooltip(`${esc(MODES[leg.mode] || "Trajet")}${d ? " · " + esc(d) : ""}${esc(km)}`, { sticky: true });
   }
   return line;
 }

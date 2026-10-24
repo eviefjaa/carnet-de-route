@@ -15,12 +15,30 @@ export function todayIn(timeZone = "Europe/Paris", now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
 
+// Un voyage a pu être écrit par n'importe lequel de ses voyageurs : on ne garde que ce qui a
+// la bonne forme (sinon une valeur piégée ferait planter les rappels de tout le monde)
+const DATE = /^\d{4}-\d{2}-\d{2}/;
+const s = (x) => (typeof x === "string" ? x : "");
+export function cleanTrip(trip) {
+  const items = Array.isArray(trip && trip.items) ? trip.items : [];
+  return {
+    name: s(trip && trip.name),
+    items: items.filter((i) => i && typeof i === "object").map((i) => ({
+      id: s(i.id), type: s(i.type), place: s(i.place),
+      arrive: DATE.test(s(i.arrive)) ? s(i.arrive).slice(0, 10) : "",
+      dep: DATE.test(s(i.dep)) ? s(i.dep).slice(0, 10) : "",
+      todos: (Array.isArray(i.todos) ? i.todos : []).filter((t) => t && typeof t === "object")
+        .map((t) => ({ text: s(t.text).slice(0, 200), done: t.done === true })),
+    })),
+  };
+}
+
 // Date retenue pour une étape : son arrivée, sinon le début du voyage
 export const stopDate = (trip, stop) => stop.arrive || tripStart(trip);
 
 function tripStart(trip) {
   const dates = (trip.items || []).flatMap((i) =>
-    i.type === "stop" ? [i.arrive] : i.type === "transport" ? [(i.dep || "").slice(0, 10)] : []
+    i.type === "stop" ? [i.arrive] : i.type === "transport" ? [i.dep] : []
   ).filter(Boolean).sort();
   return dates[0] || null;
 }
@@ -28,10 +46,11 @@ function tripStart(trip) {
 // trips : { idVoyage: voyage } ; sent : { clé: date d'envoi }
 export function findDueReminders(trips, today, daysBefore = 3, sent = {}) {
   const due = [];
-  for (const [tripId, trip] of Object.entries(trips)) {
-    for (const stop of trip.items || []) {
+  for (const [tripId, raw] of Object.entries(trips)) {
+    const trip = cleanTrip(raw);
+    for (const stop of trip.items) {
       if (stop.type !== "stop") continue;
-      const left = (stop.todos || []).filter((t) => !t.done && t.text);
+      const left = stop.todos.filter((t) => !t.done && t.text);
       if (!left.length) continue;
       const date = stopDate(trip, stop);
       if (!date) continue;

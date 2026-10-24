@@ -34,7 +34,9 @@ service cloud.firestore {
         && newData().owner == uid()
         && newData().members == [uid()]
         && newData().invites == []
-        && newData().emails.keys().hasOnly([uid()]);
+        && newData().emails.keys().hasOnly([uid()])
+        && newData().emails[uid()] == request.auth.token.email
+        && !("joined" in newData());
 
       // Seul le créateur supprime le voyage
       allow delete: if signedIn() && isOwner();
@@ -44,7 +46,10 @@ service cloud.firestore {
         // Il peut retirer des voyageurs mais pas en ajouter : on n'entre que sur invitation
         (isOwner() && newData().owner == resource.data.owner && uid() in newData().members
             && resource.data.members.hasAll(newData().members)
-            && resource.data.emails.keys().hasAll(newData().emails.keys()))
+            // Adresses des voyageurs : il peut en retirer, jamais en modifier ni en ajouter
+            && newData().emails.diff(resource.data.emails).addedKeys().size() == 0
+            && newData().emails.diff(resource.data.emails).changedKeys().size() == 0
+            && !changed().hasAny(["joined"]))
         // Un voyageur modifie le contenu ou invite quelqu'un (sans retirer d'invitation)
         || (isMember() && !changed().hasAny(["owner", "members", "emails", "joined"])
             && newData().invites.hasAll(resource.data.invites))
@@ -57,9 +62,12 @@ service cloud.firestore {
             && newData().members == resource.data.members.concat([uid()])
             && newData().invites == resource.data.invites.removeAll([email()])
             && newData().emails.diff(resource.data.emails).affectedKeys().hasOnly([uid()])
-            // Date d'arrivée : la sienne seulement, fixée par Firebase
+            // Son adresse affichée aux autres : la vraie, celle du compte
+            && newData().emails[uid()] == request.auth.token.email
+            // Date d'arrivée : la sienne seulement, fixée par Firebase, sans effacer celles des autres
             && (!("joined" in newData())
                 || (newData().joined.diff("joined" in resource.data ? resource.data.joined : {}).affectedKeys().hasOnly([uid()])
+                    && newData().joined.diff("joined" in resource.data ? resource.data.joined : {}).removedKeys().size() == 0
                     && newData().joined[uid()] == request.time)))
       );
 
@@ -88,13 +96,17 @@ service cloud.firestore {
       allow create: if request.auth != null
         && handle.matches('^[a-z0-9_.]{3,20}$')
         && request.resource.data.keys().hasOnly(["uid"])
-        && request.resource.data.uid == request.auth.uid;
+        && request.resource.data.uid == request.auth.uid
+        // Réservé seulement avec le profil qui l'utilise (pas de pseudos réservés en masse)
+        && getAfter(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.handle == handle;
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
-    // Profil : nom, pseudo, bio, compte public ou privé. Lisible par tous (comme une carte de visite)
+    // Profil : nom, pseudo, bio, compte public ou privé. Lisible par tous (comme une carte de visite),
+    // mais la recherche (liste) demande un compte et rend 10 profils au plus
     match /profiles/{userId} {
-      allow read: if true;
+      allow get: if true;
+      allow list: if request.auth != null && request.query.limit <= 10;
       allow create, update: if request.auth != null && request.auth.uid == userId
         && request.resource.data.keys().hasOnly(["name", "nameLower", "handle", "bio", "visibility"])
         && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 40
@@ -119,6 +131,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(["follower", "followed", "status", "createdAt"])
         && request.resource.data.follower == request.auth.uid
         && request.resource.data.followed != request.auth.uid
+        && request.resource.data.createdAt == request.time
         // Il faut un profil public pour s'abonner : la personne suivie sait qui la suit
         && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
         && (request.resource.data.status == "pending"
@@ -144,6 +157,16 @@ service cloud.firestore {
         || (request.auth != null && (resource.data.owner == request.auth.uid
             || (resource.data.visibility == "followers" && isFollower(resource.data.owner))));
       allow create: if request.auth != null
+        // Identifiant « p » + compte à rebours de l'heure : il doit correspondre à maintenant,
+        // sinon on pourrait se placer en tête de Découvrir pour toujours (à une heure près, pour les horloges décalées)
+        && postId.matches('^p[0-9]{13}[a-z0-9]{4,12}$')
+        && math.abs((10000000000000 - int(postId[1:14])) - request.time.toMillis()) < 3600000
+        && request.resource.data.publishedAt == request.time
+        && request.resource.data.trip.keys().hasOnly(["country", "days", "nights", "items"])
+        && request.resource.data.trip.items is list
+        // Nombres de jours et de nuits : entiers (ou absents), jamais du texte
+        && (!("days" in request.resource.data.trip) || request.resource.data.trip.days == null || request.resource.data.trip.days is int)
+        && (!("nights" in request.resource.data.trip) || request.resource.data.trip.nights == null || request.resource.data.trip.nights is int)
         && request.resource.data.keys().hasOnly(["owner", "ownerName", "ownerHandle", "title", "visibility", "publishedAt", "trip", "recos"])
         && request.resource.data.owner == request.auth.uid
         && request.resource.data.ownerName == profile().name
@@ -182,3 +205,5 @@ service cloud.firestore {
     }
   }
 }
+
+

@@ -15,7 +15,7 @@
 
 import admin from "firebase-admin";
 import nodemailer from "nodemailer";
-import { findDueReminders, buildEmail, todayIn, daysBetween, stopDate } from "./reminders.js";
+import { findDueReminders, buildEmail, todayIn, daysBetween, stopDate, cleanTrip } from "./reminders.js";
 
 const SITE_URL = process.env.SITE_URL || "https://eviefjaa.github.io/carnet-de-route/";
 const DAYS_BEFORE = Number(process.env.DAYS_BEFORE || 3);
@@ -40,21 +40,23 @@ const mailer = DRY_RUN ? null : nodemailer.createTransport({
 const today = todayIn("Europe/Paris");
 console.log(`Rappels du ${today} : étapes qui commencent dans ${DAYS_BEFORE} jours ou moins${DRY_RUN ? " (essai, rien n'est envoyé)" : ""}`);
 
-// Explique, pour chaque étape avec des choses non cochées, pourquoi elle est retenue ou non
+// Explique, pour chaque étape avec des choses non cochées, pourquoi elle est retenue ou non.
+// Journal public : aucune date ni aucun délai précis, seulement la catégorie.
 function explain(trips, sent) {
   const lines = [];
-  for (const [tripId, trip] of Object.entries(trips)) {
-    for (const stop of trip.items || []) {
+  for (const [tripId, raw] of Object.entries(trips)) {
+    const trip = cleanTrip(raw);
+    for (const stop of trip.items) {
       if (stop.type !== "stop") continue;
-      const left = (stop.todos || []).filter((t) => !t.done && t.text).length;
+      const left = stop.todos.filter((t) => !t.done && t.text).length;
       if (!left) continue;
       const date = stopDate(trip, stop);
-      if (!date) { lines.push(`étape sans date (${left} à réserver) → ignorée`); continue; }
+      if (!date) { lines.push("étape sans date → ignorée"); continue; }
       const d = daysBetween(today, date);
-      if (d < 0) lines.push(`étape passée (il y a ${-d} j) → ignorée`);
-      else if (d > DAYS_BEFORE) lines.push(`étape dans ${d} jours → trop tôt`);
-      else if (sent[`${tripId}:${stop.id}:${date}`]) lines.push(`étape dans ${d} jour(s) → rappel déjà envoyé`);
-      else lines.push(`étape dans ${d} jour(s), ${left} à réserver → rappel à envoyer`);
+      if (d < 0) lines.push("étape passée → ignorée");
+      else if (d > DAYS_BEFORE) lines.push("étape plus tard → trop tôt");
+      else if (sent[`${tripId}:${stop.id}:${date}`]) lines.push("rappel déjà envoyé");
+      else lines.push("rappel à envoyer");
     }
   }
   return lines;
@@ -86,11 +88,21 @@ let n = 0;
 for (const uid of uids) {
   n++;
   const label = `Compte ${n}`;
+  // Un compte qui pose problème n'empêche pas les rappels des autres
+  try {
+    await remindAccount(uid, label);
+  } catch (err) {
+    console.error(`${label} : ignoré après une erreur (${err.code || err.name || "erreur"})`);
+    process.exitCode = 1;
+  }
+}
+
+async function remindAccount(uid, label) {
   const userRef = db.collection("users").doc(uid);
   const prefs = (await userRef.collection("meta").doc("prefs").get()).data() || {};
   if (prefs.emailReminders === false) {
     console.log(`${label} : rappels désactivés dans les Paramètres → ignoré`);
-    continue;
+    return;
   }
 
   const trips = tripsByUser[uid] || {};
@@ -102,7 +114,7 @@ for (const uid of uids) {
   reasons.forEach((r) => console.log(`   - ${r}`));
 
   const due = findDueReminders(trips, today, DAYS_BEFORE, sent);
-  if (!due.length) continue;
+  if (!due.length) return;
 
   // Seulement vers une adresse confirmée : sinon n'importe qui pourrait
   // créer un compte avec l'adresse d'un autre et lui faire envoyer des e-mails
@@ -112,18 +124,18 @@ for (const uid of uids) {
   } catch {}
   if (!user || !user.email) {
     console.log(`${label} : pas d'adresse e-mail sur le compte → ignoré`);
-    continue;
+    return;
   }
   if (!user.emailVerified) {
     console.log(`${label} : adresse e-mail pas encore confirmée → ignoré (bouton dans Paramètres → Rappels par e-mail)`);
-    continue;
+    return;
   }
   const email = user.email;
 
   const { subject, text, html } = buildEmail(due, SITE_URL);
   if (DRY_RUN) {
     console.log(`${label} : e-mail prêt (${due.length} étape(s)), non envoyé car c'est un essai`);
-    continue;
+    return;
   }
 
   try {

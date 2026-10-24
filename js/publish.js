@@ -38,9 +38,9 @@ export function publicCopy(trip) {
   );
 
   const stops = items.filter((i) => i.type === "stop");
+  // Pas de nom de voyage : la publication a son propre titre
   return {
-    name: String(trip.name || "").slice(0, 200),
-    country: trip.country || "",
+    country: /^[A-Z]{2}$/.test(trip.country || "") ? trip.country : "",
     days: start && end ? nights(start, end) + 1 : null,
     nights: stops.reduce((n, s) => n + (s.nights || 0), 0),
     items,

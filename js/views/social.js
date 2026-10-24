@@ -231,8 +231,8 @@ export function publishPanel(t) {
     <fieldset class="radios"><legend>Visible par</legend>
       ${Object.entries(social.VISIBILITIES).map(([k, v]) => `<label class="radio"><input type="radio" name="visibility" value="${k}"${k === def ? " checked" : ""}> ${esc(v)}${k === "public" ? " (même sans compte, avec le lien)" : ""}</label>`).join("")}
     </fieldset>
-    <p class="note"><b>Publié :</b> les étapes, les activités, les trajets et la carte (positions arrondies à environ 2 km), avec « Jour 1, Jour 2… » à la place des dates.<br>
-      <b>Jamais publié :</b> dates, prix, notes, adresses, liens et numéros de réservation, billets, co-voyageurs.<br>
+    <p class="note"><b>Publié :</b> les étapes, les activités, la carte (positions arrondies à environ 2 km) et les trajets, avec leurs lieux de départ et d'arrivée tels que vous les avez écrits. « Jour 1, Jour 2… » remplacent les dates.<br>
+      <b>Jamais publié :</b> dates, prix, notes, adresses d'hébergement, liens et numéros de réservation, billets, co-voyageurs.<br>
       La publication est une copie : vos modifications du voyage ne s'y reportent pas, et personne ne peut la modifier.</p>
     <div class="f-label">Recommandations (facultatif)
       <p class="note">Vos bonnes adresses : un restaurant, un hébergement, un lieu à voir. Elles seront visibles par les mêmes personnes que l'itinéraire.</p>

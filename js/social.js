@@ -107,7 +107,7 @@ const followDoc = (follower, followed) => F().fb.doc(F().db, "follows", `${follo
 // Compte public : abonnement immédiat. Compte privé : demande à accepter.
 export async function follow(profile) {
   const status = profile.visibility === "public" ? "accepted" : "pending";
-  await F().fb.setDoc(followDoc(me(), profile.uid), { follower: me(), followed: profile.uid, status, createdAt: Date.now() });
+  await F().fb.setDoc(followDoc(me(), profile.uid), { follower: me(), followed: profile.uid, status, createdAt: F().fb.serverTimestamp() });
   resetSocial();
   return status;
 }
@@ -153,9 +153,36 @@ export async function myNetwork() {
 }
 
 // ---------- Publications ----------
+// Date Firestore (Timestamp) ou nombre de millisecondes → millisecondes
+const toMs = (v) => (v && v.toMillis ? v.toMillis() : v && typeof v.seconds === "number" ? v.seconds * 1000 : typeof v === "number" ? v : 0);
 const postsCol = () => F().fb.collection(F().db, "posts");
 const newPostId = () => `p${String(1e13 - Date.now()).padStart(13, "0")}${uid()}`;
-const docs = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+// Une publication a pu être écrite directement dans Firebase, sans passer par le site :
+// chaque champ est remis au bon type avant affichage
+const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+const text = (x, max = 500) => (typeof x === "string" ? x.slice(0, max) : "");
+const intOrNull = (x) => (Number.isInteger(x) && x >= 0 ? x : null);
+function normalizePost(id, p) {
+  const trip = isObj(p.trip) ? p.trip : {};
+  const items = (Array.isArray(trip.items) ? trip.items : []).filter(isObj).map((i) => i.type === "transport"
+    ? { type: "transport", mode: text(i.mode, 20), from: text(i.from, 120), to: text(i.to, 120), day: intOrNull(i.day), duration: text(i.duration, 20) }
+    : { type: "stop", place: text(i.place, 120), country: text(i.country, 60), day: intOrNull(i.day), nights: intOrNull(i.nights),
+        geo: isObj(i.geo) && Number.isFinite(i.geo.lat) && Number.isFinite(i.geo.lng) ? { lat: i.geo.lat, lng: i.geo.lng } : null,
+        todos: (Array.isArray(i.todos) ? i.todos : []).map((t) => text(t, 120)).filter(Boolean) });
+  return {
+    id, owner: text(p.owner, 128), ownerName: text(p.ownerName, 40), ownerHandle: text(p.ownerHandle, 20),
+    title: text(p.title, 200) || "Sans titre",
+    visibility: VISIBILITIES[p.visibility] ? p.visibility : "private",
+    publishedAt: toMs(p.publishedAt),
+    trip: { country: text(trip.country, 2), days: intOrNull(trip.days), nights: intOrNull(trip.nights), items },
+    recos: (Array.isArray(p.recos) ? p.recos : []).filter(isObj).slice(0, 50).map((r) => ({
+      kind: RECO_KINDS[r.kind] ? r.kind : "autre", name: text(r.name, 100), where: text(r.where, 120),
+      note: text(r.note, 500), url: text(r.url, 500), stop: Number.isInteger(r.stop) ? r.stop : null,
+    })).filter((r) => r.name),
+  };
+}
+const docs = (snap) => snap.docs.map((d) => normalizePost(d.id, d.data()));
+export { normalizePost }; // pour les tests
 const newestFirst = (a, b) => (a.id < b.id ? -1 : 1);
 
 // Recommandations nettoyées : type connu, textes coupés, lien http(s) seulement
@@ -176,7 +203,7 @@ export async function publish(trip, { title, visibility, recos }) {
   const id = newPostId();
   await F().fb.setDoc(F().fb.doc(F().db, "posts", id), {
     owner: me(), ownerName: p.name, ownerHandle: p.handle,
-    title, visibility, publishedAt: Date.now(), trip: publicCopy(trip), recos: cleanRecos(recos),
+    title, visibility, publishedAt: F().fb.serverTimestamp(), trip: publicCopy(trip), recos: cleanRecos(recos),
   });
   resetSocial();
   return id;
@@ -184,7 +211,7 @@ export async function publish(trip, { title, visibility, recos }) {
 
 export async function getPost(id) {
   const snap = await F().fb.getDoc(F().fb.doc(F().db, "posts", id));
-  return snap.exists() ? { id, ...snap.data() } : null;
+  return snap.exists() ? normalizePost(id, snap.data()) : null;
 }
 
 export async function setPostVisibility(id, visibility) {
@@ -259,7 +286,6 @@ export async function discover() {
 //   request   quelqu'un demande à s'abonner (compte privé)
 //   accepted  quelqu'un a accepté ma demande d'abonnement
 //   joined    quelqu'un a rejoint un de mes voyages partagés
-const toMs = (v) => (v && v.toMillis ? v.toMillis() : v && typeof v.seconds === "number" ? v.seconds * 1000 : typeof v === "number" ? v : 0);
 
 async function loadNotifications() {
   const { fb, db } = F();

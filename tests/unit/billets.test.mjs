@@ -1,0 +1,22 @@
+import assert from "node:assert/strict";
+globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+globalThis.document = { getElementById: () => null, documentElement: { dataset: {} } };
+import { fileURLToPath } from "node:url";
+const root = fileURLToPath(new URL("../..", import.meta.url));
+const { state } = await import(root + "/js/store.js");
+const { ticketsBlock, fmtSize } = await import(root + "/js/views/tickets.js");
+const leg = { id: "l1", type: "transport", tickets: [{ id: "f1", name: "Billet <TGV>.pdf", type: "application/pdf", size: 245000 }] };
+assert.match(ticketsBlock(leg), /Connectez-vous/);
+state.user = { uid: "u", email: "a@b.c" };
+const html = ticketsBlock(leg);
+assert.match(html, /Billet &lt;TGV&gt;\.pdf/);
+assert.match(html, /239 Ko/);
+assert.match(html, /data-ticket-input="l1"/);
+state.confirm = "ticket:f1";
+assert.match(ticketsBlock(leg), /ticket-del-yes/);
+assert.equal(fmtSize(1.5 * 1024 * 1024), "1,5 Mo");
+// Base64 aller-retour comme dans tickets.js (taille limite)
+const bytes = new Uint8Array(700 * 1024).map((_, i) => i % 251);
+const b64 = Buffer.from(bytes).toString("base64");
+assert.ok(b64.length < 1000000, "le billet le plus lourd passe la règle Firestore");
+console.log("Billets : tous les tests passent. Base64 max :", b64.length, "caractères");

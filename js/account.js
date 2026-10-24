@@ -1,7 +1,7 @@
 // Connexion / déconnexion : branche le site sur le compte de l'utilisateur
 
 import * as cloud from "./cloud.js";
-import { state, setCloud, replaceTrips, loadLocal, clearLocal, applyRemote, hasPendingChanges, hasUnsaved, save, flush, resetUi, setSync, syncError } from "./store.js";
+import { state, setCloud, replaceTrips, loadLocal, clearLocal, applyRemote, hasPendingChanges, hasUnsaved, save, flush, resetUi, setSync, syncError, onTripsMerged } from "./store.js";
 import { render } from "./views/trip.js";
 import { toast } from "./toast.js";
 import { usePrefsCloud, resetPrefs } from "./prefs.js";
@@ -76,8 +76,13 @@ async function onUserChange(user) {
     if (joined.length) toast(joined.length > 1 ? `Vous avez rejoint ${joined.length} voyages` : `Vous avez rejoint le voyage « ${joined[0]} »`);
 
     stopWatching = cloud.watchTrips(user.uid, (id, trip) => {
-      const editing = id === state.currentId && (state.editingId || state.insertAt || state.todoAdding || isTyping());
-      if (editing || hasPendingChanges(id)) return;
+      // Pendant une saisie ou un envoi, la version reçue est gardée de côté : elle sera
+      // appliquée ensuite (ou fusionnée à l'enregistrement), jamais perdue
+      if (editingTrip(id) || hasPendingChanges(id)) {
+        deferred.set(id, trip);
+        return;
+      }
+      deferred.delete(id);
       applyRemote(id, trip);
       render();
     }, (err) => setSync("error", "La synchronisation en direct s'est arrêtée. " + syncError(err) + " Rechargez la page."));
@@ -91,6 +96,21 @@ async function onUserChange(user) {
   state.loading = false;
   render();
 }
+
+// Versions reçues pendant une saisie, appliquées dès que la saisie est finie
+const deferred = new Map();
+const editingTrip = (id) => id === state.currentId && !!(state.editingId || state.insertAt || state.todoAdding || isTyping());
+setInterval(() => {
+  for (const [id, trip] of deferred) {
+    if (editingTrip(id)) continue;
+    deferred.delete(id);
+    if (hasPendingChanges(id)) continue; // mon enregistrement fusionnera avec le serveur
+    applyRemote(id, trip);
+    render();
+  }
+}, 1500);
+// Fusion faite à l'enregistrement : on réaffiche, sauf pendant une saisie
+onTripsMerged((id) => { if (!editingTrip(id)) render(); });
 
 // Saisie en cours dans le nom du voyage ou le champ d'invitation : on ne réaffiche pas
 const isTyping = () => {

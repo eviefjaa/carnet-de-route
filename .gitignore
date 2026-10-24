@@ -6,3 +6,6 @@ service-account*.json
 # Fichiers techniques
 node_modules/
 .DS_Store
+
+# Journaux des émulateurs Firebase
+*-debug.log

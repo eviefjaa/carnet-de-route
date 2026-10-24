@@ -8,6 +8,8 @@ Sans compte, les voyages sont enregistrés dans le navigateur (localStorage). Av
 
 ```
 index.html            Page principale
+firebase.json         Configuration Firebase (règles, émulateurs pour les tests)
+tests/                Tests : unitaires, règles Firestore, parcours complet dans Chrome
 404.html              Page « introuvable » (GitHub Pages)
 sitemap.xml           Plan du site pour les moteurs de recherche
 img/                  Favicons et image de partage sur les réseaux
@@ -51,6 +53,7 @@ js/
   social.js           Profils publics, abonnements et publications (Firestore)
   social-events.js    Clics et formulaires des pages sociales
   publish.js          Copie publique d'un voyage (sans dates, prix, notes, adresses, billets)
+  merge.js            Fusion d'un voyage modifié en même temps par plusieurs voyageurs
   tickets.js          Billets des trajets et des activités : envoi, ouverture, suppression
   data/
     countries.js      Fiches pays (ajoutez-en en copiant une ligne)
@@ -120,3 +123,27 @@ Secrets à créer dans GitHub (Settings → Secrets and variables → Actions) :
 - `GMAIL_APP_PASSWORD` : mot de passe d'application Gmail
 
 Ne jamais ajouter le fichier JSON de la clé dans le dépôt : il est public.
+
+## Tests
+
+Les tests sont dans `tests/`. Il faut Node.js, et Java 21 pour l'émulateur Firebase (par exemple `brew install openjdk@21`).
+
+```
+cd tests
+npm install
+npm test            # tests unitaires et règles de sécurité Firestore
+npm run test:e2e    # parcours complet dans Chrome, avec deux comptes fictifs
+```
+
+Les tests de règles et le parcours complet tournent contre les émulateurs Firebase : aucune donnée réelle n'est lue ni modifiée. Le parcours complet sert le site sur `http://localhost:8765` et utilise Google Chrome (chemin modifiable avec la variable `CHROME_PATH`).
+
+Sur GitHub, le workflow « Tests » lance les tests unitaires, ceux des rappels et ceux des règles à chaque envoi de code.
+
+## Publier les règles Firestore depuis le terminal
+
+Au lieu de copier `firestore.rules` dans la console, depuis la racine du dépôt :
+
+```
+npx firebase-tools login                              # une seule fois
+npx firebase-tools deploy --only firestore:rules
+```

@@ -4,6 +4,7 @@
 // Préférences et rappels envoyés : users/{uid}/meta/…
 
 import { firebaseConfig } from "./firebase-config.js";
+import { mergeTrip } from "./merge.js";
 
 const V = "10.12.2";
 const SDK = `https://www.gstatic.com/firebasejs/${V}`;
@@ -116,17 +117,32 @@ export const SHARING = ["owner", "members", "invites", "emails", "joined"];
 const tripDoc = (id) => fb.doc(db, "trips", id);
 const myTrips = (uid) => fb.query(fb.collection(db, "trips"), fb.where("members", "array-contains", uid));
 
-// Un voyage peut avoir été écrit par un autre voyageur : on garantit sa forme minimale
+// Un voyage peut avoir été écrit par un autre voyageur : chaque champ est remis au bon type
+// (texte, nombre, liste), sinon une valeur piégée ferait planter l'affichage chez tous ses membres.
+const STR = ["place", "country", "arrive", "depart", "address", "notes", "mode", "from", "to", "dep", "arr", "company", "ref", "url"];
+const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+const str = (x) => (typeof x === "string" ? x : "");
+
 function normalize(t) {
-  if (!Array.isArray(t.items)) t.items = [];
-  t.items = t.items.filter((i) => i && typeof i === "object" && typeof i.id === "string");
-  t.items.forEach((i) => {
-    for (const k of ["todos", "tickets", "links"]) if (k in i && !Array.isArray(i[k])) i[k] = [];
-    if (Array.isArray(i.todos)) i.todos = i.todos.filter((x) => x && typeof x === "object");
-  });
   if (typeof t.name !== "string") t.name = "Sans titre";
+  if (typeof t.currency !== "string") t.currency = "EUR";
+  t.items = (Array.isArray(t.items) ? t.items : []).filter((i) => isObj(i) && typeof i.id === "string" && (i.type === "stop" || i.type === "transport"));
+  t.items.forEach((i) => {
+    STR.forEach((k) => { if (k in i) i[k] = str(i[k]); });
+    if ("price" in i && !(typeof i.price === "number" && Number.isFinite(i.price))) i.price = null;
+    if ("nights" in i) delete i.nights; // calculé à partir des dates, jamais lu tel quel
+    if (isObj(i.geo) && !(Number.isFinite(i.geo.lat) && Number.isFinite(i.geo.lng))) delete i.geo;
+    if ("route" in i && !(isObj(i.route) && typeof i.route.key === "string")) delete i.route;
+    i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true }));
+    i.links = (Array.isArray(i.links) ? i.links : []).filter(isObj).map((l) => ({ id: str(l.id), label: str(l.label), url: str(l.url) }));
+    const files = (list) => (Array.isArray(list) ? list : []).filter(isObj).map((f) => ({ id: str(f.id), name: str(f.name), type: str(f.type), size: Number(f.size) || 0 }));
+    i.tickets = files(i.tickets);
+    i.todos.forEach((x) => { if ("tickets" in x) x.tickets = files(x.tickets); });
+  });
   return t;
 }
+
+export { normalize as normalizeTrip }; // pour les tests
 
 export async function loadTrips(uid) {
   const snap = await fb.getDocs(myTrips(uid));
@@ -154,8 +170,23 @@ function content(trip) {
 // Nouveau voyage : on en est le créateur et le seul voyageur
 export const newTripSharing = () => ({ owner: me.uid, members: [me.uid], invites: [], emails: { [me.uid]: me.email } });
 
-export const saveTrip = (id, trip, isNew) =>
-  isNew ? fb.setDoc(tripDoc(id), clean(trip)) : fb.setDoc(tripDoc(id), content(trip), { merge: true });
+// Enregistre un voyage. Un voyage existant est relu sur le serveur dans une transaction, puis fusionné
+// avec ma version (merge.js) : les modifications faites au même moment par les autres voyageurs
+// ne sont pas écrasées. Renvoie la version fusionnée (ce qui est maintenant sur le serveur).
+export async function saveTrip(id, trip, isNew, base) {
+  if (isNew) {
+    await fb.setDoc(tripDoc(id), clean(trip));
+    return null;
+  }
+  return fb.runTransaction(db, async (tx) => {
+    const snap = await tx.get(tripDoc(id));
+    if (!snap.exists()) throw Object.assign(new Error("Voyage supprimé"), { code: "not-found" });
+    const server = normalize(snap.data());
+    const merged = base ? mergeTrip(base, clean(trip), server, SHARING) : { ...server, ...content(trip) };
+    tx.set(tripDoc(id), content(merged), { merge: true });
+    return merged;
+  });
+}
 // Les billets (sous-collection files) sont supprimés avec le voyage
 export async function deleteTrip(id) {
   const files = await fb.getDocs(fb.collection(db, "trips", id, "files"));
@@ -220,7 +251,9 @@ export const savePrefs = (p) => fb.setDoc(fb.doc(db, "users", me.uid, "meta", "p
 // Écoute les modifications faites depuis un autre appareil ou par les autres voyageurs
 export function watchTrips(uid, onChange, onError) {
   return fb.onSnapshot(myTrips(uid), (snap) => {
-    if (snap.metadata.hasPendingWrites) return; // nos propres modifications
-    snap.docChanges().forEach((c) => onChange(c.doc.id, c.type === "removed" ? null : normalize(c.doc.data())));
+    snap.docChanges().forEach((c) => {
+      if (c.doc.metadata.hasPendingWrites) return; // ma propre modification, pas encore confirmée
+      onChange(c.doc.id, c.type === "removed" ? null : normalize(c.doc.data()));
+    });
   }, onError);
 }
