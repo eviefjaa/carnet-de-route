@@ -29,6 +29,7 @@ export const state = {
   explore: { q: "", continent: "", tag: "" }, // filtres des destinations
   profile: null,    // mon profil public { uid, name, handle, bio, visibility }, une fois créé
   notifs: null,     // notifications { list, at } (voir social.js)
+  invitations: [],  // invitations à des voyages en attente de réponse [{ id, name, from }]
   publishOpen: false, // panneau « Publier l'itinéraire » ouvert
   inviteOpen: false,  // champ « Inviter une personne » ouvert
   openItems: new Set(), // étapes et trajets dépliés (le détail s'affiche au clic sur leur carte)

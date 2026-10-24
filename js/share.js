@@ -6,6 +6,7 @@
 
 import * as cloud from "./cloud.js";
 import { state, currentTrip, flush, patchTrip, forgetTrip } from "./store.js";
+import { go } from "./router.js";
 import { prefs } from "./prefs.js";
 import { render } from "./views/trip.js";
 import { toast } from "./toast.js";
@@ -53,7 +54,8 @@ function openInviteMail(email, t, id) {
     "Pour le rejoindre :",
     `1. Ouvrez ce lien : ${link}`,
     `2. Créez un compte (ou connectez-vous) avec cette adresse : ${email}`,
-    "3. Confirmez votre adresse avec le lien reçu par e-mail, puis rechargez la page.",
+    "3. Confirmez votre adresse avec le lien reçu par e-mail.",
+    "4. Dans Mes voyages, acceptez l'invitation avec « Rejoindre ».",
     "",
     "À bientôt !",
   ].join("\n");
@@ -102,5 +104,24 @@ export async function leaveTrip(id) {
   }
   forgetTrip(id);
   toast("Vous avez quitté le voyage");
+  render();
+}
+
+// Réponse à une invitation : rejoindre le voyage, ou refuser (l'invitation disparaît)
+export async function answerInvitation(tripId, join) {
+  const inv = state.invitations.find((i) => i.id === tripId);
+  try {
+    if (join) await cloud.joinTrip(tripId);
+    else await cloud.declineInvite(tripId);
+  } catch {
+    return toast("Réponse impossible pour le moment. Vérifiez votre connexion.");
+  }
+  state.invitations = state.invitations.filter((i) => i.id !== tripId);
+  if (join) {
+    toast(`Vous avez rejoint « ${inv ? inv.name : "le voyage"} »`);
+    go("voyage-" + tripId); // le voyage arrive par la synchronisation en direct
+  } else {
+    toast("Invitation refusée");
+  }
   render();
 }

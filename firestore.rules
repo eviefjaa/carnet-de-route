@@ -57,7 +57,10 @@ service cloud.firestore {
         || (isMember() && !isOwner() && changed().hasOnly(["members", "emails"])
             && newData().members == resource.data.members.removeAll([uid()])
             && !(uid() in newData().emails))
-        // Une personne invitée rejoint le voyage
+        // Une personne invitée refuse : elle retire seulement sa propre adresse des invitations
+        || (isInvited() && !isMember() && changed().hasOnly(["invites"])
+            && newData().invites == resource.data.invites.removeAll([email()]))
+        // Une personne invitée rejoint le voyage (après avoir cliqué sur « Rejoindre »)
         || (isInvited() && !isMember() && changed().hasOnly(["members", "invites", "emails", "joined"])
             && newData().members == resource.data.members.concat([uid()])
             && newData().invites == resource.data.invites.removeAll([email()])

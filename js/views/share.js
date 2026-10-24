@@ -50,3 +50,20 @@ export function shareSection(t) {
     <p class="note">Votre messagerie s'ouvre avec un e-mail d'invitation prêt à envoyer. Les personnes invitées peuvent modifier le voyage.</p>` : ""}
   </section>`;
 }
+
+// Invitations à des voyages en attente : rien n'est rejoint sans un clic sur « Rejoindre »
+export function invitationsBlock() {
+  const list = state.user ? state.invitations : [];
+  if (!list.length) return "";
+  return `<section class="panel invitations" aria-label="Invitations à des voyages">
+    <h2>${list.length > 1 ? `${list.length} invitations à des voyages` : "Une invitation à un voyage"}</h2>
+    <ul class="people">${list.map((i) => `<li>
+      <span class="invite-text"><b>${esc(i.name)}</b>${i.from ? `<span class="note">de ${esc(i.from)}</span>` : ""}</span>
+      <span class="row-btns">
+        <button class="btn small primary" data-act="invite-join" data-trip="${esc(i.id)}" type="button">Rejoindre</button>
+        <button class="btn small" data-act="invite-decline" data-trip="${esc(i.id)}" type="button">Refuser</button>
+      </span>
+    </li>`).join("")}</ul>
+    <p class="note">En rejoignant, vous pourrez modifier ce voyage, et les autres voyageurs verront votre adresse e-mail.</p>
+  </section>`;
+}

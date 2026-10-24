@@ -31,6 +31,7 @@ async function onUserChange(user) {
     state.user = null;
     state.profile = null;
     state.notifs = null;
+    state.invitations = [];
     state.verifyOpen = false;
     resetSocial();
     if (wasConnected) resetPrefs();
@@ -51,8 +52,8 @@ async function onUserChange(user) {
     user.emailVerified = await cloud.refreshEmailVerified().catch(() => user.emailVerified);
     cloud.useAccount(user);
     await cloud.moveOldTrips(user.uid);
-    // Voyages auxquels on a été invité : il faut une adresse confirmée
-    const joined = user.emailVerified ? await cloud.acceptInvites().catch(() => []) : [];
+    // Invitations en attente (adresse confirmée obligatoire) : affichées, jamais acceptées d'office
+    state.invitations = user.emailVerified ? await cloud.listInvitations().catch(() => []) : [];
     const remote = await cloud.loadTrips(user.uid);
 
     // Les voyages créés sans compte sur cet appareil sont ajoutés au compte
@@ -73,7 +74,7 @@ async function onUserChange(user) {
     resetSocial();
     await loadMyProfile();
     refreshNotifications();
-    if (joined.length) toast(joined.length > 1 ? `Vous avez rejoint ${joined.length} voyages` : `Vous avez rejoint le voyage « ${joined[0]} »`);
+    if (state.invitations.length) toast(state.invitations.length > 1 ? `${state.invitations.length} invitations à des voyages vous attendent dans Mes voyages` : `Une invitation au voyage « ${state.invitations[0].name} » vous attend dans Mes voyages`);
 
     stopWatching = cloud.watchTrips(user.uid, (id, trip) => {
       // Pendant une saisie ou un envoi, la version reçue est gardée de côté : elle sera

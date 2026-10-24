@@ -83,7 +83,7 @@ Les fichiers JavaScript sont des modules : le site doit être ouvert via une adr
 
 ## Partager un voyage
 
-Sur la page d'un voyage, la section « Voyageurs » permet d'inviter quelqu'un par son adresse e-mail. L'invitation est enregistrée dans le voyage, puis la messagerie de l'utilisateur s'ouvre avec un e-mail prêt à envoyer (lien vers le voyage). La personne invitée crée un compte ou se connecte avec cette adresse et la confirme : le voyage apparaît alors dans « Mes voyages ».
+Sur la page d'un voyage, la section « Voyageurs » permet d'inviter quelqu'un par son adresse e-mail. L'invitation est enregistrée dans le voyage, puis la messagerie de l'utilisateur s'ouvre avec un e-mail prêt à envoyer (lien vers le voyage). La personne invitée crée un compte ou se connecte avec cette adresse et la confirme. L'invitation s'affiche alors en haut de « Mes voyages » et dans « Notifications » : elle choisit « Rejoindre » ou « Refuser ». Rien n'est rejoint sans son accord.
 
 Tous les voyageurs peuvent modifier le voyage et inviter d'autres personnes. Seul le créateur peut supprimer le voyage, annuler une invitation ou retirer quelqu'un ; les autres peuvent quitter le voyage.
 

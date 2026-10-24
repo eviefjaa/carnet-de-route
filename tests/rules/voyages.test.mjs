@@ -85,6 +85,15 @@ await t("le créateur retire un voyageur", updateDoc(T(alice, "trips/v9"), { mem
 await t("le voyageur retiré ne lit plus", getDoc(T(bob, "trips/v9")), false);
 await t("le créateur ne peut pas se retirer", updateDoc(T(alice, "trips/v9"), { members: arrayRemove("alice") }), false);
 
+// ---------- Refuser une invitation ----------
+await setDoc(T(alice, "trips/v12"), trip());
+await updateDoc(T(alice, "trips/v12"), { invites: arrayUnion("bob@x.fr", "carla@x.fr") });
+await t("un inconnu refuse à la place de bob", updateDoc(T(eve, "trips/v12"), { invites: arrayRemove("bob@x.fr") }), false);
+await t("bob retire aussi l'invitation de carla", updateDoc(T(bob, "trips/v12"), { invites: arrayRemove("bob@x.fr", "carla@x.fr") }), false);
+await t("bob (non confirmé) refuse", updateDoc(T(bobUnverified, "trips/v12"), { invites: arrayRemove("bob@x.fr") }), false);
+await t("bob refuse l'invitation", updateDoc(T(bob, "trips/v12"), { invites: arrayRemove("bob@x.fr") }), true);
+await t("bob ne voit plus le voyage refusé", getDoc(T(bob, "trips/v12")), false);
+
 // ---------- Retirer, quitter, supprimer ----------
 await t("voyageur quitte", updateDoc(T(bob, "trips/v1"), { members: arrayRemove("bob"), "emails.bob": deleteField() }), true);
 await t("ancien voyageur ne lit plus", getDoc(T(bob, "trips/v1")), false);

@@ -212,23 +212,24 @@ export const cancelInvite = (id, email) => fb.updateDoc(tripDoc(id), { invites: 
 export const removeMember = (id, uid) =>
   fb.updateDoc(tripDoc(id), { members: fb.arrayRemove(uid), [`emails.${uid}`]: fb.deleteField() });
 
-// Rejoint les voyages où notre adresse est invitée (adresse confirmée obligatoire)
-// Renvoie les noms des voyages rejoints
-export async function acceptInvites() {
+// Invitations en attente pour mon adresse (adresse confirmée obligatoire) : rien n'est rejoint
+// sans mon accord, on choisit « Rejoindre » ou « Refuser »
+export async function listInvitations() {
   const email = me.email.toLowerCase();
   const snap = await fb.getDocs(fb.query(fb.collection(db, "trips"), fb.where("invites", "array-contains", email)));
-  const joined = [];
-  for (const d of snap.docs) {
-    try {
-      await fb.updateDoc(d.ref, {
-        members: fb.arrayUnion(me.uid), invites: fb.arrayRemove(email),
-        [`emails.${me.uid}`]: me.email, [`joined.${me.uid}`]: fb.serverTimestamp(),
-      });
-      joined.push(d.data().name || "Sans titre");
-    } catch {}
-  }
-  return joined;
+  return snap.docs.map((d) => {
+    const t = d.data();
+    const from = t.emails && typeof t.emails[t.owner] === "string" ? t.emails[t.owner] : "";
+    return { id: d.id, name: typeof t.name === "string" && t.name ? t.name.slice(0, 200) : "Sans titre", from };
+  });
 }
+
+export const joinTrip = (id) => fb.updateDoc(tripDoc(id), {
+  members: fb.arrayUnion(me.uid), invites: fb.arrayRemove(me.email.toLowerCase()),
+  [`emails.${me.uid}`]: me.email, [`joined.${me.uid}`]: fb.serverTimestamp(),
+});
+
+export const declineInvite = (id) => fb.updateDoc(tripDoc(id), { invites: fb.arrayRemove(me.email.toLowerCase()) });
 
 // Avant le partage, les voyages étaient dans users/{uid}/trips : on les déplace dans trips
 export async function moveOldTrips(uid) {

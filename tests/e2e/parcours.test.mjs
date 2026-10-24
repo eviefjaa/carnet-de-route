@@ -215,7 +215,13 @@ await fetch("http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/projects/ca
 });
 await carla.click('[data-act="verify-check"]');
 await sleep(4000);
+// Plus d'acceptation d'office : l'invitation s'affiche, Carla choisit
+check("invitation pas acceptée d'office", !(await carla.evaluate(async (id) => !!(await import("/js/store.js")).state.trips[id], tripId)));
+check("invitation affichée dans Mes voyages", (await text(carla)).includes("Une invitation à un voyage") && (await text(carla)).includes("Japon en train"));
+await carla.click(`[data-act="invite-join"][data-trip="${tripId}"]`);
+await sleep(4000);
 check("Carla a rejoint le voyage", (await carla.evaluate(async (id) => !!(await import("/js/store.js")).state.trips[id], tripId)));
+check("invitation disparue après la réponse", !(await carla.$(".invitations")));
 // ---------- Modifications simultanées : Alice et Carla ajoutent chacune une étape ----------
 await goHash(alice, tripHash.slice(1));
 await goHash(carla, tripHash.slice(1));

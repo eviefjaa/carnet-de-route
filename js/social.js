@@ -338,7 +338,10 @@ export async function refreshNotifications() {
   if (!state.user || notifLoading) return;
   notifLoading = true;
   try {
-    if (await cloud.ready) state.notifs = { list: await loadNotifications(), at: Date.now() };
+    if (await cloud.ready) {
+      state.notifs = { list: await loadNotifications(), at: Date.now() };
+      if (state.user.emailVerified) state.invitations = await cloud.listInvitations().catch(() => state.invitations);
+    }
   } catch {
     // hors ligne : on garde la dernière liste
   }

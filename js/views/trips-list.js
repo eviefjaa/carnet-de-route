@@ -7,10 +7,12 @@ import { computeBudget } from "../budget.js";
 import { COUNTRIES } from "../data/countries.js";
 import { tripPending } from "./checklist.js";
 import { isEnabled } from "../cloud.js";
+import { invitationsBlock } from "./share.js";
 
 // Premier écran d'un nouveau visiteur : ce que fait le site, et de quoi commencer tout de suite
 function welcome() {
   return `<section class="page welcome">
+    ${invitationsBlock()}
     <h1>Préparez votre road trip, étape par étape.</h1>
     <p class="lead">Ajoutez vos villes et vos trajets : le site les place sur une carte et calcule le budget au fur et à mesure.
       Vos compagnons de route peuvent le préparer avec vous.</p>
@@ -119,6 +121,7 @@ export function tripsListView() {
       </div>
       <button class="btn primary" data-act="new-trip" type="button">+ Nouveau voyage</button>
     </header>
+    ${invitationsBlock()}
     <div class="trip-grid">
       ${all.map(card).join("")}
       <button class="trip-card new-card" data-act="new-trip" type="button">

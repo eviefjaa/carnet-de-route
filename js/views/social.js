@@ -4,6 +4,7 @@
 import { esc, plural, MODES, safeUrl } from "../utils.js";
 import { state } from "../store.js";
 import { prefs, savePrefs } from "../prefs.js";
+import { invitationsBlock } from "./share.js";
 import { isEnabled } from "../cloud.js";
 import * as social from "../social.js";
 import { COUNTRIES } from "../data/countries.js";
@@ -387,8 +388,10 @@ function commentsSection(p) {
 }
 
 // ---------- Notifications ----------
+// Nouveautés du menu : notifications pas encore vues, plus invitations en attente de réponse
 export const unreadNotifications = () =>
-  state.user && state.notifs ? state.notifs.list.filter((n) => n.at > (prefs.notifSeen || 0)).length : 0;
+  !state.user ? 0
+    : (state.notifs ? state.notifs.list.filter((n) => n.at > (prefs.notifSeen || 0)).length : 0) + state.invitations.length;
 
 // La page ouverte : tout est lu (la mise en avant reste visible jusqu'au prochain affichage)
 export function markNotificationsSeen() {
@@ -433,9 +436,10 @@ export function notificationsView() {
   const list = state.notifs.list;
   const seen = prefs.notifSeen || 0;
   return `<section class="page">${head}
+    ${invitationsBlock()}
     ${list.length
       ? `<ul class="notifs">${list.map((n) => notifLine(n, seen)).join("")}</ul>`
-      : `<p class="note">Rien pour l'instant. Les commentaires sur vos itinéraires, vos nouveaux abonnés et les voyageurs qui rejoignent vos voyages apparaîtront ici.</p>`}
+      : state.invitations.length ? "" : `<p class="note">Rien pour l'instant. Les commentaires sur vos itinéraires, vos nouveaux abonnés et les voyageurs qui rejoignent vos voyages apparaîtront ici.</p>`}
   </section>`;
 }
 

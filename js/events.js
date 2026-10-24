@@ -13,7 +13,7 @@ import { openMenu, closeMenu, go } from "./router.js";
 import { favButton, filterCountries } from "./views/explore.js";
 import { renderSidebar } from "./views/sidebar.js";
 import { countryByCode } from "./data/countries.js";
-import { inviteFromForm, resendInvite, cancelInvite, removeMember, leaveTrip } from "./share.js";
+import { inviteFromForm, resendInvite, cancelInvite, removeMember, leaveTrip, answerInvitation } from "./share.js";
 import { onSocialClick, onSocialSubmit, onSocialChange, onSocialInput } from "./social-events.js";
 import { addTickets, openTicket, deleteTicket, deleteTicketFiles, allTickets, resetFormTickets, pickFormTickets, removeFormTicket, commitFormTickets } from "./tickets.js";
 
@@ -264,6 +264,10 @@ function onPageClick(act, b) {
       state.inviteOpen = false;
       render();
       return true;
+    case "invite-join":
+    case "invite-decline":
+      answerInvitation(b.dataset.trip, act === "invite-join");
+      return true;
     case "resend-invite":
       resendInvite(b.dataset.email);
       return true;
@@ -394,8 +398,9 @@ async function checkVerified(btn) {
     }
     state.user.emailVerified = true;
     state.verifyOpen = false;
-    const joined = await cloud.acceptInvites().catch(() => []);
-    toast(joined.length ? `Adresse confirmée. Vous avez rejoint « ${joined[0]} »${joined.length > 1 ? ` et ${joined.length - 1} autre${joined.length > 2 ? "s" : ""} voyage${joined.length > 2 ? "s" : ""}` : ""}.` : "Adresse confirmée, merci !");
+    state.invitations = await cloud.listInvitations().catch(() => []);
+    toast(state.invitations.length ? "Adresse confirmée. Vos invitations vous attendent dans Mes voyages." : "Adresse confirmée, merci !");
+    go("voyages");
     render();
   } catch (err) {
     msg.textContent = cloud.errorMessage(err);
