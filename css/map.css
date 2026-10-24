@@ -7,10 +7,10 @@
 .pin span {
   display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
   background: var(--route); color: #1d1600; border: 3px solid #ffffff;
-  font-family: var(--mono); font-weight: 600; font-size: 13px; box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
+  font-family: var(--body); font-weight: 600; font-size: 13px; box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
 }
 
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface); color: var(--ink); }
 .leaflet-popup-content { font-family: var(--body); margin: 10px 14px; }
 .leaflet-popup-content b { font-family: var(--display); font-size: 15px; }
-.leaflet-tooltip { font-family: var(--mono); font-size: 12px; }
+.leaflet-tooltip { font-family: var(--body); font-size: 12px; }

@@ -16,13 +16,13 @@
 
 .tc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tc-status {
-  font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+  font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
   padding: 3px 9px; border-radius: 99px; background: var(--bg); color: var(--muted);
 }
 .is-upcoming .tc-status { background: var(--accent-soft); color: var(--accent); }
 .is-now .tc-status { background: var(--route); color: #1d1600; }
 .is-past { opacity: .8; }
-.tc-flags { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--muted); }
+.tc-flags { font-family: var(--body); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--muted); }
 
 .trip-card h2 { font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
 .tc-link { color: var(--ink); text-decoration: none; }

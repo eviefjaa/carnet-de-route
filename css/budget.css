@@ -13,16 +13,16 @@
 .table-scroll { overflow-x: auto; }
 .budget-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
 .budget-table th, .budget-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.budget-table thead th { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); text-align: right; }
+.budget-table thead th { font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); text-align: right; }
 .budget-table thead th:first-child, .budget-table tbody th, .budget-table tfoot th { text-align: left; }
 .budget-table tbody th { font-weight: 600; white-space: normal; }
-.budget-table td { text-align: right; font-family: var(--mono); }
+.budget-table td { text-align: right; font-family: var(--body); }
 .budget-table tfoot th, .budget-table tfoot td { border-bottom: 0; border-top: 2px solid var(--ink); font-weight: 700; }
 .b-total { color: var(--accent); font-weight: 600; }
 
 /* Prix affiché sur les étapes et les trajets */
-.price { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--accent); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
-.price-sub { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.price { display: inline-block; font-family: var(--body); font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--accent); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.price-sub { font-family: var(--body); font-size: 12px; color: var(--muted); }
 
 /* Sur téléphone : tableau plus compact pour que la colonne Total reste visible */
 @media (max-width: 480px) {

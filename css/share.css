@@ -12,7 +12,7 @@
 .sh-who { min-width: 0; overflow-wrap: anywhere; }
 .sh-me { color: var(--muted); }
 .sh-pending .sh-who { color: var(--muted); }
-.sh-badge { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .04em; padding: 1px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.sh-badge { font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: .04em; padding: 1px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
 .sh-pending .sh-badge { background: var(--ticket); color: var(--ink); }
 .sh-list .link-btn { font-size: 13px; }
 .sh-list .cl-del { margin-left: auto; }
@@ -20,7 +20,7 @@
 .sh-pending .link-btn { margin-left: auto; }
 
 /* Pastille « Partagé » sur la carte d'un voyage */
-.tc-shared { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.tc-shared { font-family: var(--body); font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
 .tc-top .tc-shared { margin-right: auto; }
 
 /* Invitations en attente (Mes voyages et Notifications) */

@@ -16,7 +16,7 @@
 .ac-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .ac-main b { font-weight: 600; font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ac-sub { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ac-kind { flex: none; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.ac-kind { flex: none; font-family: var(--body); font-size: 11px; color: var(--muted); }
 .ac-list li.ac-empty { cursor: default; font-size: 13px; color: var(--muted); }
 .ac-list li.ac-empty:hover { background: none; }
 

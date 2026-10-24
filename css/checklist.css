@@ -3,7 +3,7 @@
 .checklist { border-top: 1px dashed var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
 .cl-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .cl-head h3 { white-space: nowrap; font-family: var(--body); font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
-.cl-progress { white-space: nowrap; font-family: var(--mono); font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--ticket); color: var(--ink); }
+.cl-progress { white-space: nowrap; font-family: var(--body); font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--ticket); color: var(--ink); }
 .cl-progress.all { background: var(--accent-soft); color: var(--accent); }
 .cl-add {
   margin-left: auto; display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
@@ -38,4 +38,4 @@
 .todo-edit { display: flex; align-items: center; gap: 8px; }
 .todo-edit input[name="todoDone"] { flex: none; width: 18px; height: 18px; accent-color: var(--accent); }
 .todo-edit input[name="todoText"] { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font-size: 14px; color: var(--ink); }
-.todo-tk { flex: none; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.todo-tk { flex: none; font-family: var(--body); font-size: 11px; color: var(--muted); }
