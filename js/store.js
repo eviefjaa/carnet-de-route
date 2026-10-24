@@ -28,7 +28,7 @@ export const state = {
   profile: null,    // mon profil public { uid, name, handle, bio, visibility }, une fois créé
   publishOpen: false, // panneau « Publier l'itinéraire » ouvert
   inviteOpen: false,  // champ « Inviter une personne » ouvert
-  openStops: new Set(), // étapes dépliées (le détail s'affiche au clic sur la carte de l'étape)
+  openItems: new Set(), // étapes et trajets dépliés (le détail s'affiche au clic sur leur carte)
   personId: null,   // personne affichée (#personne-…)
   postId: null,     // publication affichée (#publication-…)
 };
@@ -204,7 +204,7 @@ export function resetUi() {
   state.formTickets = { pending: [], removed: [] };
   state.publishOpen = false;
   state.inviteOpen = false;
-  state.openStops = new Set();
+  state.openItems = new Set();
 }
 
 export function selectTrip(id) {

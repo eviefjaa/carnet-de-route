@@ -19,7 +19,7 @@ export function stopCard(it, trip, idx) {
     : "";
 
   // Carte repliée : l'essentiel, et ce qui reste à réserver en rouge. Un clic l'ouvre.
-  const open = state.openStops.has(it.id);
+  const open = state.openItems.has(it.id);
   const toBook = (it.todos || []).filter((t) => !t.done).map((t) => t.text);
   const detailId = `stop-detail-${esc(it.id)}`;
 
@@ -27,7 +27,7 @@ export function stopCard(it, trip, idx) {
     <div class="stop-summary">
       <div class="stop-head">
         ${dayN ? `<span class="day">JOUR ${dayN}</span>` : ""}
-        <h2><button class="stop-toggle" data-act="toggle-stop" data-id="${esc(it.id)}" type="button" aria-expanded="${open}" aria-controls="${detailId}">${esc(it.place || "Étape sans nom")}</button></h2>
+        <h2><button class="stop-toggle" data-act="toggle-item" data-id="${esc(it.id)}" type="button" aria-expanded="${open}" aria-controls="${detailId}">${esc(it.place || "Étape sans nom")}</button></h2>
         ${it.country ? `<span class="stop-country">${esc(it.country)}</span>` : ""}
         <svg class="stop-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </div>

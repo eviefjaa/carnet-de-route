@@ -1,6 +1,7 @@
 // Affichage et formulaire d'un trajet (moyen de transport, lieux, horaires, durée)
 
-import { esc, uid, safeUrl, MODES, duration, fmtDateTime, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
+import { esc, uid, safeUrl, MODES, duration, fmtDateTime, fmtMoney, priceInput, parsePrice, hasPrice, plural } from "../utils.js";
+import { state } from "../store.js";
 import { itemActions } from "./actions.js";
 import { ticketsBlock, formTicketsBlock } from "./tickets.js";
 
@@ -9,14 +10,29 @@ export function transportCard(it, trip, idx) {
   const u = safeUrl(it.url);
   const hasExtra = it.company || it.ref || u || it.notes;
 
-  return `<article class="item transport">
-    <span class="mode">${esc(MODES[it.mode] || "Trajet")}</span>
-    <div class="leg">
-      <div class="leg-places">${esc(it.from || "Départ ?")} → ${esc(it.to || "Arrivée ?")}</div>
+  // Carte repliée : mode, lieux, départ et durée. Un clic affiche le reste.
+  const open = state.openItems.has(it.id);
+  const tickets = (it.tickets || []).length;
+  const detailId = `leg-detail-${esc(it.id)}`;
+
+  return `<article class="item transport${open ? " open" : ""}">
+    <div class="leg-summary">
+      <span class="mode">${esc(MODES[it.mode] || "Trajet")}</span>
+      <div class="leg">
+        <div class="leg-places">
+          <button class="stop-toggle" data-act="toggle-item" data-id="${esc(it.id)}" type="button" aria-expanded="${open}" aria-controls="${detailId}">${esc(it.from || "Départ ?")} → ${esc(it.to || "Arrivée ?")}</button>
+          <svg class="stop-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="leg-times">
+          <span>Départ <b>${esc(fmtDateTime(it.dep))}</b></span>
+          ${d ? `<span class="dur">${esc(d)}</span>` : ""}
+          ${tickets ? `<span class="leg-tickets">${plural(tickets, "billet")}</span>` : ""}
+        </div>
+      </div>
+    </div>
+    ${open ? `<div class="leg-detail" id="${detailId}">
       <div class="leg-times">
-        <span>Départ <b>${esc(fmtDateTime(it.dep))}</b></span>
         <span>Arrivée <b>${esc(fmtDateTime(it.arr))}</b></span>
-        ${d ? `<span class="dur">${esc(d)}</span>` : ""}
         ${hasPrice(it.price) ? `<span class="price">${esc(fmtMoney(it.price, trip.currency || "EUR"))}</span>` : ""}
       </div>
       ${hasExtra ? `<div class="leg-extra">
@@ -25,9 +41,9 @@ export function transportCard(it, trip, idx) {
         ${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">Réservation ↗</a>` : ""}
         ${it.notes ? `<span>${esc(it.notes)}</span>` : ""}
       </div>` : ""}
-    </div>
-    ${ticketsBlock(it)}
-    ${itemActions(it, idx, trip)}
+      ${ticketsBlock(it)}
+      ${itemActions(it, idx, trip)}
+    </div>` : ""}
   </article>`;
 }
 

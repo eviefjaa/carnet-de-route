@@ -59,3 +59,15 @@
 .stop-detail { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
 /* Ce qui reste à réserver, visible même carte repliée */
 .to-book { margin: 0; font-size: 14px; font-weight: 600; color: var(--danger); overflow-wrap: anywhere; }
+
+/* Trajet replié : même principe que les étapes */
+.leg-summary { grid-column: 1 / -1; position: relative; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: start; }
+.leg-summary .stop-toggle::after { inset: -12px -14px -6px; border-radius: 10px; }
+.leg-places { display: flex; align-items: flex-start; gap: 8px; }
+.leg-places .stop-toggle { min-width: 0; overflow-wrap: anywhere; }
+.leg-places .stop-chevron { flex: none; }
+.transport.open .stop-chevron { transform: rotate(180deg); }
+.transport:not(.open):hover { border-style: solid; }
+.leg-tickets { color: var(--accent); font-weight: 600; }
+.leg-detail { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--route); padding-top: 10px; }
+.leg-detail .tickets { border-top: 0; padding-top: 0; }
