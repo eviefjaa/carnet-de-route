@@ -4,7 +4,7 @@ import { state, currentTrip, save, flush, createTrip, deleteTrip, neighbours, is
 import { render } from "./views/trip.js";
 import { linkRow, todoRow, newStop, readStopForm } from "./views/stop.js";
 import { newTransport, readTransportForm } from "./views/transport.js";
-import { uid, nights, duration, plural } from "./utils.js";
+import { uid, nights, duration, plural, safeUrl } from "./utils.js";
 import { toast } from "./toast.js";
 import * as cloud from "./cloud.js";
 import { setAuthMode } from "./views/auth.js";
@@ -25,7 +25,7 @@ export function bindEvents() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeMenu();
     // Entrée dans une activité du formulaire d'étape : nouvelle activité plutôt qu'enregistrer
-    if (e.key === "Enter" && e.target.name === "todoText") {
+    if (e.key === "Enter" && (e.target.name === "todoText" || e.target.name === "todoMaps")) {
       e.preventDefault();
       addTodoRow(e.target.closest("[data-todo-row]"));
     }
@@ -177,11 +177,12 @@ function findTodo(stopId, todoId) {
   return s && (s.todos || []).find((x) => x.id === todoId);
 }
 // Ajoute un élément à la checklist d'une étape ; renvoie false si rien à ajouter
-function addTodo(stopId, text) {
+function addTodo(stopId, text, maps = "") {
   text = text.trim();
   const s = findStop(stopId);
   if (!text || !s) return false;
-  s.todos = [...(s.todos || []), { id: uid(), text, done: false }];
+  const link = safeUrl(maps);
+  s.todos = [...(s.todos || []), { id: uid(), text, done: false, ...(link ? { maps: link } : {}) }];
   save();
   return true;
 }
@@ -201,7 +202,7 @@ function onPageClick(act, b) {
     case "todo-close": {
       // Ce qui est tapé est enregistré aussi, pour ne pas le perdre
       const form = b.closest("form[data-todo-form]");
-      if (form) addTodo(form.dataset.todoForm, form.text.value);
+      if (form) addTodo(form.dataset.todoForm, form.text.value, form.maps ? form.maps.value : "");
       state.todoAdding = null;
       render();
       return true;
@@ -471,7 +472,7 @@ function onSubmit(e) {
   const todoForm = e.target.closest("form[data-todo-form]");
   if (todoForm) {
     e.preventDefault();
-    if (addTodo(todoForm.dataset.todoForm, todoForm.text.value)) {
+    if (addTodo(todoForm.dataset.todoForm, todoForm.text.value, todoForm.maps ? todoForm.maps.value : "")) {
       render();
       focusTodoInput(); // on peut enchaîner plusieurs ajouts
     }

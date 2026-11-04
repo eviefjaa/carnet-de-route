@@ -38,4 +38,13 @@ assert.match(transportCard(leg, { items: [leg], currency: "EUR" }, 0), /1 billet
 assert.doesNotMatch(transportCard(leg, { items: [leg], currency: "EUR" }, 0), /TGV\.pdf/);
 state.openItems = new Set(["l1"]);
 assert.match(transportCard(leg, { items: [leg], currency: "EUR" }, 0), /TGV\.pdf/);
+// Lien Google Maps d'une activité : affiché s'il est en http(s), jamais un lien javascript:
+const withMaps = { ...newStop("Lyon"), todos: [
+  { id: "m1", text: "Bouchon", done: true, maps: "https://maps.app.goo.gl/abc" },
+  { id: "m2", text: "Piège", done: false, maps: "javascript:alert(1)" } ] };
+const clm = checklist(withMaps);
+assert.match(clm, /class="cl-map" href="https:\/\/maps\.app\.goo\.gl\/abc"/);
+assert.doesNotMatch(clm, /javascript:/);
+assert.match(stopForm(withMaps, false), /name="todoMaps"[^>]*value="https:\/\/maps\.app\.goo\.gl\/abc"/);
+
 console.log("Formulaires et checklist : tous les tests passent.");

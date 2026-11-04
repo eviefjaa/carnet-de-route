@@ -2,7 +2,7 @@
 // Chaque élément : { id, text, done, tickets }. Coché = réservé / fait.
 // Une activité peut avoir ses billets (musée, excursion…) : voir views/tickets.js.
 
-import { esc } from "../utils.js";
+import { esc, safeUrl } from "../utils.js";
 import { state } from "../store.js";
 import { todoTickets, todoTicketButton } from "./tickets.js";
 
@@ -26,12 +26,15 @@ export function checklist(stop) {
           <input type="checkbox" data-todo="${esc(t.id)}" data-stop="${esc(stop.id)}" id="todo-${esc(t.id)}"${t.done ? " checked" : ""}>
           <span>${esc(t.text)}</span>
         </label>
+        ${safeUrl(t.maps) ? `<a class="cl-map" href="${esc(safeUrl(t.maps))}" target="_blank" rel="noopener noreferrer" aria-label="Voir « ${esc(t.text)} » sur la carte" title="Ouvrir dans Google Maps">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>Carte</a>` : ""}
         ${todoTicketButton(stop, t)}
         <button class="cl-del" data-act="todo-del" data-todo="${esc(t.id)}" data-stop="${esc(stop.id)}" type="button" aria-label="Supprimer « ${esc(t.text)} »" title="Supprimer">✕</button>
         ${todoTickets(stop, t)}
       </li>`).join("")}</ul>` : adding ? "" : `<p class="note">Ajoutez les activités prévues et ce qu'il reste à réserver avec le bouton +.</p>`}
     ${adding ? `<form class="cl-form" data-todo-form="${esc(stop.id)}">
       <input name="text" id="todo-new-${esc(stop.id)}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" required>
+      <input name="maps" id="todo-maps-${esc(stop.id)}" placeholder="Lien Google Maps du lieu (facultatif)" inputmode="url" autocomplete="off" aria-label="Lien Google Maps du lieu">
       <button class="btn primary small" type="submit">Ajouter</button>
       <button class="btn ghost small" data-act="todo-close" type="button">Fermer</button>
     </form>` : ""}

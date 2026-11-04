@@ -18,7 +18,9 @@
 .cl-list label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 5px 0; cursor: pointer; }
 .cl-list input[type="checkbox"] { flex: none; width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
 .cl-list span { overflow-wrap: anywhere; }
-.cl-list li.done span { color: var(--muted); text-decoration: line-through; }
+/* Réservé : en vert (plus de texte barré) */
+.cl-list li.done > label span { color: var(--accent); font-weight: 600; }
+.cl-list li.done > label input[type="checkbox"] { accent-color: var(--accent); }
 /* Encore à réserver : en rouge pour ne pas l'oublier */
 .cl-list li:not(.done) > label span { color: var(--danger); font-weight: 600; }
 .cl-list li:not(.done) > label input[type="checkbox"] { accent-color: var(--danger); }
@@ -39,3 +41,12 @@
 .todo-edit input[name="todoDone"] { flex: none; width: 18px; height: 18px; accent-color: var(--accent); }
 .todo-edit input[name="todoText"] { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font-size: 14px; color: var(--ink); }
 .todo-tk { flex: none; font-family: var(--body); font-size: 11px; color: var(--muted); }
+
+/* Lien Google Maps d'une activité */
+.cl-map { display: inline-flex; align-items: center; gap: 3px; flex: none; font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; padding: 2px 6px; border-radius: 6px; }
+.cl-map:hover { background: var(--accent-soft); }
+
+/* Activité dans le formulaire : le lien Google Maps en seconde ligne */
+.todo-edit { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 6px 8px; }
+.todo-edit input[name="todoMaps"] { grid-column: 2 / -1; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 13px; color: var(--ink); }
+.cl-form input[name="maps"] { flex: 1 1 100%; font-size: 13px; }

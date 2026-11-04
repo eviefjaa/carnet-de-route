@@ -133,7 +133,7 @@ function normalize(t) {
     if ("nights" in i) delete i.nights; // calculé à partir des dates, jamais lu tel quel
     if (isObj(i.geo) && !(Number.isFinite(i.geo.lat) && Number.isFinite(i.geo.lng))) delete i.geo;
     if ("route" in i && !(isObj(i.route) && typeof i.route.key === "string")) delete i.route;
-    i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true }));
+    i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true, ...("maps" in x ? { maps: str(x.maps) } : {}) }));
     i.links = (Array.isArray(i.links) ? i.links : []).filter(isObj).map((l) => ({ id: str(l.id), label: str(l.label), url: str(l.url) }));
     const files = (list) => (Array.isArray(list) ? list : []).filter(isObj).map((f) => ({ id: str(f.id), name: str(f.name), type: str(f.type), size: Number(f.size) || 0 }));
     i.tickets = files(i.tickets);

@@ -102,8 +102,9 @@ export function todoRow(t) {
   return `<div class="todo-edit" data-todo-row="${esc(t.id)}">
     <input type="checkbox" name="todoDone" id="td-done-${esc(t.id)}"${t.done ? " checked" : ""} aria-label="Déjà réservé ou fait">
     <input name="todoText" id="td-text-${esc(t.id)}" value="${esc(t.text)}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" aria-label="Activité">
-    ${n ? `<span class="todo-tk" title="Billets gérés depuis la checklist de l'étape">${n} billet${n > 1 ? "s" : ""}</span>` : ""}
+    ${n ? `<span class="todo-tk" title="Billets gérés depuis la checklist de l'étape">${n} billet${n > 1 ? "s" : ""}</span>` : "<span></span>"}
     <button class="btn ghost small" data-act="rm-todo-row" type="button" aria-label="Retirer cette activité">✕</button>
+    <input name="todoMaps" id="td-maps-${esc(t.id)}" value="${esc(t.maps || "")}" placeholder="Lien Google Maps du lieu (facultatif)" inputmode="url" autocomplete="off" aria-label="Lien Google Maps du lieu">
   </div>`;
 }
 
@@ -131,6 +132,7 @@ export function readStopForm(f) {
       id: r.dataset.todoRow,
       text: r.querySelector('[name="todoText"]').value.trim(),
       done: r.querySelector('[name="todoDone"]').checked,
+      maps: safeUrl(r.querySelector('[name="todoMaps"]').value),
     }))
     .filter((t) => t.text);
   return o;
