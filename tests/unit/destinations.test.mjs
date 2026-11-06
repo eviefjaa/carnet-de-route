@@ -12,5 +12,9 @@ for (const x of COUNTRIES) {
   const html = ex.countryView(x.code);
   assert.match(html, /class="timeline"/, `frise de ${x.code}`);
   assert.match(html, /class="hl-grid"/, `incontournables de ${x.code}`);
+  assert.match(html, /class="urgences-list"/, `numéros utiles de ${x.code}`);
+  assert.doesNotMatch(html, /href="tel:/, `pas de bouton d'appel (${x.code})`);
 }
+// Un numéro qui sert à tout n'est affiché qu'une fois
+assert.equal(ex.countryView("US").match(/>911</g).length, 1, "911 une seule fois");
 console.log(`Destinations : les ${COUNTRIES.length} fiches sont complètes.`);

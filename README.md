@@ -58,6 +58,7 @@ js/
   data/
     countries.js      Fiches pays (ajoutez-en en copiant une ligne)
     country-details.js  Frise historique et incontournables détaillés de chaque pays
+    urgences.js       Numéros d'urgence de chaque pays (source en commentaire, à revérifier chaque année)
   views/
     trips-list.js     Page Mes voyages : une carte par voyage
     trip.js           Page d'un voyage (et choix de la page à afficher)

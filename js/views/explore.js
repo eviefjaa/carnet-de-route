@@ -4,6 +4,7 @@ import { esc } from "../utils.js";
 import { state } from "../store.js";
 import { isFavorite } from "../prefs.js";
 import { COUNTRIES, CONTINENTS, TAGS, countryByCode, wikiUrl } from "../data/countries.js";
+import { URGENCES, URGENCES_VERIFIED } from "../data/urgences.js";
 
 const BUDGET = { 1: ["€", "Bon marché"], 2: ["€€", "Moyen"], 3: ["€€€", "Cher"] };
 
@@ -112,6 +113,7 @@ export function countryView(code) {
       ${favButton(x.code)}
     </div>
     <dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
+    ${urgencesSection(x)}
     <div class="country-text">
       <section><h2>Présentation</h2><p>${esc(x.description)}</p></section>
       <section>
@@ -152,6 +154,30 @@ function highlightCards(list, country) {
 }
 
 // postsSection : itinéraires publiés mis en favori (views/social.js), vide s'il n'y en a pas
+// Numéros d'urgence du pays (données vérifiées sur des sources officielles : js/data/urgences.js)
+function urgencesSection(x) {
+  const u = URGENCES[x.code];
+  if (!u) return "";
+  // Simple liste (pas de bouton d'appel)
+  const line = (label, number, main = false) => number
+    ? `<li${main ? ' class="is-main"' : ""}><span>${esc(label)}</span><b class="urgence-num">${esc(number)}</b></li>` : "";
+  // Un service joignable au numéro général n'est pas répété (911 aux États-Unis…)
+  const own = (n) => (n && n !== u.general ? n : "");
+  const rows = [
+    line("Urgences (tous services)", u.general, true),
+    line("Police", own(u.police)),
+    line("Ambulance, urgences médicales", own(u.ambulance)),
+    line("Pompiers", own(u.pompiers)),
+    ...(u.autres || []).map((a) => line(a.label, a.number)),
+  ].join("");
+  if (!rows) return "";
+  return `<section class="panel urgences" aria-label="Numéros utiles">
+    <h2>Numéros utiles</h2>
+    <ul class="urgences-list">${rows}</ul>
+    <p class="note">Numéros à composer sur place. Vérifiés en ${esc(URGENCES_VERIFIED)} : en cas de doute, confirmez-les en arrivant (hôtel, office de tourisme).${u.conseils ? ` Pour l'ambassade et le consulat de France : <a href="${esc(u.conseils)}" target="_blank" rel="noopener noreferrer">Conseils aux voyageurs ↗</a>.` : ""}</p>
+  </section>`;
+}
+
 export function favoritesView(codes, postsSection = "") {
   const list = codes.map(countryByCode).filter(Boolean);
   if (!list.length && !postsSection) {
