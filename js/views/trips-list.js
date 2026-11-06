@@ -78,11 +78,7 @@ function summary(id, trip) {
 }
 
 function card(s) {
-  const { id, trip, stops } = s;
-  const places = stops.map((x) => x.place).filter(Boolean);
-  const route = places.length > 4 ? [...places.slice(0, 3), `+${places.length - 3}`] : places;
-  const dots = stops.slice(0, 12).map(() => "<i></i>").join("");
-
+  const { id, trip } = s;
   const owner = isOwner(trip);
   const name = trip.name || "Sans titre";
   // Confirmation après la poubelle (une suppression efface aussi les billets, sans retour possible)
@@ -96,16 +92,40 @@ function card(s) {
     </div></div>`;
   }
 
+  // Mode sélection : toucher la carte la coche (voir js/events.js), sans ouvrir le voyage ni glisser
+  if (state.selecting) {
+    const on = state.selected.has(id);
+    return `<article class="trip-card is-${s.status.key} is-selectable${on ? " is-selected" : ""}" data-act="select-trip" data-trip="${esc(id)}">
+      <input type="checkbox" class="tc-check" data-act="select-trip" data-trip="${esc(id)}" ${on ? "checked" : ""} aria-label="Sélectionner « ${esc(name)} »">
+      ${cardBody(s, esc(name))}
+    </article>`;
+  }
+
   // Glisser vers la gauche fait apparaître la poubelle : la carte et la poubelle sont côte à côte
   // dans un bandeau qui défile horizontalement (défilement natif du téléphone, voir js/swipe.js)
   return `<div class="swipe">
     <article class="trip-card is-${s.status.key}">
-    <div class="tc-top">
+    ${cardBody(s, `<a class="tc-link" href="#voyage-${esc(id)}">${esc(name)}</a>`)}
+  </article>
+    <button class="swipe-action" data-act="swipe-delete" data-trip="${esc(id)}" type="button" aria-label="${owner ? "Supprimer" : "Quitter"} le voyage « ${esc(name)} »">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+      <span>${owner ? "Supprimer" : "Quitter"}</span>
+    </button>
+  </div>`;
+}
+
+// Contenu de la carte ; title : le nom du voyage, déjà échappé (lien, ou texte en mode sélection)
+function cardBody(s, title) {
+  const { trip, stops } = s;
+  const places = stops.map((x) => x.place).filter(Boolean);
+  const route = places.length > 4 ? [...places.slice(0, 3), `+${places.length - 3}`] : places;
+  const dots = stops.slice(0, 12).map(() => "<i></i>").join("");
+  return `<div class="tc-top">
       <span class="tc-status">${esc(s.status.label)}</span>
       ${(trip.members || []).length > 1 ? `<span class="tc-shared">Partagé · ${trip.members.length}</span>` : ""}
       <span class="tc-flags" aria-hidden="true">${flagsOf(trip, stops)}</span>
     </div>
-    <h2><a class="tc-link" href="#voyage-${esc(id)}">${esc(trip.name || "Sans titre")}</a></h2>
+    <h2>${title}</h2>
     <p class="tc-dates">${s.start ? esc(fmtRange(s.start, s.end)) : "Pas encore de dates"}</p>
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : `<p class="tc-route empty-route">Aucune étape pour l'instant</p>`}
     ${tripPending(trip) ? `<span class="todo-alert">${tripPending(trip)} à réserver</span>` : ""}
@@ -114,13 +134,7 @@ function card(s) {
       <div><dt>Étapes</dt><dd>${stops.length}</dd></div>
       <div><dt>Nuits</dt><dd>${s.nights}</dd></div>
       <div><dt>Budget</dt><dd>${s.budget ? esc(fmtMoney(s.budget, trip.currency || "EUR")) : "–"}</dd></div>
-    </dl>
-  </article>
-    <button class="swipe-action" data-act="swipe-delete" data-trip="${esc(id)}" type="button" aria-label="${owner ? "Supprimer" : "Quitter"} le voyage « ${esc(name)} »">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
-      <span>${owner ? "Supprimer" : "Quitter"}</span>
-    </button>
-  </div>`;
+    </dl>`;
 }
 
 export function tripsListView() {
@@ -134,22 +148,56 @@ export function tripsListView() {
 
   if (!all.length) return welcome();
 
-  return `<section class="page">
+  const sel = state.selecting;
+  return `<section class="page${sel ? " is-selecting" : ""}">
     <header class="page-head trips-head">
       <div>
         <h1>Mes voyages</h1>
         <p class="lead">${plural(all.length, "voyage")}</p>
       </div>
-      <button class="btn primary" data-act="new-trip" type="button">+ Nouveau voyage</button>
+      <div class="row-btns">
+        ${sel
+          ? `<button class="btn" data-act="select-all" type="button">${all.every((s) => state.selected.has(s.id)) ? "Tout désélectionner" : "Tout sélectionner"}</button>
+             <button class="btn primary" data-act="select-end" type="button">Terminé</button>`
+          : `<button class="btn" data-act="select-start" type="button">Sélectionner</button>
+             <button class="btn primary" data-act="new-trip" type="button">+ Nouveau voyage</button>`}
+      </div>
     </header>
-    ${invitationsBlock()}
+    ${sel ? "" : invitationsBlock()}
     <div class="trip-grid">
       ${all.map(card).join("")}
-      <button class="trip-card new-card" data-act="new-trip" type="button">
+      ${sel ? "" : `<button class="trip-card new-card" data-act="new-trip" type="button">
         <span class="plus" aria-hidden="true">+</span>
         <b>Nouveau voyage</b>
         <span class="note">Ou inspirez-vous des destinations</span>
-      </button>
+      </button>`}
     </div>
+    ${sel ? selectionBar(all) : ""}
   </section>`;
+}
+
+// Barre du bas en mode sélection : nombre de voyages cochés, puis suppression avec confirmation
+function selectionBar(all) {
+  const picked = all.filter((s) => state.selected.has(s.id));
+  const n = picked.length;
+  if (state.confirm === "select-delete" && n) {
+    // Les voyages partagés par quelqu'un d'autre ne sont pas supprimés : on les quitte
+    const del = picked.filter((s) => isOwner(s.trip)).length;
+    const leave = n - del;
+    const parts = [];
+    if (del) parts.push(`supprimer ${plural(del, "voyage")} et tout ${del > 1 ? "leur" : "son"} contenu (billets compris)`);
+    if (leave) parts.push(`quitter ${leave} ${leave > 1 ? "voyages partagés" : "voyage partagé"}`);
+    const question = parts.join(" et ");
+    return `<div class="select-bar is-confirm" role="group" aria-label="Confirmation">
+      <p>${question.charAt(0).toUpperCase() + question.slice(1)} ? C'est définitif.</p>
+      <div class="row-btns">
+        <button class="btn" data-act="select-cancel-delete" type="button">Annuler</button>
+        <button class="btn danger-solid" data-act="select-delete-yes" type="button">${del ? "Supprimer" : "Quitter"}</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="select-bar">
+    <p aria-live="polite">${n ? `${plural(n, "voyage")} sélectionné${n > 1 ? "s" : ""}` : "Touchez les voyages à supprimer"}</p>
+    <button class="btn danger-solid" data-act="select-delete" type="button" ${n ? "" : "disabled"}>Supprimer</button>
+  </div>`;
 }

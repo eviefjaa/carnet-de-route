@@ -95,16 +95,19 @@ export async function removeMember(uid) {
 }
 
 // Un voyageur (pas le créateur) quitte le voyage : il disparaît de sa liste seulement
-export async function leaveTrip(id) {
+// quiet : pas de message (suppression de plusieurs voyages, qui affiche son propre bilan)
+export async function leaveTrip(id, quiet = false) {
   try {
     await flush();
     await cloud.removeMember(id, state.user.uid);
   } catch {
-    return toast("Impossible de quitter le voyage. Vérifiez votre connexion.");
+    if (!quiet) toast("Impossible de quitter le voyage. Vérifiez votre connexion.");
+    return false;
   }
   forgetTrip(id);
-  toast("Vous avez quitté le voyage");
+  if (!quiet) toast("Vous avez quitté le voyage");
   render();
+  return true;
 }
 
 // Réponse à une invitation : rejoindre le voyage, ou refuser (l'invitation disparaît)

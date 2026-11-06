@@ -37,4 +37,18 @@ assert.deepEqual(post.recos, []);
 const html = postCard(post);
 assert.doesNotMatch(html, /<iframe|<script/);
 
+// Liste « Mes voyages » avec un voyage partagé au nom piégé, en mode normal et en mode sélection
+const { state } = await import(root + "/js/store.js");
+const { tripsListView } = await import(root + "/js/views/trips-list.js");
+state.trips = { ['x" onclick="alert(1)']: normalizeTrip({ name: TRAP, owner: "autre", items: [] }) };
+state.user = { uid: "moi" };
+for (const selecting of [false, true]) {
+  state.selecting = selecting;
+  state.selected = new Set(Object.keys(state.trips));
+  state.confirm = selecting ? "select-delete" : null;
+  const list = tripsListView();
+  assert.doesNotMatch(list, /<iframe|<script| onclick="/, `liste des voyages (sélection : ${selecting})`);
+  if (selecting) assert.match(list, /Quitter 1 voyage partagé \? /, "un voyage d'un autre est quitté, pas supprimé");
+}
+
 console.log("Sécurité : les valeurs piégées sont neutralisées.");

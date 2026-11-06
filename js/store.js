@@ -33,6 +33,8 @@ export const state = {
   publishOpen: false, // panneau « Publier l'itinéraire » ouvert
   inviteOpen: false,  // champ « Inviter une personne » ouvert
   openItems: new Set(), // étapes et trajets dépliés (le détail s'affiche au clic sur leur carte)
+  selecting: false, // « Mes voyages » en mode sélection (pour supprimer plusieurs voyages)
+  selected: new Set(), // voyages cochés dans ce mode
   networkTab: null,  // liste affichée depuis Mon profil (#abonnes, #abonnements, #mes-publications, #demandes)
   personId: null,   // personne affichée (#personne-…)
   postId: null,     // publication affichée (#publication-…)
@@ -226,6 +228,8 @@ export function resetUi() {
   state.publishOpen = false;
   state.inviteOpen = false;
   state.openItems = new Set();
+  state.selecting = false;
+  state.selected = new Set();
 }
 
 export function selectTrip(id) {

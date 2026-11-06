@@ -58,6 +58,27 @@ function newTrip() {
   go("voyage-" + id);
 }
 
+// Supprime les voyages cochés en mode sélection ; ceux d'un autre propriétaire sont quittés
+async function deleteSelected() {
+  const ids = [...state.selected].filter((id) => state.trips[id]);
+  const mine = ids.filter((id) => isOwner(state.trips[id]));
+  const others = ids.filter((id) => !isOwner(state.trips[id]));
+  mine.forEach((id) => deleteTrip(id)); // leurs billets sont supprimés avec eux dans le compte
+  let failed = 0;
+  for (const id of others) if (!(await leaveTrip(id, true))) failed++;
+  state.selecting = false;
+  state.selected = new Set();
+  state.confirm = null;
+  render();
+  const done = [];
+  if (mine.length) done.push(`${plural(mine.length, "voyage")} supprimé${mine.length > 1 ? "s" : ""}`);
+  const left = others.length - failed;
+  if (left) done.push(`${mine.length ? left : plural(left, "voyage")} quitté${left > 1 ? "s" : ""}`); // « 2 voyages supprimés, 1 quitté »
+  toast(failed
+    ? `${done.length ? done.join(", ") + ". " : ""}Impossible de quitter ${plural(failed, "voyage")} : vérifiez votre connexion.`
+    : done.join(", "));
+}
+
 function onClick(e) {
   const b = e.target.closest("[data-act]");
   if (!b) return;
@@ -268,6 +289,45 @@ function onPageClick(act, b) {
     case "swipe-delete":
       state.confirm = "swipe:" + b.dataset.trip;
       render();
+      return true;
+    // Mode sélection de « Mes voyages » : cocher des voyages pour les supprimer ensemble
+    case "select-start":
+      state.selecting = true;
+      state.selected = new Set();
+      state.confirm = null;
+      render();
+      return true;
+    case "select-end":
+      state.selecting = false;
+      state.selected = new Set();
+      state.confirm = null;
+      render();
+      return true;
+    case "select-trip": {
+      const id = b.dataset.trip;
+      if (state.selected.has(id)) state.selected.delete(id);
+      else state.selected.add(id);
+      state.confirm = null;
+      render();
+      return true;
+    }
+    case "select-all": {
+      const ids = Object.keys(state.trips);
+      state.selected = ids.every((id) => state.selected.has(id)) ? new Set() : new Set(ids);
+      state.confirm = null;
+      render();
+      return true;
+    }
+    case "select-delete":
+      state.confirm = "select-delete";
+      render();
+      return true;
+    case "select-cancel-delete":
+      state.confirm = null;
+      render();
+      return true;
+    case "select-delete-yes":
+      deleteSelected();
       return true;
     case "swipe-cancel":
       state.confirm = null;
