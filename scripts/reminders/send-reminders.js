@@ -13,7 +13,9 @@
 // Le dépôt est public : ses journaux aussi. On n'y écrit donc jamais d'adresse e-mail
 // ni le contenu des voyages, seulement des comptes anonymes (« compte 1 », « compte 2 »…).
 
-import admin from "firebase-admin";
+import { initializeApp, cert } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 import nodemailer from "nodemailer";
 import { findDueReminders, buildEmail, todayIn, daysBetween, stopDate, cleanTrip } from "./reminders.js";
 
@@ -29,8 +31,8 @@ function need(name) {
   return process.env[name];
 }
 
-admin.initializeApp({ credential: admin.credential.cert(JSON.parse(need("FIREBASE_SERVICE_ACCOUNT"))) });
-const db = admin.firestore();
+initializeApp({ credential: cert(JSON.parse(need("FIREBASE_SERVICE_ACCOUNT"))) });
+const db = getFirestore();
 
 const mailer = DRY_RUN ? null : nodemailer.createTransport({
   service: "gmail",
@@ -120,7 +122,7 @@ async function remindAccount(uid, label) {
   // créer un compte avec l'adresse d'un autre et lui faire envoyer des e-mails
   let user = null;
   try {
-    user = await admin.auth().getUser(uid);
+    user = await getAuth().getUser(uid);
   } catch {}
   if (!user || !user.email) {
     console.log(`${label} : pas d'adresse e-mail sur le compte → ignoré`);

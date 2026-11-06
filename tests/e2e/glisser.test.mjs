@@ -26,7 +26,7 @@ await page.setViewport({ width: 375, height: 760, isMobile: true, hasTouch: true
 page.on("pageerror", (e) => check(`erreur JS : ${e.message}`, false));
 await page.goto(`http://localhost:${PORT}/index.html#voyages`, { waitUntil: "networkidle0" });
 await page.evaluate(() => localStorage.setItem("carnet-route-trips", JSON.stringify({
-  "v-a": { name: "Lyon et Paris", currency: "EUR", createdAt: 2, items: [{ id: "a", type: "stop", place: "Lyon", arrive: "2026-11-02", depart: "2026-11-04" }] },
+  "v-a": { name: "Lyon et Paris", currency: "EUR", createdAt: 2, items: [{ id: "a", type: "stop", place: "Lyon", arrive: "2030-11-02", depart: "2030-11-04" }] },
   "v-b": { name: "Japon", currency: "JPY", createdAt: 1, items: [] },
   "v-c": { name: "Rome (terminé)", currency: "EUR", createdAt: 0, items: [{ id: "r", type: "stop", place: "Rome", arrive: "2020-05-01", depart: "2020-05-03" }] } })));
 await page.reload({ waitUntil: "networkidle0" });
