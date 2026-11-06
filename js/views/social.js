@@ -525,6 +525,20 @@ export function networkView(tab) {
   return `<section class="page">${head}${body}</section>`;
 }
 
+// Fiche pays : 3 ou 4 itinéraires de voyageurs, les plus mis en favori, comme idées
+// (rien pendant le chargement ni s'il n'y en a pas : la fiche reste la même)
+export function countryPostsSection(code) {
+  if (!isEnabled()) return "";
+  const e = social.load("country-posts:" + code, () => social.topPostsIn(code));
+  if (e.status !== "ok" || !e.data.length) return "";
+  return `<section class="country-posts" aria-labelledby="country-posts-title">
+    <h2 id="country-posts-title">Idées d'itinéraires</h2>
+    <p class="note">Les itinéraires de voyageurs les plus mis en favori pour ce pays.</p>
+    ${postGrid(e.data, "")}
+    <p class="note"><a href="#decouvrir">Voir tous les itinéraires dans Découvrir</a></p>
+  </section>`;
+}
+
 // Page Favoris : les itinéraires publiés mis en favori
 export function favoritePostsSection() {
   const ids = prefs.favoritePosts;

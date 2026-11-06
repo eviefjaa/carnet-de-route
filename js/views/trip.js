@@ -18,7 +18,7 @@ import { prefs } from "../prefs.js";
 import { tripsListView } from "./trips-list.js";
 import { tripPending } from "./checklist.js";
 import { shareSection, travellers } from "./share.js";
-import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel, socialTitle, notificationsView, markNotificationsSeen, networkView, NETWORK_PAGES, favoritePostsSection } from "./social.js";
+import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel, socialTitle, notificationsView, markNotificationsSeen, networkView, NETWORK_PAGES, favoritePostsSection, countryPostsSection } from "./social.js";
 import { refreshNotifications } from "../social.js";
 import { countryByCode } from "../data/countries.js";
 
@@ -91,7 +91,7 @@ export function render() {
       filterCountries();
       return;
     case "country":
-      app.innerHTML = countryView(state.country);
+      app.innerHTML = countryView(state.country, countryPostsSection(state.country));
       // Première fiche ouverte : on affiche la version courte, puis la version détaillée
       if (!detailsReady()) loadDetails().then(() => state.view === "country" && !state.authOpen && render());
       return;

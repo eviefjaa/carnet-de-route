@@ -346,6 +346,36 @@ check("sans compte : la publication supprimée n'est plus lisible", (await text(
 await goHash(alice, "voyages");
 check("le voyage, lui, est toujours là", (await text(alice)).includes("Japon en train"));
 
+// ---------- Fiche pays : idées d'itinéraires publiés, classées par mises en favori ----------
+await goHash(alice, "destination-JP");
+await alice.click('[data-act="trip-from-country"]');
+await sleep(2500);
+await alice.click('[data-act="open-publish"]');
+await alice.waitForSelector("[data-publish-form]");
+await alice.click('[data-publish-form] button[type="submit"]');
+await sleep(3000);
+await anon.goto(SITE + "#destination-JP");
+await anon.waitForSelector(".country-posts .post-card", { timeout: 15000 }).catch(() => {});
+check("sans compte : la fiche Japon montre l'itinéraire publié", (await anon.$$eval(".country-posts .post-card h2", (l) => l.map((h) => h.textContent.trim()))).includes("Japon"));
+await anon.goto(SITE + "#destination-FR");
+await sleep(4000);
+check("pas de section vide sur une fiche sans itinéraire", !(await anon.$(".country-posts")));
+// Compteur public lu directement dans Firestore (même module que le site)
+const favCount = (page) => page.evaluate(async () => {
+  const c = await import("/js/cloud.js");
+  const { fb, db } = c.firestore();
+  const id = document.querySelector('.country-posts [data-act="fav-post"]').dataset.post;
+  return (await fb.getDoc(fb.doc(db, "posts", id))).data().favCount || 0;
+});
+await goHash(bob, "destination-JP");
+await bob.waitForSelector('.country-posts [data-act="fav-post"]', { timeout: 15000 }).catch(() => {});
+await bob.click('.country-posts [data-act="fav-post"]');
+await sleep(2500);
+check("favori depuis la fiche pays : compteur à 1", (await favCount(bob)) === 1);
+await bob.click('.country-posts [data-act="fav-post"]');
+await sleep(2500);
+check("favori retiré : compteur à 0", (await favCount(bob)) === 0);
+
 problems.forEach((p) => { ko++; console.log("ÉCHEC :", p); });
 console.log(`Parcours complet : ${ok} vérifications réussies, ${ko} échec(s).`);
 await browser.close();

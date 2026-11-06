@@ -85,7 +85,8 @@ export function filterCountries() {
   if (count) count.textContent = `${shown} destination${shown > 1 ? "s" : ""}`;
 }
 
-export function countryView(code) {
+// postsSection : idées d'itinéraires publiés dans ce pays (views/social.js), vide s'il n'y en a pas
+export function countryView(code, postsSection = "") {
   const x = countryByCode(code);
   if (!x) {
     return `<section class="page"><a class="back" href="#destinations">← Toutes les destinations</a>
@@ -131,6 +132,7 @@ export function countryView(code) {
           : `<ul class="highlights">${x.highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>`}
       </section>
     </div>
+    ${postsSection}
     <p class="note"><a href="${wikiUrl(x)}" target="_blank" rel="noopener noreferrer">En savoir plus sur Wikipédia ↗</a></p>
   </section>`;
 }

@@ -175,7 +175,8 @@ function normalizePost(id, p) {
     title: text(p.title, 200) || "Sans titre",
     visibility: VISIBILITIES[p.visibility] ? p.visibility : "private",
     publishedAt: toMs(p.publishedAt),
-    trip: { country: text(trip.country, 2), days: intOrNull(trip.days), nights: intOrNull(trip.nights), items },
+    favCount: Number.isInteger(p.favCount) && p.favCount > 0 ? p.favCount : 0, // nombre de mises en favori (public)
+    trip: { country: text(trip.country, 2), countries: (Array.isArray(trip.countries) ? trip.countries : []).filter((c) => /^[A-Z]{2}$/.test(c)).slice(0, 10), days: intOrNull(trip.days), nights: intOrNull(trip.nights), items },
     recos: (Array.isArray(p.recos) ? p.recos : []).filter(isObj).slice(0, 50).map((r) => ({
       kind: RECO_KINDS[r.kind] ? r.kind : "autre", name: text(r.name, 100), where: text(r.where, 120),
       note: text(r.note, 500), url: text(r.url, 500), stop: Number.isInteger(r.stop) ? r.stop : null,
@@ -232,17 +233,27 @@ export async function deletePost(id) {
   resetSocial();
 }
 
-// ---------- Mises en favori (pour prévenir l'auteur) ----------
-// Sans profil, le favori reste seulement dans mes préférences : l'auteur n'est pas prévenu
+// ---------- Mises en favori (pour prévenir l'auteur, et classer les itinéraires) ----------
+// Sans profil, le favori reste seulement dans mes préférences : l'auteur n'est pas prévenu et rien n'est compté.
+// Le compteur public favCount change dans la même écriture que mon favori : les règles vérifient
+// qu'il ne bouge que de 1, et seulement quand mon favori apparaît ou disparaît.
 export async function likePost(id) {
   if (!state.user || !state.profile) return;
   const { fb, db } = F();
-  await fb.setDoc(fb.doc(db, "posts", id, "likes", me()), { name: state.profile.name, handle: state.profile.handle, at: fb.serverTimestamp() });
+  const batch = fb.writeBatch(db);
+  batch.set(fb.doc(db, "posts", id, "likes", me()), { name: state.profile.name, handle: state.profile.handle, at: fb.serverTimestamp() });
+  batch.update(fb.doc(db, "posts", id), { favCount: fb.increment(1) });
+  await batch.commit();
 }
 export async function unlikePost(id) {
   if (!state.user) return;
   const { fb, db } = F();
-  await fb.deleteDoc(fb.doc(db, "posts", id, "likes", me()));
+  const like = fb.doc(db, "posts", id, "likes", me());
+  const batch = fb.writeBatch(db);
+  batch.delete(like);
+  batch.update(fb.doc(db, "posts", id), { favCount: fb.increment(-1) });
+  // Favori d'avant le compteur (il n'a pas été compté) : on le retire sans décompter
+  await batch.commit().catch(() => fb.deleteDoc(like));
 }
 
 // ---------- Commentaires ----------
@@ -294,6 +305,18 @@ export async function feed() {
 export async function discover() {
   const { fb } = F();
   return docs(await fb.getDocs(fb.query(postsCol(), fb.where("visibility", "==", "public"), fb.limit(30)))).sort(newestFirst);
+}
+
+// Fiche pays : les itinéraires publics du pays les plus mis en favori (à égalité, le plus récent)
+// Deux recherches : par pays traversé (trip.countries), et par pays du voyage (trip.country, seul
+// renseigné sur les publications plus anciennes). L'une peut échouer sans priver de l'autre.
+export async function topPostsIn(country, max = 4) {
+  const { fb } = F();
+  const get = (filter) => fb.getDocs(fb.query(postsCol(), fb.where("visibility", "==", "public"), filter, fb.limit(50))).then(docs).catch(() => null);
+  const [crossed, main] = await Promise.all([get(fb.where("trip.countries", "array-contains", country)), get(fb.where("trip.country", "==", country))]);
+  if (!crossed && !main) throw new Error("Itinéraires indisponibles");
+  const list = [...new Map([...(crossed || []), ...(main || [])].map((p) => [p.id, p])).values()];
+  return list.sort((a, b) => b.favCount - a.favCount || newestFirst(a, b)).slice(0, max);
 }
 
 // ---------- Notifications ----------

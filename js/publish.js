@@ -8,6 +8,7 @@
 
 import { MODES, nights, duration } from "./utils.js";
 import { tripStart, tripEnd } from "./store.js";
+import { COUNTRIES } from "./data/countries.js";
 
 const round = (x) => Math.round(x * 50) / 50; // 1/50 de degré ≈ 2 km
 
@@ -38,9 +39,13 @@ export function publicCopy(trip) {
   );
 
   const stops = items.filter((i) => i.type === "stop");
+  const country = /^[A-Z]{2}$/.test(trip.country || "") ? trip.country : "";
+  // Pays traversés (codes) : le pays choisi à la création et ceux des étapes, pour les fiches pays
+  const countries = [...new Set([country, ...stops.map((s) => COUNTRIES.find((c) => c.name === s.country)?.code)].filter(Boolean))].slice(0, 10);
   // Pas de nom de voyage : la publication a son propre titre
   return {
-    country: /^[A-Z]{2}$/.test(trip.country || "") ? trip.country : "",
+    country,
+    countries,
     days: start && end ? nights(start, end) + 1 : null,
     nights: stops.reduce((n, s) => n + (s.nights || 0), 0),
     items,

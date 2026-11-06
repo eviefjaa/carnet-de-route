@@ -111,3 +111,8 @@
 .urgence-num { flex: none; font-size: 18px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 .urgences-list .is-main .urgence-num { color: var(--danger); }
 .urgences-list .is-main span { font-weight: 600; }
+
+/* Fiche pays : idées d'itinéraires publiés par des voyageurs */
+.country-posts { display: flex; flex-direction: column; gap: 10px; }
+.country-posts h2 { font-size: 20px; font-weight: 700; }
+.country-posts > .note { margin: 0; }

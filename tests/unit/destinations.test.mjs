@@ -20,6 +20,12 @@ for (const x of COUNTRIES) {
   assert.equal(shown.length, COUNTRIES.length, "tous les pays affichés");
   assert.deepEqual(shown, [...shown].sort((a, b) => a.localeCompare(b, "fr")), "ordre alphabétique");
   console.log(`Destinations : de ${shown[0]} à ${shown[shown.length - 1]}.`); }
+// Publication : pays traversés (pays du voyage et pays des étapes), pour les fiches pays
+{ const { publicCopy } = await import(root + "/js/publish.js");
+  const c = publicCopy({ country: "FR", items: [{ id: "a", type: "stop", place: "Lyon", country: "France" },
+    { id: "b", type: "stop", place: "Turin", country: "Italie" }, { id: "c", type: "stop", place: "Atlantide", country: "Nulle part" }] });
+  assert.deepEqual(c.countries, ["FR", "IT"], "pays traversés");
+  assert.deepEqual(publicCopy({ items: [] }).countries, [], "aucun pays"); }
 // Un numéro qui sert à tout n'est affiché qu'une fois
 assert.equal(ex.countryView("US").match(/>911</g).length, 1, "911 une seule fois");
 console.log(`Destinations : les ${COUNTRIES.length} fiches sont complètes.`);

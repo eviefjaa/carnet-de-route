@@ -155,6 +155,9 @@ service cloud.firestore {
         return exists(f) && get(f).data.status == "accepted";
       }
       function profile() { return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data; }
+      // Compteur public de mises en favori (absent = 0) et mon favori sur cet itinéraire
+      function favs(d) { return d.get("favCount", 0); }
+      function myLike() { return /databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid); }
 
       allow read: if resource.data.visibility == "public"
         || (request.auth != null && (resource.data.owner == request.auth.uid
@@ -165,7 +168,9 @@ service cloud.firestore {
         && postId.matches('^p[0-9]{13}[a-z0-9]{4,12}$')
         && math.abs((10000000000000 - int(postId[1:14])) - request.time.toMillis()) < 3600000
         && request.resource.data.publishedAt == request.time
-        && request.resource.data.trip.keys().hasOnly(["country", "days", "nights", "items"])
+        && request.resource.data.trip.keys().hasOnly(["country", "countries", "days", "nights", "items"])
+        // Pays traversés : 10 codes au plus (fiches pays)
+        && (!("countries" in request.resource.data.trip) || (request.resource.data.trip.countries is list && request.resource.data.trip.countries.size() <= 10))
         && request.resource.data.trip.items is list
         // Nombres de jours et de nuits : entiers (ou absents), jamais du texte
         && (!("days" in request.resource.data.trip) || request.resource.data.trip.days == null || request.resource.data.trip.days is int)
@@ -179,10 +184,17 @@ service cloud.firestore {
         && request.resource.data.trip is map
         // Recommandations facultatives (restos, hébergements, adresses…) : 50 au plus
         && (!("recos" in request.resource.data) || (request.resource.data.recos is list && request.resource.data.recos.size() <= 50));
-      // Non modifiable : seul son auteur change la visibilité ou la supprime
-      allow update: if request.auth != null && resource.data.owner == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["visibility"])
-        && request.resource.data.visibility in ["public", "followers", "private"];
+      // Non modifiable : seul son auteur change la visibilité ou la supprime.
+      // Exception : le compteur de favoris, qui bouge de 1 seulement quand mon favori apparaît
+      // ou disparaît dans la même écriture (on ne peut donc pas le gonfler).
+      allow update: if request.auth != null && (
+        (resource.data.owner == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["visibility"])
+          && request.resource.data.visibility in ["public", "followers", "private"])
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["favCount"])
+          && ((request.resource.data.favCount == favs(resource.data) + 1 && !exists(myLike()) && existsAfter(myLike()))
+            || (request.resource.data.favCount == favs(resource.data) - 1 && favs(resource.data) > 0
+                && exists(myLike()) && !existsAfter(myLike())))));
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
 
       // Commentaires : lisibles par qui voit l'itinéraire ; écrits par qui le voit et a un profil.
@@ -210,19 +222,26 @@ service cloud.firestore {
       // seul l'auteur de l'itinéraire voit qui l'a mis en favori (pour ses notifications).
       match /likes/{userId} {
         function post() { return get(/databases/$(database)/documents/posts/$(postId)).data; }
+        function postAfter() { return getAfter(/databases/$(database)/documents/posts/$(postId)).data; }
         function canSeePost() {
           return post().visibility == "public"
             || post().owner == request.auth.uid
             || (post().visibility == "followers" && isFollower(post().owner));
         }
         allow read: if request.auth != null && (request.auth.uid == userId || post().owner == request.auth.uid);
+        // Un favori est toujours compté : le compteur de l'itinéraire augmente dans la même écriture
         allow create: if request.auth != null && request.auth.uid == userId
           && post().owner != userId && canSeePost()
+          && favs(postAfter()) == favs(post()) + 1
           && request.resource.data.keys().hasOnly(["name", "handle", "at"])
           && request.resource.data.name == profile().name
           && request.resource.data.handle == profile().handle
           && request.resource.data.at == request.time;
-        allow delete: if request.auth != null && (request.auth.uid == userId || post().owner == request.auth.uid);
+        // Retirer son favori décompte ; un favori d'avant le compteur (compteur à 0) part sans décompter.
+        // L'auteur retire les favoris en supprimant son itinéraire.
+        allow delete: if request.auth != null && (post().owner == request.auth.uid
+          || (request.auth.uid == userId
+            && (favs(postAfter()) == favs(post()) - 1 || (favs(post()) == 0 && favs(postAfter()) == 0))));
       }
     }
   }

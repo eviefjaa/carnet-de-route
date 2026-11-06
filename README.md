@@ -140,11 +140,13 @@ Les tests de règles et le parcours complet tournent contre les émulateurs Fire
 
 Sur GitHub, le workflow « Tests » lance les tests unitaires, ceux des rappels et ceux des règles à chaque envoi de code.
 
-## Publier les règles Firestore depuis le terminal
+## Publier les règles et les index Firestore depuis le terminal
 
 Au lieu de copier `firestore.rules` dans la console, depuis la racine du dépôt :
 
 ```
 npx firebase-tools login                              # une seule fois
-npx firebase-tools deploy --only firestore:rules
+npx firebase-tools deploy --only firestore            # règles et index
 ```
+
+`firestore.indexes.json` contient l'index des fiches pays (itinéraires publics par pays traversé). Il se construit en quelques minutes après la publication ; en attendant, les fiches montrent seulement les itinéraires créés depuis la fiche du pays.

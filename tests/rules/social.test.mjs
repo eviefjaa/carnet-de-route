@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { initializeTestEnvironment, assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, query, collection, where, orderBy, startAt, endAt, limit, writeBatch, serverTimestamp, addDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, query, collection, where, orderBy, startAt, endAt, limit, writeBatch, serverTimestamp, addDoc, increment } from "firebase/firestore";
 
 const env = await initializeTestEnvironment({
   projectId: "demo-social",
@@ -104,7 +104,31 @@ await t("carla supprime son commentaire", deleteDoc(doc(carla, `posts/${P.p7}/co
 
 // ---------- Mises en favori ----------
 const like = (name, handle, extra = {}) => ({ name, handle, at: serverTimestamp(), ...extra });
-await t("carla met en favori un itinéraire public", setDoc(doc(carla, `posts/${P.p7}/likes/carla`), like("Carla", "carla")), true);
+// Le favori et le compteur public de l'itinéraire changent dans la même écriture
+function fav(db, uid, data, by = 1, withLike = true) {
+  const b = writeBatch(db);
+  if (withLike) by > 0 ? b.set(doc(db, `posts/${P.p7}/likes/${uid}`), data) : b.delete(doc(db, `posts/${P.p7}/likes/${uid}`));
+  b.update(doc(db, `posts/${P.p7}`), { favCount: increment(by) });
+  return b.commit();
+}
+const count = async () => (await getDoc(doc(bob, `posts/${P.p7}`))).data().favCount || 0;
+await t("carla met en favori un itinéraire public", fav(carla, "carla", like("Carla", "carla")), true);
+await t("compteur à 1", count().then((n) => { if (n !== 1) throw new Error(`compteur : ${n}`); }), true);
+await t("favori sans compter", setDoc(doc(alice, `posts/${P.p7}/likes/alice`), like("Alice", "alice")), false);
+await t("compter sans favori", updateDoc(doc(alice, `posts/${P.p7}`), { favCount: increment(1) }), false);
+await t("favori compté deux fois", fav(alice, "alice", like("Alice", "alice"), 2), false);
+await t("carla compte une deuxième fois", fav(carla, "carla", like("Carla", "carla")), false);
+await t("compteur mis à 1000", updateDoc(doc(eve, `posts/${P.p7}`), { favCount: 1000 }), false);
+await t("bob (auteur) change son compteur", updateDoc(doc(bob, `posts/${P.p7}`), { favCount: 50 }), false);
+await t("compteur et titre changés ensemble", fav(alice, "alice", like("Alice", "alice")).then(() => updateDoc(doc(alice, `posts/${P.p7}`), { favCount: increment(1), title: "volé" })), false);
+await t("compteur à 2 (alice et carla)", count().then((n) => { if (n !== 2) throw new Error(`compteur : ${n}`); }), true);
+await t("décompter sans retirer son favori", updateDoc(doc(alice, `posts/${P.p7}`), { favCount: increment(-1) }), false);
+await t("eve décompte sans avoir de favori", fav(eve, "eve", null, -1), false);
+await t("retirer son favori sans décompter", deleteDoc(doc(alice, `posts/${P.p7}/likes/alice`)), false);
+await t("alice retire son favori et décompte", fav(alice, "alice", null, -1), true);
+await t("compteur revenu à 1", count().then((n) => { if (n !== 1) throw new Error(`compteur : ${n}`); }), true);
+await t("sans compte : itinéraires publics d'un pays", getDocs(query(collection(anon, "posts"), where("visibility", "==", "public"), where("trip.country", "==", "BR"), limit(50))), true);
+await t("sans compte : tous les itinéraires d'un pays", getDocs(query(collection(anon, "posts"), where("trip.country", "==", "BR"), limit(50))), false);
 await t("carla s'ajoute au nom d'alice", setDoc(doc(carla, `posts/${P.p7}/likes/alice`), like("Alice", "alice")), false);
 await t("favori avec un faux nom", setDoc(doc(alice, `posts/${P.p7}/likes/alice`), like("Bob", "bob.voyage")), false);
 await t("favori avec une fausse date", setDoc(doc(alice, `posts/${P.p7}/likes/alice`), like("Alice", "alice", { at: 1 })), false);
@@ -113,7 +137,11 @@ await t("favori sur un itinéraire « moi seul »", setDoc(doc(alice, `posts/${P
 await t("sans compte : favori", setDoc(doc(anon, `posts/${P.p7}/likes/x`), { name: "x", handle: "x", at: serverTimestamp() }), false);
 await t("l'auteur voit qui a mis en favori", getDocs(collection(bob, `posts/${P.p7}/likes`)), true);
 await t("un autre ne voit pas la liste", getDocs(collection(alice, `posts/${P.p7}/likes`)), false);
-await t("carla retire son favori", deleteDoc(doc(carla, `posts/${P.p7}/likes/carla`)), true);
+await t("carla retire son favori", fav(carla, "carla", null, -1), true);
+// Favori d'avant le compteur (compteur à 0) : il part sans décompter
+await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), `posts/${P.p7}/likes/alice`), like("Alice", "alice")));
+await t("ancien favori retiré sans décompter (compteur à 0)", deleteDoc(doc(alice, `posts/${P.p7}/likes/alice`)), true);
+await t("pas de compteur négatif", fav(carla, "carla", null, -1, false), false);
 
 await t("carla modifie la publication de bob", updateDoc(doc(carla, `posts/${P.p1}`), { title: "volé" }), false);
 await t("bob modifie le contenu", updateDoc(doc(bob, `posts/${P.p1}`), { title: "Autre" }), false);
