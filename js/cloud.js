@@ -131,7 +131,7 @@ function normalize(t) {
     STR.forEach((k) => { if (k in i) i[k] = str(i[k]); });
     if ("price" in i && !(typeof i.price === "number" && Number.isFinite(i.price))) i.price = null;
     if ("nights" in i) delete i.nights; // calculé à partir des dates, jamais lu tel quel
-    if (isObj(i.geo) && !(Number.isFinite(i.geo.lat) && Number.isFinite(i.geo.lng))) delete i.geo;
+    ["geo", "fromGeo", "toGeo"].forEach((k) => { if (k in i && !(isObj(i[k]) && Number.isFinite(i[k].lat) && Number.isFinite(i[k].lng))) delete i[k]; });
     if ("route" in i && !(isObj(i.route) && typeof i.route.key === "string")) delete i.route;
     i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true, ...("maps" in x ? { maps: str(x.maps) } : {}) }));
     i.links = (Array.isArray(i.links) ? i.links : []).filter(isObj).map((l) => ({ id: str(l.id), label: str(l.label), url: str(l.url) }));

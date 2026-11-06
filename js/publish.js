@@ -13,6 +13,7 @@ import { COUNTRIES } from "./data/countries.js";
 import { ROAD_MODES, routeKey, decodeLine, encodeLine } from "./routes.js";
 
 const round = (x) => Math.round(x * 50) / 50; // 1/50 de degré ≈ 2 km
+const roundGeo = (g) => (g && Number.isFinite(g.lat) && Number.isFinite(g.lng) ? { lat: round(g.lat), lng: round(g.lng) } : null);
 const TRIM = 2000; // mètres de route retirés à chaque bout
 
 // Distance en mètres entre deux points [lat, lng]
@@ -57,7 +58,7 @@ export function publicCopy(trip) {
           country: String(it.country || "").slice(0, 60),
           day: day(it.arrive),
           nights: nights(it.arrive, it.depart),
-          geo: it.geo && typeof it.geo.lat === "number" ? { lat: round(it.geo.lat), lng: round(it.geo.lng) } : null,
+          geo: roundGeo(it.geo),
           todos: (it.todos || []).map((t) => String(t.text || "").slice(0, 120)).filter(Boolean).slice(0, 30),
         }
       : {
@@ -67,6 +68,9 @@ export function publicCopy(trip) {
           to: String(it.to || "").slice(0, 120),
           day: day(it.dep),
           duration: duration(it.dep, it.arr),
+          // Lieux du trajet, arrondis eux aussi (carte : vol qui part d'une ville qui n'est pas une étape)
+          fromGeo: roundGeo(it.fromGeo),
+          toGeo: roundGeo(it.toGeo),
           ...withLine(publicLine(it, near(i, -1), near(i, 1)), it.route),
         }
   );

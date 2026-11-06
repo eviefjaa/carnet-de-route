@@ -51,20 +51,41 @@ export function drawMap(t = currentTrip(), { published = false } = {}) {
   layer.clearLayers();
   const color = cssVar("--route") || "#e8a800";
   const points = [];
-  let n = 0, prev = null, leg = null;
+  const tripId = published ? null : state.currentId;
+  const at = (g) => (g && typeof g.lat === "number" ? [g.lat, g.lng] : null);
+  // Bout d'un trajet sans étape de ce côté (ex. vol depuis Prague au début du voyage) : petit point
+  const end = (ll, name) => {
+    layer.addLayer(L.circleMarker(ll, { radius: 5, color, weight: 2, fillColor: "#fff", fillOpacity: 1 }).bindTooltip(esc(name || "")));
+    points.push(ll);
+    return ll;
+  };
+  // cur : dernière position connue ; leg : trajet en attente de son point d'arrivée
+  let n = 0, cur = null, leg = null;
+  const closeLeg = (to) => { if (cur && to) layer.addLayer(segment(cur, to, leg, color, tripId)); };
 
   t.items.forEach((it) => {
-    if (it.type === "transport") { leg = it; return; }
+    if (it.type === "transport") {
+      // Deux trajets de suite : le premier s'arrête à son lieu d'arrivée (ou au départ du suivant)
+      if (leg) {
+        const to = at(leg.toGeo) || at(it.fromGeo);
+        if (to) { closeLeg(to); cur = end(to, leg.to); }
+      }
+      if (!cur && at(it.fromGeo)) cur = end(at(it.fromGeo), it.from);
+      leg = it;
+      return;
+    }
     n++;
-    if (it.geo && typeof it.geo.lat === "number") {
-      const ll = [it.geo.lat, it.geo.lng];
+    const ll = at(it.geo);
+    if (ll) {
       layer.addLayer(marker(it, n, ll));
-      if (prev) layer.addLayer(segment(prev, ll, leg, color, published ? null : state.currentId));
-      prev = ll;
+      closeLeg(ll);
+      cur = ll;
       points.push(ll);
     }
     leg = null;
   });
+  // Le voyage finit par un trajet (retour en avion…) : jusqu'à son lieu d'arrivée
+  if (leg && at(leg.toGeo)) { closeLeg(at(leg.toGeo)); end(at(leg.toGeo), leg.to); }
 
   // Recadre la carte seulement si les points ont changé
   const key = JSON.stringify(points);

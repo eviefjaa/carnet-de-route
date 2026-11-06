@@ -4,6 +4,7 @@ import { esc, uid, safeUrl, MODES, duration, fmtDateTime, fmtMoney, priceInput, 
 import { state } from "../store.js";
 import { itemActions } from "./actions.js";
 import { ticketsBlock, formTicketsBlock } from "./tickets.js";
+import { pickedPlace } from "../autocomplete.js";
 
 export function transportCard(it, trip, idx) {
   const d = duration(it.dep, it.arr);
@@ -79,6 +80,11 @@ export function readTransportForm(f) {
   const o = { id: f.dataset.id, type: "transport" };
   ["mode", "from", "to", "dep", "arr", "company", "ref", "url", "notes"].forEach((k) => (o[k] = f[k].value.trim()));
   o.price = parsePrice(f.price.value);
+  // Lieux choisis dans les suggestions : leur position sert à la carte quand il n'y a pas d'étape de ce côté
+  for (const k of ["from", "to"]) {
+    const p = pickedPlace(f[k]);
+    if (p) o[k + "Geo"] = { q: o[k], lat: p.lat, lng: p.lng };
+  }
   return o;
 }
 

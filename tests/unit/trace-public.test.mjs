@@ -33,6 +33,10 @@ assert.equal(publicCopy(trip({ mode: "train", route })).items[1].line, undefined
 const short = { ...route, line: encodeLine(line.slice(0, 7)) }; // 3 km
 assert.equal(publicCopy(trip({ mode: "voiture", route: short })).items[1].line, undefined, "trajet trop court : rien à montrer");
 
+// Lieux d'un trajet (vol depuis Prague) : publiés arrondis à 2 km, comme les étapes
+{ const t = publicCopy({ items: [{ id: "v", type: "transport", mode: "avion", from: "Prague", to: "São Paulo", fromGeo: { q: "Prague", lat: 50.0755, lng: 14.4378 } }] }).items[0];
+  assert.deepEqual(t.fromGeo, { lat: 50.08, lng: 14.44 }, "départ arrondi, sans le texte cherché");
+  assert.equal(t.toGeo, null); }
 // Tracé reçu d'un autre compte : seulement des caractères du format polyline
 const p = normalizePost("p1", { trip: { items: [{ type: "transport", line: '<img src=x onerror="alert(1)">' }, { type: "transport", line: pub.line, km: "x" }] } });
 assert.equal(p.trip.items[0].line, "", "tracé piégé ignoré");
