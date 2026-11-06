@@ -208,14 +208,15 @@ export function postView(id) {
       </div>
     </header>
     ${stops.some((s) => s.geo) ? `<section class="map-box" aria-label="Carte de l'itinéraire"><div id="mapSlot"></div></section>` : ""}
-    <section class="route" aria-label="Itinéraire">${items.map(readOnlyItem).join("")}</section>
+    <section class="route" aria-label="Itinéraire">${items.map((it, i) => readOnlyItem(it, stopRecos(p, i))).join("")}</section>
     ${recosSection(p)}
     ${commentsSection(p)}
   </section>`;
 }
 
 // Élément de l'itinéraire, en lecture seule
-function readOnlyItem(it) {
+// recos : recommandations rattachées à cette étape (affichées dans sa carte)
+function readOnlyItem(it, recos = []) {
   if (it.type === "transport") {
     return `<article class="item transport">
       <span class="mode">${esc(MODES[it.mode] || "Trajet")}</span>
@@ -235,6 +236,8 @@ function readOnlyItem(it) {
     ${it.nights === 0 ? `<div class="dates"><span class="nights is-halt">Arrêt</span></div>` : it.nights ? `<div class="dates"><span class="nights">${plural(+it.nights, "nuit")}</span></div>` : ""}
     ${todos.length ? `<section class="checklist"><div class="cl-head"><h3>À faire</h3></div>
       <ul class="post-todos">${todos.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></section>` : ""}
+    ${recos.length ? `<section class="stop-recos"><div class="cl-head"><h3>Recommandations</h3></div>
+      <ul class="reco-list">${recos.map((r) => recoCard(r, true)).join("")}</ul></section>` : ""}
   </article>`;
 }
 
@@ -359,29 +362,39 @@ export function recoRow(trip) {
   </div>`;
 }
 
-// Recommandations d'une publication, regroupées par type
-function recosSection(p) {
-  const recos = p.recos || [];
-  if (!recos.length) return "";
+// Étape d'une recommandation (index dans l'itinéraire), si elle existe toujours
+const recoStop = (p, r) => {
   const items = (p.trip && p.trip.items) || [];
+  return Number.isInteger(r.stop) && items[r.stop] && items[r.stop].type === "stop" ? r.stop : null;
+};
+const stopRecos = (p, i) => (p.recos || []).filter((r) => recoStop(p, r) === i);
+
+// Une recommandation ; withKind : son type en petit (dans une étape, où elles ne sont pas regroupées)
+function recoCard(r, withKind = false) {
+  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([r.name, r.where].filter(Boolean).join(", "))}`;
+  const url = safeUrl(r.url);
+  return `<li class="reco">
+    ${withKind ? `<span class="reco-tag">${esc(social.RECO_KINDS[r.kind] || "")}</span>` : ""}
+    <h4>${esc(r.name)}</h4>
+    ${r.where ? `<p class="reco-where">${esc(r.where)}</p>` : ""}
+    ${r.note ? `<p class="reco-note">${esc(r.note)}</p>` : ""}
+    <p class="reco-links"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Voir sur la carte ↗</a>
+      ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow ugc">Site ↗</a>` : ""}</p>
+  </li>`;
+}
+
+// Recommandations pour tout le voyage (sans étape), regroupées par type, après l'itinéraire
+function recosSection(p) {
+  const all = p.recos || [];
+  const recos = all.filter((r) => recoStop(p, r) === null);
+  if (!recos.length) return "";
   const groups = Object.entries(social.RECO_KINDS)
     .map(([kind, label]) => [label, recos.filter((r) => r.kind === kind)])
     .filter(([, list]) => list.length);
   return `<section class="recos" aria-label="Recommandations">
-    <h2>Recommandations</h2>
+    <h2>${recos.length < all.length ? "Pour tout le voyage" : "Recommandations"}</h2>
     ${groups.map(([label, list]) => `<h3 class="reco-kind">${esc(label)}</h3>
-      <ul class="reco-list">${list.map((r) => {
-        const stop = Number.isInteger(r.stop) && items[r.stop] && items[r.stop].type === "stop" ? items[r.stop].place : "";
-        const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([r.name, r.where].filter(Boolean).join(", "))}`;
-        const url = safeUrl(r.url);
-        return `<li class="reco">
-          <h4>${esc(r.name)}</h4>
-          ${r.where || stop ? `<p class="reco-where">${esc([r.where, stop && `étape : ${stop}`].filter(Boolean).join(" · "))}</p>` : ""}
-          ${r.note ? `<p class="reco-note">${esc(r.note)}</p>` : ""}
-          <p class="reco-links"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Voir sur la carte ↗</a>
-            ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow ugc">Site ↗</a>` : ""}</p>
-        </li>`;
-      }).join("")}</ul>`).join("")}
+      <ul class="reco-list">${list.map((r) => recoCard(r)).join("")}</ul>`).join("")}
   </section>`;
 }
 

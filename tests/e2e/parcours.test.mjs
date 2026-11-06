@@ -123,6 +123,15 @@ await alice.type('[name="recoName"]', "Chez Jo");
 await alice.type('[name="recoWhere"]', "Gion, Kyoto");
 await alice.type('[name="recoNote"]', "Les meilleurs ramens du quartier.");
 await alice.type('[name="recoUrl"]', "javascript:alert(1)");
+// Rattachée à l'étape Kyoto (première étape proposée)
+await alice.$eval('[name="recoStop"]', (el) => { el.value = el.options[1].value; });
+// Une deuxième, pour tout le voyage
+await alice.click('[data-act="add-reco-row"]');
+await alice.$$eval('[data-reco-row]', (rows) => {
+  const r = rows[1];
+  r.querySelector('[name="recoKind"]').value = "adresse";
+  r.querySelector('[name="recoName"]').value = "Pass JR";
+});
 await alice.click('[data-publish-form] button[type="submit"]');
 await sleep(3000);
 check("après publication : page Mes publications", (await alice.evaluate(() => location.hash)) === "#mes-publications");
@@ -136,6 +145,10 @@ const postText = await text(alice);
 check("publication : étape et activité", postText.includes("Kyoto") && postText.includes("Temple Kinkaku-ji"));
 check("publication : « Jour 1 » au lieu des dates", postText.includes("JOUR 1") && !postText.includes("nov."));
 check("recommandation affichée", postText.includes("Chez Jo") && postText.includes("Les meilleurs ramens"));
+const kyotoCard = await alice.$$eval(".route .item.stop", (l) => (l.find((c) => c.querySelector("h2").textContent.includes("Kyoto")) || {}).innerText || "");
+check("recommandation de l'étape : dans la carte de Kyoto", kyotoCard.includes("Chez Jo") && kyotoCard.includes("RESTAURANT"));
+const endRecos = await alice.$eval(".recos", (e) => e.innerText).catch(() => "");
+check("recommandation pour tout le voyage : à la fin", endRecos.includes("Pour tout le voyage") && endRecos.includes("Pass JR") && !endRecos.includes("Chez Jo"));
 check("lien javascript: non publié", !(await alice.$('a[href^="javascript"]')));
 check("publication : ni prix, ni notes, ni adresse", !postText.includes("999") && !postText.includes("4321") && !postText.includes("secrète"));
 
