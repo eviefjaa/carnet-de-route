@@ -554,7 +554,15 @@ function onSubmit(e) {
   if (!f) return;
   e.preventDefault();
 
-  // Dernière vérification avant d'enregistrer
+  // Dernière vérification avant d'enregistrer (required laisse passer un champ rempli d'espaces)
+  if (f.dataset.form === "transport") {
+    const empty = [[f.from, "de départ"], [f.to, "d'arrivée"]].find(([el]) => !el.value.trim());
+    if (empty) {
+      toast(`Indiquez le lieu ${empty[1]} du trajet.`);
+      empty[0].focus();
+      return;
+    }
+  }
   const [start, end] = f.dataset.form === "stop" ? [f.arrive, f.depart] : [f.dep, f.arr];
   if (start.value && end.value && end.value < start.value) {
     toast(f.dataset.form === "stop" ? "Le départ ne peut pas être avant l'arrivée." : "L'arrivée ne peut pas être avant le départ.");

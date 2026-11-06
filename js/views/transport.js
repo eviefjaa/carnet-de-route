@@ -57,8 +57,8 @@ export function transportForm(it, isNew) {
     <div class="grid">
       <label class="f">Moyen de transport<select name="mode" id="t-mode-${esc(it.id)}">${modes}</select></label>
       <label class="f">Compagnie<input name="company" id="t-comp-${esc(it.id)}" value="${esc(it.company)}" placeholder="Ex. 1001, LATAM"></label>
-      <label class="f">Lieu de départ<span class="ac"><input name="from" id="t-from-${esc(it.id)}" value="${esc(it.from)}" placeholder="Ville, gare, aéroport…" data-place="any" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
-      <label class="f">Lieu d'arrivée<span class="ac"><input name="to" id="t-to-${esc(it.id)}" value="${esc(it.to)}" placeholder="Ville, gare, aéroport…" data-place="any" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
+      <label class="f">Lieu de départ<span class="ac"><input name="from" id="t-from-${esc(it.id)}" value="${esc(it.from)}" placeholder="Ville, gare, aéroport…" required data-place="any" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
+      <label class="f">Lieu d'arrivée<span class="ac"><input name="to" id="t-to-${esc(it.id)}" value="${esc(it.to)}" placeholder="Ville, gare, aéroport…" required data-place="any" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
       <label class="f">Départ (date et heure)<input type="datetime-local" name="dep" id="t-dep-${esc(it.id)}" value="${esc(it.dep)}"></label>
       <label class="f">Arrivée (date et heure)<input type="datetime-local" name="arr" id="t-arr-${esc(it.id)}" value="${esc(it.arr)}" min="${esc(it.dep)}"></label>
       <div class="computed full" data-duration></div>

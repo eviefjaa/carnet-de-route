@@ -145,8 +145,32 @@ await goHash(alice, tripHash.slice(1));
 await alice.click('[data-act="add-leg"][data-pos="1"]');
 await alice.waitForSelector('form[data-form="transport"]');
 await alice.select('form[data-form="transport"] [name="mode"]', "train");
+// Le lieu d'arrivée est obligatoire : vide, puis rempli d'espaces, le trajet n'est pas enregistré
+await alice.$eval('form[data-form="transport"] [name="to"]', (el) => (el.value = ""));
+await alice.click('form[data-form="transport"] button[type="submit"]');
+await sleep(400);
+check("trajet sans lieu d'arrivée : refusé", !!(await alice.$('form[data-form="transport"]')) && !(await alice.$(".transport")));
+await alice.$eval('form[data-form="transport"] [name="to"]', (el) => (el.value = "   "));
+await alice.click('form[data-form="transport"] button[type="submit"]');
+await sleep(400);
+check("lieu d'arrivée fait d'espaces : refusé, avec un message", !!(await alice.$('form[data-form="transport"]'))
+  && (await alice.$eval("#toast", (t) => t.textContent)).includes("lieu d'arrivée"));
+// Le lieu de départ aussi
+await alice.$eval('form[data-form="transport"] [name="to"]', (el) => (el.value = "Osaka"));
+const fromBefore = await alice.$eval('form[data-form="transport"] [name="from"]', (el) => el.value);
+await alice.$eval('form[data-form="transport"] [name="from"]', (el) => (el.value = ""));
+await alice.click('form[data-form="transport"] button[type="submit"]');
+await sleep(400);
+check("trajet sans lieu de départ : refusé", !!(await alice.$('form[data-form="transport"]')) && !(await alice.$(".transport")));
+await alice.$eval('form[data-form="transport"] [name="from"]', (el) => (el.value = "  "));
+await alice.click('form[data-form="transport"] button[type="submit"]');
+await sleep(400);
+check("lieu de départ fait d'espaces : refusé, avec un message", !!(await alice.$('form[data-form="transport"]'))
+  && (await alice.$eval("#toast", (t) => t.textContent)).includes("lieu de départ"));
+await alice.$eval('form[data-form="transport"] [name="from"]', (el, v) => (el.value = v || "Tokyo"), fromBefore);
 await alice.click('form[data-form="transport"] button[type="submit"]');
 await sleep(2500);
+check("avec un lieu d'arrivée, le trajet est enregistré", !(await alice.$('form[data-form="transport"]')) && (await text(alice)).includes("Osaka"));
 await alice.click('.transport [data-act="toggle-item"]');
 await alice.waitForSelector("input[data-ticket-input]");
 const input = await alice.$("input[data-ticket-input]");
