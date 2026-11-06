@@ -107,6 +107,8 @@ async function page_newTrip(page) {
 }
 const tripHash = await alice.evaluate(() => location.hash);
 check("voyage créé", tripHash.startsWith("#voyage-"));
+// L'enregistrement peut prendre plus de temps que la pause ci-dessus : on attend l'indicateur
+await alice.waitForFunction(() => document.querySelector(".sync-badge")?.textContent.includes("Enregistré"), { timeout: 15000 }).catch(() => {});
 check("voyage enregistré dans le compte", (await alice.$eval(".sync-badge", (e) => e.textContent)).includes("Enregistré"));
 
 await makeProfile(alice, "Alice", "alice.test");

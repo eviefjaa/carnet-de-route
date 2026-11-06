@@ -15,6 +15,11 @@ for (const x of COUNTRIES) {
   assert.match(html, /class="urgences-list"/, `numéros utiles de ${x.code}`);
   assert.doesNotMatch(html, /href="tel:/, `pas de bouton d'appel (${x.code})`);
 }
+// Page « Choisir une destination » : pays par ordre alphabétique
+{ const shown = [...ex.exploreView().matchAll(/class="cc-link"[^>]*>([^<]+)</g)].map((m) => m[1].trim());
+  assert.equal(shown.length, COUNTRIES.length, "tous les pays affichés");
+  assert.deepEqual(shown, [...shown].sort((a, b) => a.localeCompare(b, "fr")), "ordre alphabétique");
+  console.log(`Destinations : de ${shown[0]} à ${shown[shown.length - 1]}.`); }
 // Un numéro qui sert à tout n'est affiché qu'une fois
 assert.equal(ex.countryView("US").match(/>911</g).length, 1, "911 une seule fois");
 console.log(`Destinations : les ${COUNTRIES.length} fiches sont complètes.`);

@@ -42,6 +42,9 @@ export function countryCard(x) {
   </article>`;
 }
 
+// Pays par ordre alphabétique (tri français : « Égypte » avec les E)
+const byName = [...COUNTRIES].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+
 export function exploreView() {
   const f = state.explore;
   const chip = (filter, value, label) =>
@@ -58,7 +61,7 @@ export function exploreView() {
       <div class="chips" role="group" aria-label="Envie">${chip("tag", "", "Toutes les envies")}${Object.entries(TAGS).map(([k, v]) => chip("tag", k, v)).join("")}</div>
     </div>
     <p class="note" id="exploreCount"></p>
-    <div class="country-grid">${COUNTRIES.map(countryCard).join("")}</div>
+    <div class="country-grid">${byName.map(countryCard).join("")}</div>
     <p class="note" id="exploreEmpty" hidden>Aucun pays ne correspond. Essayez un autre continent ou une autre envie.</p>
   </section>`;
 }
