@@ -166,7 +166,9 @@ const intOrNull = (x) => (Number.isInteger(x) && x >= 0 ? x : null);
 function normalizePost(id, p) {
   const trip = isObj(p.trip) ? p.trip : {};
   const items = (Array.isArray(trip.items) ? trip.items : []).filter(isObj).map((i) => i.type === "transport"
-    ? { type: "transport", mode: text(i.mode, 20), from: text(i.from, 120), to: text(i.to, 120), day: intOrNull(i.day), duration: text(i.duration, 20) }
+    ? { type: "transport", mode: text(i.mode, 20), from: text(i.from, 120), to: text(i.to, 120), day: intOrNull(i.day), duration: text(i.duration, 20),
+        // Tracé de la route (format polyline : caractères 63 à 126 seulement)
+        line: typeof i.line === "string" && i.line.length <= 20000 && /^[\x3f-\x7e]*$/.test(i.line) ? i.line : "", km: intOrNull(i.km) }
     : { type: "stop", place: text(i.place, 120), country: text(i.country, 60), day: intOrNull(i.day), nights: intOrNull(i.nights),
         geo: isObj(i.geo) && Number.isFinite(i.geo.lat) && Number.isFinite(i.geo.lng) ? { lat: i.geo.lat, lng: i.geo.lng } : null,
         todos: (Array.isArray(i.todos) ? i.todos : []).map((t) => text(t, 120)).filter(Boolean) });

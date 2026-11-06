@@ -31,8 +31,8 @@ function ensureMap() {
   return true;
 }
 
-// Carte d'un voyage (par défaut le voyage affiché) ; une publication est dessinée sans
-// tracé de route ni placement automatique (positions déjà arrondies)
+// Carte d'un voyage (par défaut le voyage affiché) ; une publication est dessinée avec le
+// tracé publié (raccourci aux deux bouts), sans placement automatique (positions déjà arrondies)
 export function drawMap(t = currentTrip(), { published = false } = {}) {
   if (!t) return;
 
@@ -93,7 +93,9 @@ function marker(it, n, ll) {
 function segment(from, to, leg, color, tripId) {
   const road = !!tripId && leg && ROAD_MODES.has(leg.mode);
   const route = road ? roadRoute(tripId, leg, from, to) : null;
-  const line = L.polyline(route ? decodeLine(route.line) : [from, to], {
+  // Publication : tracé sans ses deux bouts, relié aux étapes (arrondies) par une ligne droite
+  const published = !tripId && leg && leg.line ? decodeLine(leg.line) : null;
+  const line = L.polyline(route ? decodeLine(route.line) : published ? [from, ...published, to] : [from, to], {
     color,
     weight: 4,
     // Tracé de la route en cours de calcul : ligne droite plus discrète en attendant
@@ -102,7 +104,8 @@ function segment(from, to, leg, color, tripId) {
   });
   if (leg) {
     const d = leg.duration ?? duration(leg.dep, leg.arr);
-    const km = route && Number.isFinite(+route.km) ? ` · ${(+route.km).toLocaleString("fr-FR")} km par la route` : "";
+    const dist = route ? route.km : published ? leg.km : null;
+    const km = dist != null && Number.isFinite(+dist) ? ` · ${(+dist).toLocaleString("fr-FR")} km par la route` : "";
     line.bindTooltip(`${esc(MODES[leg.mode] || "Trajet")}${d ? " · " + esc(d) : ""}${esc(km)}`, { sticky: true });
   }
   return line;
