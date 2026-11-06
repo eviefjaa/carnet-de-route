@@ -63,6 +63,23 @@ export function onSocialClick(act, b) {
         go("mes-publications");
       }, "Impossible de supprimer la publication. Vérifiez votre connexion.");
       return true;
+    // Mes publications, mode sélection : suppression des publications cochées
+    case "select-delete-posts-yes": {
+      const ids = [...state.selected];
+      state.confirm = null;
+      Promise.allSettled(ids.map((id) => social.deletePost(id))).then((res) => {
+        const failed = res.filter((r) => r.status === "rejected").length;
+        const done = ids.length - failed;
+        state.selecting = false;
+        state.selected = new Set();
+        social.resetSocial(); // la liste est relue, sans les publications supprimées
+        render();
+        toast(failed
+          ? `${done ? `${done} supprimée${done > 1 ? "s" : ""}. ` : ""}Impossible de supprimer ${failed > 1 ? `${failed} publications` : "une publication"} : vérifiez votre connexion.`
+          : `${ids.length > 1 ? `${ids.length} publications supprimées` : "Publication supprimée"}`);
+      });
+      return true;
+    }
     case "add-reco-row": {
       const box = b.closest("form").querySelector("[data-recos]");
       const t = currentTrip();

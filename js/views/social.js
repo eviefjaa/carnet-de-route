@@ -5,6 +5,7 @@ import { esc, plural, MODES, safeUrl } from "../utils.js";
 import { state } from "../store.js";
 import { prefs, savePrefs, isFavoritePost } from "../prefs.js";
 import { invitationsBlock } from "./share.js";
+import { selectButtons, selectAttrs, selectBox, selectBar } from "./select.js";
 import { isEnabled } from "../cloud.js";
 import * as social from "../social.js";
 import { COUNTRIES } from "../data/countries.js";
@@ -56,6 +57,23 @@ export function postCard(p) {
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
     <p class="tc-dates">${plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
     ${p.owner === me() ? `<span class="vis-badge is-published">Publié · ${esc(social.VISIBILITIES[p.visibility] || "")}</span>` : ""}
+  </article>`;
+}
+
+// Ma publication en mode sélection : toucher la carte la coche, sans l'ouvrir
+function selectablePostCard(p) {
+  const trip = p.trip || {};
+  const stops = (trip.items || []).filter((i) => i.type === "stop");
+  const places = stops.map((s) => s.place).filter(Boolean);
+  const route = places.length > 4 ? [...places.slice(0, 3), `+${places.length - 3}`] : places;
+  const on = state.selected.has(p.id);
+  return `<article class="trip-card post-card is-selectable${on ? " is-selected" : ""}" ${selectAttrs(p.id)}>
+    ${selectBox(p.id, p.title)}
+    <div class="tc-top"><span class="tc-flags" aria-hidden="true">${flagsOf(trip)}</span></div>
+    <h2>${esc(p.title)}</h2>
+    ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
+    <p class="tc-dates">${plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
+    <span class="vis-badge is-published">Publié · ${esc(social.VISIBILITIES[p.visibility] || "")}</span>
   </article>`;
 }
 
@@ -473,9 +491,26 @@ export function networkView(tab) {
 
   if (tab === "mes-publications") {
     const mine = social.load("mine", () => social.postsOf(me()));
-    const body = mine.status === "loading" ? loadingNote : mine.status === "error" ? errorNote()
-      : postGrid(mine.data, "Vous n'avez rien publié. Ouvrez un voyage et choisissez « Publier l'itinéraire ».");
-    return `<section class="page">${head}${body}</section>`;
+    if (mine.status !== "ok") return `<section class="page">${head}${mine.status === "loading" ? loadingNote : errorNote()}</section>`;
+    const posts = mine.data;
+    const sel = state.selecting && posts.length > 0;
+    const n = posts.filter((p) => state.selected.has(p.id)).length;
+    // En-tête avec le bouton « Sélectionner » (pour supprimer plusieurs publications)
+    const top = `<header class="page-head trips-head">
+        <div><h1>${esc(title)}</h1></div>
+        ${selectButtons(posts.map((p) => p.id))}
+      </header>
+      <p class="lead">Les copies figées de vos voyages que vous avez publiées. Vos voyages, eux, restent modifiables dans Mes voyages.</p>`;
+    const body = !posts.length ? `<p class="note">Vous n'avez rien publié. Ouvrez un voyage et choisissez « Publier l'itinéraire ».</p>`
+      : sel ? `<div class="trip-grid">${posts.map(selectablePostCard).join("")}</div>
+          ${selectBar(n, {
+            word: "publication", feminine: true,
+            hint: "Touchez les publications à supprimer",
+            question: `Supprimer ${plural(n, "publication")}, avec ${n > 1 ? "leurs" : "ses"} commentaires ? Vos voyages ne sont pas touchés.`,
+            yesAct: "select-delete-posts-yes",
+          })}`
+      : postGrid(posts, "");
+    return `<section class="page${sel ? " is-selecting" : ""}">${top}${body}</section>`;
   }
 
   const net = social.load("network", social.myNetwork);

@@ -1,7 +1,7 @@
 /* Page « Mes voyages » : grille de cartes */
 
 .trips-head { flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
-.trips-head > div { display: flex; flex-direction: column; gap: 4px; }
+.trips-head > div:first-child { display: flex; flex-direction: column; gap: 4px; } /* titre et sous-titre */
 
 .trip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 

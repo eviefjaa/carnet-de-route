@@ -315,6 +315,35 @@ await anon.goto(SITE + postHash);
 await sleep(5000);
 check("sans compte : publication publique lisible", (await text(anon)).includes("Kyoto"));
 
+// ---------- Alice : Mes publications, sélectionner et supprimer plusieurs publications ----------
+await goHash(alice, tripHash.slice(1));
+await alice.click('[data-act="open-publish"]');
+await alice.waitForSelector("[data-publish-form]");
+await alice.click('[data-publish-form] button[type="submit"]');
+await sleep(3000);
+check("deuxième publication : deux cartes dans Mes publications", (await alice.$$(".post-card")).length === 2);
+await alice.click('[data-act="select-start"]');
+await sleep(300);
+check("Mes publications : mode sélection, une case par publication", (await alice.$$(".post-card .tc-check")).length === 2 && !(await alice.$(".post-card .tc-link")));
+for (const i of [0, 1]) { await (await alice.$$(".post-card.is-selectable"))[i].click(); await sleep(250); } // chaque coche réaffiche la page
+check("compteur : 2 publications sélectionnées", (await alice.$eval(".select-bar p", (p) => p.textContent)) === "2 publications sélectionnées");
+await alice.click('[data-act="select-delete"]');
+await sleep(300);
+check("confirmation : le voyage n'est pas touché", (await alice.$eval(".select-bar p", (p) => p.textContent)).includes("Supprimer 2 publications, avec leurs commentaires ? Vos voyages ne sont pas touchés."));
+await alice.click('[data-act="select-cancel-delete"]');
+await sleep(300);
+check("Annuler garde les publications", (await alice.$$(".post-card")).length === 2);
+await alice.click('[data-act="select-delete"]');
+await sleep(300);
+await alice.click('[data-act="select-delete-posts-yes"]');
+await sleep(4000);
+check("publications supprimées", (await text(alice)).includes("Vous n'avez rien publié") && (await alice.$eval("#toast", (t) => t.textContent)) === "2 publications supprimées");
+await anon.reload();
+await sleep(4000);
+check("sans compte : la publication supprimée n'est plus lisible", (await text(anon)).includes("Itinéraire introuvable"));
+await goHash(alice, "voyages");
+check("le voyage, lui, est toujours là", (await text(alice)).includes("Japon en train"));
+
 problems.forEach((p) => { ko++; console.log("ÉCHEC :", p); });
 console.log(`Parcours complet : ${ok} vérifications réussies, ${ko} échec(s).`);
 await browser.close();

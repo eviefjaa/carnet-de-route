@@ -290,7 +290,7 @@ function onPageClick(act, b) {
       state.confirm = "swipe:" + b.dataset.trip;
       render();
       return true;
-    // Mode sélection de « Mes voyages » : cocher des voyages pour les supprimer ensemble
+    // Mode sélection de « Mes voyages » et « Mes publications » : cocher des cartes pour les supprimer ensemble
     case "select-start":
       state.selecting = true;
       state.selected = new Set();
@@ -303,8 +303,8 @@ function onPageClick(act, b) {
       state.confirm = null;
       render();
       return true;
-    case "select-trip": {
-      const id = b.dataset.trip;
+    case "select-item": {
+      const id = b.dataset.id;
       if (state.selected.has(id)) state.selected.delete(id);
       else state.selected.add(id);
       state.confirm = null;
@@ -312,7 +312,7 @@ function onPageClick(act, b) {
       return true;
     }
     case "select-all": {
-      const ids = Object.keys(state.trips);
+      const ids = (b.dataset.ids || "").split(",").filter(Boolean); // toutes les cartes de la page
       state.selected = ids.every((id) => state.selected.has(id)) ? new Set() : new Set(ids);
       state.confirm = null;
       render();

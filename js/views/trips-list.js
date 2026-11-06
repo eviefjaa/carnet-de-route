@@ -8,6 +8,7 @@ import { COUNTRIES } from "../data/countries.js";
 import { tripPending } from "./checklist.js";
 import { isEnabled } from "../cloud.js";
 import { invitationsBlock } from "./share.js";
+import { selectButtons, selectAttrs, selectBox, selectBar } from "./select.js";
 
 // Premier écran d'un nouveau visiteur : ce que fait le site, et de quoi commencer tout de suite
 function welcome() {
@@ -95,8 +96,8 @@ function card(s) {
   // Mode sélection : toucher la carte la coche (voir js/events.js), sans ouvrir le voyage ni glisser
   if (state.selecting) {
     const on = state.selected.has(id);
-    return `<article class="trip-card is-${s.status.key} is-selectable${on ? " is-selected" : ""}" data-act="select-trip" data-trip="${esc(id)}">
-      <input type="checkbox" class="tc-check" data-act="select-trip" data-trip="${esc(id)}" ${on ? "checked" : ""} aria-label="Sélectionner « ${esc(name)} »">
+    return `<article class="trip-card is-${s.status.key} is-selectable${on ? " is-selected" : ""}" ${selectAttrs(id)}>
+      ${selectBox(id, name)}
       ${cardBody(s, esc(name))}
     </article>`;
   }
@@ -155,13 +156,7 @@ export function tripsListView() {
         <h1>Mes voyages</h1>
         <p class="lead">${plural(all.length, "voyage")}</p>
       </div>
-      <div class="row-btns">
-        ${sel
-          ? `<button class="btn" data-act="select-all" type="button">${all.every((s) => state.selected.has(s.id)) ? "Tout désélectionner" : "Tout sélectionner"}</button>
-             <button class="btn primary" data-act="select-end" type="button">Terminé</button>`
-          : `<button class="btn" data-act="select-start" type="button">Sélectionner</button>
-             <button class="btn primary" data-act="new-trip" type="button">+ Nouveau voyage</button>`}
-      </div>
+      ${selectButtons(all.map((s) => s.id), `<button class="btn primary" data-act="new-trip" type="button">+ Nouveau voyage</button>`)}
     </header>
     ${sel ? "" : invitationsBlock()}
     <div class="trip-grid">
@@ -181,25 +176,18 @@ export function tripsListView() {
 // Barre du bas en mode sélection : nombre de voyages cochés, puis suppression avec confirmation
 function selectionBar(all) {
   const picked = all.filter((s) => state.selected.has(s.id));
-  const n = picked.length;
-  if (state.confirm === "select-delete" && n) {
-    // Les voyages partagés par quelqu'un d'autre ne sont pas supprimés : on les quitte
-    const del = picked.filter((s) => isOwner(s.trip)).length;
-    const leave = n - del;
-    const parts = [];
-    if (del) parts.push(`supprimer ${plural(del, "voyage")} et tout ${del > 1 ? "leur" : "son"} contenu (billets compris)`);
-    if (leave) parts.push(`quitter ${leave} ${leave > 1 ? "voyages partagés" : "voyage partagé"}`);
-    const question = parts.join(" et ");
-    return `<div class="select-bar is-confirm" role="group" aria-label="Confirmation">
-      <p>${question.charAt(0).toUpperCase() + question.slice(1)} ? C'est définitif.</p>
-      <div class="row-btns">
-        <button class="btn" data-act="select-cancel-delete" type="button">Annuler</button>
-        <button class="btn danger-solid" data-act="select-delete-yes" type="button">${del ? "Supprimer" : "Quitter"}</button>
-      </div>
-    </div>`;
-  }
-  return `<div class="select-bar">
-    <p aria-live="polite">${n ? `${plural(n, "voyage")} sélectionné${n > 1 ? "s" : ""}` : "Touchez les voyages à supprimer"}</p>
-    <button class="btn danger-solid" data-act="select-delete" type="button" ${n ? "" : "disabled"}>Supprimer</button>
-  </div>`;
+  // Les voyages partagés par quelqu'un d'autre ne sont pas supprimés : on les quitte
+  const del = picked.filter((s) => isOwner(s.trip)).length;
+  const leave = picked.length - del;
+  const parts = [];
+  if (del) parts.push(`supprimer ${plural(del, "voyage")} et tout ${del > 1 ? "leur" : "son"} contenu (billets compris)`);
+  if (leave) parts.push(`quitter ${leave} ${leave > 1 ? "voyages partagés" : "voyage partagé"}`);
+  const question = parts.join(" et ");
+  return selectBar(picked.length, {
+    word: "voyage",
+    hint: "Touchez les voyages à supprimer",
+    question: `${question.charAt(0).toUpperCase() + question.slice(1)} ? C'est définitif.`,
+    yesAct: "select-delete-yes",
+    yesLabel: del ? "Supprimer" : "Quitter",
+  });
 }
