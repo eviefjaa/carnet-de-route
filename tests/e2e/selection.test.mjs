@@ -100,9 +100,23 @@ await sleep(300);
 await page.evaluate(() => (location.hash = "#voyages"));
 await sleep(300);
 check("changer de page quitte le mode sélection", !(await page.$(".select-bar")));
+// Carte « Nouveau voyage » : la phrase du bas mène aux destinations, le reste de la carte crée un voyage
+await page.click('.new-card a[href="#destinations"]');
+await sleep(300);
+check("« inspirez-vous des destinations » mène à Choisir une destination", (await page.evaluate(() => location.hash)) === "#destinations"
+  && (await page.$eval("h1", (h) => h.textContent)) === "Choisir une destination");
+await page.goBack();
+await sleep(300);
+{ const r = await page.$eval(".new-card", (c) => { const b = c.getBoundingClientRect(); return { x: b.x + 30, y: b.y + 20 }; }); // coin de la carte, loin du « + »
+  const before = await stored();
+  await page.mouse.click(r.x, r.y);
+  await sleep(400);
+  check("le coin de la carte crée toujours un voyage", (await page.evaluate(() => location.hash)).startsWith("#voyage-") && (await stored()) !== before); }
+await page.evaluate(() => (location.hash = "#voyages"));
+await sleep(300);
 await page.tap(".swipe > .trip-card .tc-link");
 await sleep(500);
-check("hors sélection, un toucher ouvre toujours le voyage", (await page.evaluate(() => location.hash)) === "#voyage-v-b");
+check("hors sélection, un toucher ouvre toujours le voyage", (await page.evaluate(() => location.hash)).startsWith("#voyage-"));
 
 console.log(`Sélectionner et supprimer : ${ok} vérifications réussies, ${ko} échec(s).`);
 await browser.close();

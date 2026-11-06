@@ -166,11 +166,13 @@ export function tripsListView() {
     ${sel ? "" : invitationsBlock()}
     <div class="trip-grid">
       ${all.map(card).join("")}
-      ${sel ? "" : `<button class="trip-card new-card" data-act="new-trip" type="button">
-        <span class="plus" aria-hidden="true">+</span>
-        <b>Nouveau voyage</b>
-        <span class="note">Ou inspirez-vous des destinations</span>
-      </button>`}
+      ${sel ? "" : `<div class="trip-card new-card">
+        <button class="new-card-btn" data-act="new-trip" type="button">
+          <span class="plus" aria-hidden="true">+</span>
+          <b>Nouveau voyage</b>
+        </button>
+        <span class="note">Ou <a href="#destinations">inspirez-vous des destinations</a></span>
+      </div>`}
     </div>
     ${sel ? selectionBar(all) : ""}
   </section>`;
