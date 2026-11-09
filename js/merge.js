@@ -8,7 +8,15 @@
 //   - si nous avons modifié le même élément, ma version l'emporte (dernière écriture) ;
 //   - un élément modifié par l'un et supprimé par l'autre est gardé (on ne perd pas un changement).
 
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// Deux versions sont identiques si elles ont le même contenu, quel que soit l'ordre des champs
+// (Firestore les renvoie triés) ; un champ vide ("", null, []) vaut un champ absent (le serveur
+// ajoute des listes vides). Sans ça, un élément supprimé ici, mais simplement relu sur le
+// serveur, passerait pour « modifié par les autres » et réapparaîtrait.
+const empty = (v) => v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length);
+const canon = (v) => Array.isArray(v) ? v.map(canon)
+  : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().filter((k) => !empty(v[k])).map((k) => [k, canon(v[k])]))
+  : v;
+const same = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
 
 // skip : champs à ne pas fusionner (voyageurs et invitations, changés par d'autres moyens)
 export function mergeTrip(base, mine, theirs, skip = []) {

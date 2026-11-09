@@ -40,4 +40,15 @@ assert.equal(mergeTrip(base, { ...base, name: "Mon Japon" }, { ...base, name: "J
 const shared = mergeTrip({ ...base, members: ["x"] }, { ...base, members: ["x"] }, { ...base, members: ["x", "y"] }, ["members"]);
 assert.deepEqual(shared.members, ["x", "y"]);
 
+// Trajet supprimé chez moi, simplement relu sur le serveur : il ne doit pas réapparaître.
+// Firestore renvoie les champs triés et ajoute des listes vides : ce n'est pas une modification.
+{ const leg = { id: "t", type: "transport", mode: "voiture", from: "São Paulo", to: "Paraty", notes: "" };
+  const reread = { tickets: [], to: "Paraty", type: "transport", todos: [], mode: "voiture", links: [], id: "t", from: "São Paulo", notes: "" };
+  const b = { name: "Brésil", items: [leg, stop("s", "Paraty")] };
+  assert.equal(ids(mergeTrip(b, { ...b, items: [stop("s", "Paraty")] }, { ...b, items: [reread, stop("s", "Paraty")] })), "s:Paraty", "supprimé, champs dans un autre ordre");
+  // Mais une vraie modification chez l'autre garde le trajet
+  assert.equal(mergeTrip(b, { ...b, items: [stop("s", "Paraty")] }, { ...b, items: [{ ...reread, mode: "bus" }, stop("s", "Paraty")] }).items.length, 2, "modifié chez l'autre : gardé");
+  // Et vider un champ reste une modification
+  assert.equal(mergeTrip(b, { ...b, items: [{ ...leg, to: "" }, stop("s", "Paraty")] }, b).items[0].to, "", "champ vidé chez moi"); }
+
 console.log("Fusion des modifications simultanées : tous les tests passent.");
