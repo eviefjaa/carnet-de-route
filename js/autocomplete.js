@@ -78,9 +78,15 @@ function show(el) {
     ? items.map((r, i) => `<li role="option" data-i="${i}" id="${list.id}-${i}" aria-selected="${i === active}" class="${i === active ? "on" : ""}">
         <span class="ac-main"><b>${esc(r.name)}</b>${r.sub ? `<span class="ac-sub">${esc(r.sub)}</span>` : ""}</span>
         <span class="ac-kind">${esc(r.kind)}</span>
-      </li>`).join("")
-    : `<li class="ac-empty">Aucun lieu trouvé. Vous pouvez garder votre saisie.</li>`;
+      </li>`).join("") + (closeMatch(el.value, items) ? "" : `<li class="ac-empty">${HINT}</li>`)
+    : `<li class="ac-empty">Aucun lieu trouvé. ${HINT} Vous pouvez aussi garder votre saisie.</li>`;
 }
+
+// Le service cherche les noms locaux et tolère mal les fautes : un conseil quand aucune
+// suggestion ne contient ce qui a été tapé (accents et majuscules ignorés)
+const HINT = "Pas le bon lieu ? Essayez le nom local, sans faute de frappe (ex. Foz do Iguaçu).";
+const plain = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const closeMatch = (q, results) => results.some((r) => plain(r.name).includes(plain(q)));
 
 function onKeydown(e) {
   if (!list || e.target !== input) return;

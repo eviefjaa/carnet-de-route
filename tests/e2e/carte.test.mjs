@@ -32,6 +32,13 @@ page.on("request", (req) => {
     asked.push(new URL(req.url()).searchParams.get("q"));
     return req.respond({ status: 200, contentType: "application/json", headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify([{ lat: "50.0755", lon: "14.4378" }]) });
   }
+  // Suggestions de lieux simulées : rien qui ressemble à « foz de iguazu », Paraty pour « paraty »
+  if (req.url().startsWith("https://photon.komoot.io/")) {
+    const q = new URL(req.url()).searchParams.get("q");
+    const feature = (name) => ({ type: "Feature", properties: { name, osm_key: "place", osm_value: "town", country: "Brésil", countrycode: "BR" }, geometry: { type: "Point", coordinates: [-44.7, -23.2] } });
+    return req.respond({ status: 200, contentType: "application/json", headers: { "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify({ type: "FeatureCollection", features: [feature(q.startsWith("paraty") ? "Paraty" : "Terminal de bus Puerto Iguazú")] }) });
+  }
   if (req.url().startsWith("https://routing.openstreetmap.de/")) return req.respond({ status: 503, body: "" });
   req.continue();
 });
@@ -60,6 +67,19 @@ const paths = await page.$$eval(".leaflet-overlay-pane path", (l) => l.length);
 check("trois tracés : vol, route, point de départ de Prague", paths === 3);
 const note = await page.$eval("#geoNote", (e) => e.textContent).catch(() => "");
 check("pas de message « introuvable »", !note.includes("Introuvable"));
+
+// Suggestions : un conseil quand aucune ne correspond à ce qui est tapé
+await page.click('[data-act="add-stop"]');
+await page.waitForSelector('form[data-form="stop"] [name="place"]');
+const typeIn = async (txt) => {
+  await page.$eval('form[data-form="stop"] [name="place"]', (el) => (el.value = ""));
+  await page.type('form[data-form="stop"] [name="place"]', txt);
+  await page.waitForSelector(".ac-list li", { timeout: 5000 }).catch(() => {});
+  await sleep(300);
+  return page.$$eval(".ac-list li", (l) => l.map((li) => li.textContent.trim()).join(" | "));
+};
+check("faute de frappe : conseil d'essayer le nom local", (await typeIn("foz de iguazu")).includes("Essayez le nom local"));
+check("bon nom : pas de conseil", !(await typeIn("paraty")).includes("Essayez le nom local"));
 
 console.log(`Carte : ${ok} vérifications réussies, ${ko} échec(s).`);
 await browser.close();
