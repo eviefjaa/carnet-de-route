@@ -32,7 +32,7 @@ export function stopCard(it, trip, idx) {
         <svg class="stop-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </div>
       <div class="dates">
-        ${it.arrive ? esc(fmtDay(it.arrive)) : "date à définir"}${it.depart ? " → " + esc(fmtDay(it.depart)) : ""}
+        ${datesLine(it)}
         ${n === 0 ? `<span class="nights is-halt">Arrêt</span>` : n ? `<span class="nights">${plural(n, "nuit")}</span>` : ""}
       </div>
       ${toBook.length ? `<p class="to-book">À réserver : ${toBook.slice(0, 3).map(esc).join(", ")}${toBook.length > 3 ? ` et ${toBook.length - 3} autre${toBook.length > 4 ? "s" : ""}` : ""}</p>` : ""}
@@ -47,6 +47,13 @@ export function stopCard(it, trip, idx) {
     ${itemActions(it, idx, trip)}
     </div>` : ""}
   </article>`;
+}
+
+// Dates de l'étape ; celles qui manquent sont signalées en rouge
+function datesLine(it) {
+  const todo = (txt) => `<span class="to-define">${txt}</span>`;
+  if (!it.arrive && !it.depart) return todo("Dates à définir");
+  return `${it.arrive ? esc(fmtDay(it.arrive)) : todo("Arrivée à définir")} → ${it.depart ? esc(fmtDay(it.depart)) : todo("départ à définir")}`;
 }
 
 function linkCard(l) {

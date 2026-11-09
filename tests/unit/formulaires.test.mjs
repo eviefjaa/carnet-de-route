@@ -4,7 +4,7 @@ globalThis.document = { getElementById: () => null, documentElement: { dataset: 
 import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const { state } = await import(root + "/js/store.js");
-const { stopForm, newStop } = await import(root + "/js/views/stop.js");
+const { stopForm, newStop, stopCard } = await import(root + "/js/views/stop.js");
 const { transportForm, transportCard } = await import(root + "/js/views/transport.js");
 const { checklist } = await import(root + "/js/views/checklist.js");
 
@@ -46,5 +46,13 @@ const clm = checklist(withMaps);
 assert.match(clm, /class="cl-map" href="https:\/\/maps\.app\.goo\.gl\/abc"/);
 assert.doesNotMatch(clm, /javascript:/);
 assert.match(stopForm(withMaps, false), /name="todoMaps"[^>]*value="https:\/\/maps\.app\.goo\.gl\/abc"/);
+
+// Carte d'étape : les dates manquantes sont signalées en rouge
+{ const card = (arrive, depart) => { const it = { ...newStop("Lyon"), arrive, depart }; return stopCard(it, { currency: "EUR", items: [it] }, 0); };
+  const red = (html) => [...html.matchAll(/class="to-define">([^<]+)</g)].map((m) => m[1]).join(" | ");
+  assert.equal(red(card("", "")), "Dates à définir");
+  assert.equal(red(card("2030-03-02", "")), "départ à définir");
+  assert.equal(red(card("", "2030-03-05")), "Arrivée à définir");
+  assert.equal(red(card("2030-03-02", "2030-03-05")), "", "dates complètes : rien en rouge"); }
 
 console.log("Formulaires et checklist : tous les tests passent.");

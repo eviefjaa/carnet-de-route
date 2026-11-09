@@ -65,6 +65,7 @@
 .stop-detail { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
 /* Ce qui reste à réserver, visible même carte repliée */
 .to-book { margin: 0; font-size: 14px; font-weight: 600; color: var(--danger); overflow-wrap: anywhere; }
+.to-define { font-weight: 600; color: var(--danger); } /* date d'étape manquante */
 
 /* Trajet replié : même principe que les étapes */
 .leg-summary { grid-column: 1 / -1; position: relative; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: start; }
