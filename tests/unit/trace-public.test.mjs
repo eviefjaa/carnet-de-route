@@ -33,6 +33,19 @@ assert.equal(publicCopy(trip({ mode: "train", route })).items[1].line, undefined
 const short = { ...route, line: encodeLine(line.slice(0, 7)) }; // 3 km
 assert.equal(publicCopy(trip({ mode: "voiture", route: short })).items[1].line, undefined, "trajet trop court : rien à montrer");
 
+// Dernier trajet du voyage, sans étape après lui (Florianópolis → São Paulo) : tracé publié aussi,
+// vers son propre lieu d'arrivée, comme sur la carte privée
+{ const C = { q: "Villefranche", lat: B.lat, lng: B.lng };
+  const last = publicCopy({ items: [{ id: "s1", type: "stop", place: "Lyon", geo: A },
+    { id: "t1", type: "transport", mode: "bus", from: "Lyon", to: "Villefranche", toGeo: C, route }] }).items[1];
+  assert.ok(last.line, "dernier trajet : tracé publié");
+  const q = decodeLine(last.line);
+  assert.ok(m(q[q.length - 1], [B.lat, B.lng]) >= 1990, "dernier trajet : coupé à 2 km de son arrivée");
+  // Premier trajet sans étape avant : depuis son lieu de départ
+  const first = publicCopy({ items: [{ id: "t1", type: "transport", mode: "voiture", from: "Lyon", to: "Villefranche", fromGeo: { q: "Lyon", ...A }, route },
+    { id: "s2", type: "stop", place: "Villefranche", geo: B }] }).items[0];
+  assert.ok(first.line, "premier trajet : tracé publié"); }
+
 // Lieux d'un trajet (vol depuis Prague) : publiés arrondis à 2 km, comme les étapes
 { const t = publicCopy({ items: [{ id: "v", type: "transport", mode: "avion", from: "Prague", to: "São Paulo", fromGeo: { q: "Prague", lat: 50.0755, lng: 14.4378 } }] }).items[0];
   assert.deepEqual(t.fromGeo, { lat: 50.08, lng: 14.44 }, "départ arrondi, sans le texte cherché");

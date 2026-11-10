@@ -61,6 +61,7 @@ export function drawMap(t = currentTrip(), { published = false } = {}) {
   };
   // cur : dernière position connue ; leg : trajet en attente de son point d'arrivée
   let n = 0, cur = null, leg = null;
+  const stopPts = []; // cadrage : sur les étapes (un vol depuis l'Europe ne réduit pas le Brésil à un point)
   const closeLeg = (to) => { if (cur && to) layer.addLayer(segment(cur, to, leg, color, tripId)); };
 
   t.items.forEach((it) => {
@@ -81,20 +82,22 @@ export function drawMap(t = currentTrip(), { published = false } = {}) {
       closeLeg(ll);
       cur = ll;
       points.push(ll);
+      stopPts.push(ll);
     }
     leg = null;
   });
   // Le voyage finit par un trajet (retour en avion…) : jusqu'à son lieu d'arrivée
   if (leg && at(leg.toGeo)) { closeLeg(at(leg.toGeo)); end(at(leg.toGeo), leg.to); }
 
-  // Recadre la carte seulement si les points ont changé
-  const key = JSON.stringify(points);
+  // Recadre la carte seulement si les points ont changé ; sur les étapes s'il y en a au moins deux
+  const frame = stopPts.length > 1 ? stopPts : points;
+  const key = JSON.stringify(frame);
   setTimeout(() => {
     map.invalidateSize();
     if (key === lastFit) return;
     lastFit = key;
-    if (points.length > 1) map.fitBounds(points, { padding: [36, 36] });
-    else if (points.length === 1) map.setView(points[0], 10);
+    if (frame.length > 1) map.fitBounds(frame, { padding: [36, 36] });
+    else if (frame.length === 1) map.setView(frame[0], 10);
   }, 0);
 
   if (!published) renderGeoNote();

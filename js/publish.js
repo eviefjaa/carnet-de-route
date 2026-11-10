@@ -32,11 +32,20 @@ function trimStart(points, m) {
   }
   return null;
 }
-// Tracé public d'un trajet par la route : seulement s'il relie bien les deux étapes actuelles
-function publicLine(leg, prev, next) {
+// Bouts d'un trajet, comme sur la carte (map.js) : l'étape voisine, sinon le lieu du trajet
+// lui-même (dernier trajet du voyage qui finit sans étape, vol depuis Prague…)
+function legEnds(items, i) {
+  const leg = items[i], before = items[i - 1], after = items[i + 1];
+  const from = before?.type === "stop" ? before.geo : leg.fromGeo || (before?.type === "transport" ? before.toGeo : null);
+  const to = after?.type === "stop" ? after.geo : leg.toGeo || (after?.type === "transport" ? after.fromGeo : null);
+  return [from, to];
+}
+// Tracé public d'un trajet par la route : seulement s'il relie bien ses deux bouts actuels
+function publicLine(leg, [from, to]) {
   const r = leg.route;
-  if (!ROAD_MODES.has(leg.mode) || !r || r.none || typeof r.line !== "string" || !prev?.geo || !next?.geo) return null;
-  if (r.key !== routeKey([prev.geo.lat, prev.geo.lng], [next.geo.lat, next.geo.lng])) return null;
+  const ok = (g) => g && Number.isFinite(g.lat) && Number.isFinite(g.lng);
+  if (!ROAD_MODES.has(leg.mode) || !r || r.none || typeof r.line !== "string" || !ok(from) || !ok(to)) return null;
+  if (r.key !== routeKey([from.lat, from.lng], [to.lat, to.lng])) return null;
   const head = trimStart(decodeLine(r.line), TRIM);
   const middle = head && trimStart(head.reverse(), TRIM);
   return middle && middle.length >= 2 ? encodeLine(middle.reverse()) : null;
@@ -50,8 +59,6 @@ export function publicCopy(trip) {
   const day = (date) => (date && start ? nights(start, date.slice(0, 10)) + 1 : null);
   const sejour = trip.kind === "sejour";
 
-  // Étapes avant et après chaque trajet (pour vérifier son tracé)
-  const near = (i, step) => { for (let j = i + step; j >= 0 && j < trip.items.length; j += step) if (trip.items[j].type === "stop") return trip.items[j]; return null; };
   const items = trip.items.map((it, i) =>
     it.type === "stop"
       ? {
@@ -79,7 +86,7 @@ export function publicCopy(trip) {
           // Lieux du trajet, arrondis eux aussi (carte : vol qui part d'une ville qui n'est pas une étape)
           fromGeo: roundGeo(it.fromGeo),
           toGeo: roundGeo(it.toGeo),
-          ...withLine(publicLine(it, near(i, -1), near(i, 1)), it.route),
+          ...withLine(publicLine(it, legEnds(trip.items, i)), it.route),
         }
   );
 
