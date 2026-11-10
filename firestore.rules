@@ -168,7 +168,9 @@ service cloud.firestore {
         && postId.matches('^p[0-9]{13}[a-z0-9]{4,12}$')
         && math.abs((10000000000000 - int(postId[1:14])) - request.time.toMillis()) < 3600000
         && request.resource.data.publishedAt == request.time
-        && request.resource.data.trip.keys().hasOnly(["country", "countries", "days", "nights", "items"])
+        && request.resource.data.trip.keys().hasOnly(["kind", "country", "countries", "days", "nights", "items"])
+        // Type du voyage : séjour (un lieu, programme jour par jour), road trip sinon
+        && (!("kind" in request.resource.data.trip) || request.resource.data.trip.kind == "sejour")
         // Pays traversés : 10 codes au plus (fiches pays)
         && (!("countries" in request.resource.data.trip) || (request.resource.data.trip.countries is list && request.resource.data.trip.countries.size() <= 10))
         && request.resource.data.trip.items is list

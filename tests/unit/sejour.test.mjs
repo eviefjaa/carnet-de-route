@@ -33,4 +33,14 @@ assert.deepEqual(sejourStats(trip), { days: 2, activities: 4, place: "Paris" });
 // Sans lieu : le formulaire du lieu est ouvert d'office
 state.insertAt = null;
 assert.match(sejourView({ kind: "sejour", items: [] }), /data-sejour="1"/);
+// Publication : programme par jour (« Jour 2 », jamais la date), sans lien Maps ni billets
+const { publicCopy } = await import(root + "/js/publish.js");
+const pub = publicCopy({ kind: "sejour", items: [{ ...stop, todos: [...stop.todos, { id: "e", text: "Bateau", date: "2030-05-02", time: "7h", maps: "https://maps.app.goo.gl/x", tickets: [{ id: "f" }] }] }] });
+assert.equal(pub.kind, "sejour");
+assert.deepEqual(pub.items[0].program.map((a) => [a.text.slice(0, 5), a.day, a.time]),
+  [["Dîner", 1, "20:00"], ["Musée", 1, "09:15"], ["Balad", null, ""], ["Hors ", 32, ""], ["Batea", 2, ""]]);
+assert.doesNotMatch(JSON.stringify(pub), /2030|maps\.app|tickets/);
+assert.equal("kind" in publicCopy({ items: [stop] }), false, "road trip : pas de type ni de programme");
+assert.equal("program" in publicCopy({ items: [stop] }).items[0], false);
+
 console.log("Séjour : tous les tests passent.");

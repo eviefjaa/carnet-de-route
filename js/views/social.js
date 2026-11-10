@@ -55,7 +55,7 @@ export function postCard(p) {
     </div>
     <h2><a class="tc-link" href="#publication-${esc(p.id)}">${esc(p.title)}</a></h2>
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
-    <p class="tc-dates">${plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
+    <p class="tc-dates">${trip.kind === "sejour" ? "Séjour" : plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
     ${p.owner === me() ? `<span class="vis-badge is-published">Publié · ${esc(social.VISIBILITIES[p.visibility] || "")}</span>` : ""}
   </article>`;
 }
@@ -72,7 +72,7 @@ function selectablePostCard(p) {
     <div class="tc-top"><span class="tc-flags" aria-hidden="true">${flagsOf(trip)}</span></div>
     <h2>${esc(p.title)}</h2>
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
-    <p class="tc-dates">${plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
+    <p class="tc-dates">${trip.kind === "sejour" ? "Séjour" : plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
     <span class="vis-badge is-published">Publié · ${esc(social.VISIBILITIES[p.visibility] || "")}</span>
   </article>`;
 }
@@ -193,7 +193,7 @@ export function postView(id) {
       <a class="post-author" href="#personne-${esc(p.owner)}">${avatar({ name: p.ownerName })}<span>${esc(p.ownerName)} <span class="handle">@${esc(p.ownerHandle)}</span></span></a>
       <h1>${esc(p.title)}</h1>
       <div class="stats">
-        <span><b>${stops.length}</b> étape${stops.length > 1 ? "s" : ""}</span>
+        ${trip.kind === "sejour" ? `<span><b>Séjour</b></span>` : `<span><b>${stops.length}</b> étape${stops.length > 1 ? "s" : ""}</span>`}
         ${trip.days ? `<span><b>${plural(trip.days, "jour")}</b></span>` : ""}
         ${trip.nights ? `<span><b>${plural(trip.nights, "nuit")}</b></span>` : ""}
       </div>
@@ -234,11 +234,27 @@ function readOnlyItem(it, recos = []) {
       ${it.country ? `<span class="stop-country">${esc(it.country)}</span>` : ""}
     </div>
     ${it.nights === 0 ? `<div class="dates"><span class="nights is-halt">Arrêt</span></div>` : it.nights ? `<div class="dates"><span class="nights">${plural(+it.nights, "nuit")}</span></div>` : ""}
-    ${todos.length ? `<section class="checklist"><div class="cl-head"><h3>À faire</h3></div>
+    ${(it.program || []).length ? programSection(it.program)
+      : todos.length ? `<section class="checklist"><div class="cl-head"><h3>À faire</h3></div>
       <ul class="post-todos">${todos.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></section>` : ""}
     ${recos.length ? `<section class="stop-recos"><div class="cl-head"><h3>Recommandations</h3></div>
       <ul class="reco-list">${recos.map((r) => recoCard(r, true)).join("")}</ul></section>` : ""}
   </article>`;
+}
+
+// Programme d'un séjour publié : un bloc par jour, activités par heure
+function programSection(program) {
+  const days = [...new Set(program.map((a) => a.day))].sort((a, b) => (a ?? 1e9) - (b ?? 1e9));
+  const byTime = (a, b) => (a.time || "99").localeCompare(b.time || "99");
+  return `<section class="post-program"><div class="cl-head"><h3>Programme</h3></div>
+    ${days.map((d) => `<div class="sj-day${d ? "" : " is-loose"}">
+      <div class="sj-day-head"><h3>${d ? `Jour ${+d}` : "Sans jour précis"}</h3></div>
+      <ul class="sj-acts">${program.filter((a) => a.day === d).sort(byTime).map((a) => `<li class="sj-act is-public">
+        <div class="sj-act-main">${a.time ? `<time class="sj-time">${esc(a.time.replace(":", " h "))}</time>` : ""}<span class="sj-text">${esc(a.text)}</span></div>
+        ${a.how ? `<p class="sj-how"><span><b>Y aller :</b> ${esc(a.how)}</span></p>` : ""}
+      </li>`).join("")}</ul>
+    </div>`).join("")}
+  </section>`;
 }
 
 // Données de la carte d'une publication déjà chargée (ou null)

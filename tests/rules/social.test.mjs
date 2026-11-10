@@ -59,6 +59,8 @@ const post = (extra = {}) => ({ owner: "bob", ownerName: "Bob", ownerHandle: "bo
 await t("abonnement daté à la main", setDoc(doc(alice, "follows/alice_carla"), { follower: "alice", followed: "carla", status: "accepted", createdAt: 9e12 }), false);
 await t("publication antidatée (tête de Découvrir)", setDoc(doc(bob, "posts/p0000000000000aaaa"), post({ visibility: "public" })), false);
 await t("publication avec fausse date", setDoc(doc(bob, `posts/${pid()}`), post({ publishedAt: 1 })), false);
+await t("publication : séjour", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { kind: "sejour", items: [] } })), true);
+await t("publication : type de voyage inconnu", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { kind: "<b>", items: [] } })), false);
 await t("publication : nombre de jours en texte (injection)", setDoc(doc(bob, `posts/${pid()}`), post({ visibility: "public", trip: { items: [], days: "<iframe>" } })), false);
 await t("bob publie (abonnés)", setDoc(doc(bob, `posts/${P.p1}`), post()), true);
 await t("bob publie (public)", setDoc(doc(bob, `posts/${P.p2}`), post({ visibility: "public" })), true);

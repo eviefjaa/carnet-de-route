@@ -45,3 +45,11 @@
 /* Formulaire d'une activité */
 .sj-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 0 2px; }
 .sj-form .full, .sj-form .form-actions { grid-column: 1 / -1; }
+
+/* Programme d'un séjour publié (lecture seule) */
+.post-program { display: flex; flex-direction: column; gap: 6px; border-top: 1px dashed var(--line); padding-top: 10px; }
+.post-program .sj-day { margin: 0; background: var(--bg); }
+.post-program .sj-day::before { display: none; }
+.sj-act.is-public .sj-act-main { gap: 10px; padding: 4px 0; }
+.sj-act.is-public .sj-text { color: var(--ink); }
+.sj-act.is-public .sj-how { margin-left: 0; }

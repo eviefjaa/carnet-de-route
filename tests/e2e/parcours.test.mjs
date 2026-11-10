@@ -393,6 +393,38 @@ await bob.click('.country-posts [data-act="fav-post"]');
 await sleep(2500);
 check("favori retiré : compteur à 0", (await favCount(bob)) === 0);
 
+// ---------- Séjour publié : le programme jour par jour, sans dates ni liens ----------
+await goHash(alice, "nouveau-voyage");
+await alice.click('[data-act="create-trip"][data-kind="sejour"]');
+await alice.waitForSelector('form[data-form="stop"][data-sejour]');
+await alice.type('form[data-form="stop"] [name="place"]', "Lisbonne");
+await alice.$eval('form[data-form="stop"] [name="arrive"]', (e) => { e.value = "2030-06-10"; });
+await alice.$eval('form[data-form="stop"] [name="depart"]', (e) => { e.value = "2030-06-12"; });
+await alice.$eval('form[data-form="stop"]', (f) => f.requestSubmit());
+await alice.waitForSelector('[data-act="act-add"][data-date="2030-06-11"]');
+await alice.click('[data-act="act-add"][data-date="2030-06-11"]');
+await alice.waitForSelector("form[data-act-form]");
+await alice.type("form[data-act-form] [name=text]", "Tour de Belém");
+await alice.$eval("form[data-act-form] [name=time]", (e) => { e.value = "09:45"; });
+await alice.type("form[data-act-form] [name=how]", "Tram 15 depuis Praça da Figueira");
+await alice.type("form[data-act-form] [name=maps]", "https://maps.app.goo.gl/secret-maison");
+await alice.$eval("form[data-act-form]", (f) => f.requestSubmit());
+await sleep(2500);
+await alice.click('[data-act="open-publish"]');
+await alice.waitForSelector("[data-publish-form]");
+await alice.click('[data-publish-form] button[type="submit"]');
+await sleep(3000);
+const sejourCard = await alice.$$eval(".post-card", (l) => (l.find((c) => c.querySelector("h2").textContent.includes("Lisbonne")) || {}).innerText || "");
+check("séjour publié : la carte dit « Séjour »", sejourCard.includes("Séjour"));
+const sejourHref = await alice.$$eval(".post-card .tc-link", (l) => (l.find((a) => a.textContent.includes("Lisbonne")) || {}).getAttribute?.("href") || "");
+await anon.goto(SITE + sejourHref);
+await anon.waitForSelector(".post-program", { timeout: 15000 }).catch(() => {});
+const prog = await anon.$eval(".post-program", (e) => e.innerText).catch(() => "");
+if (process.env.SHOTS) await anon.$eval(".post-program", (e) => e.closest(".item").scrollIntoView()).then(() => anon.screenshot({ path: process.env.SHOTS + "/sejour-publie.png" })).catch(() => {});
+check("séjour publié : programme par jour, avec l'heure et comment y aller", /Jour 2/i.test(prog) && prog.includes("09 h 45") && prog.includes("Tour de Belém") && prog.includes("Tram 15"));
+const postHtml = await anon.$eval(".page.post", (e) => e.innerHTML).catch(() => "");
+check("séjour publié : ni dates ni lien Maps", !postHtml.includes("secret-maison") && !postHtml.includes("2030") && !/juin/.test(postHtml));
+
 problems.forEach((p) => { ko++; console.log("ÉCHEC :", p); });
 console.log(`Parcours complet : ${ok} vérifications réussies, ${ko} échec(s).`);
 await browser.close();

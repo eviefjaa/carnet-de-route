@@ -1,6 +1,7 @@
 // Copie publique d'un voyage, pour une publication
 //
 // On ne garde que l'essentiel : étapes, activités, trajets et carte.
+// Séjour : le programme est publié jour par jour (jour, heure, activité, comment y aller).
 // Les dates deviennent « Jour 1, Jour 2… » (ne pas révéler quand on est absent de chez soi),
 // et les positions sont arrondies à environ 2 km (une adresse d'hébergement ne doit pas se
 // deviner sur la carte). Le tracé des routes est publié sans ses 2 premiers et 2 derniers
@@ -47,6 +48,7 @@ export function publicCopy(trip) {
   const start = tripStart(trip);
   const end = tripEnd(trip);
   const day = (date) => (date && start ? nights(start, date.slice(0, 10)) + 1 : null);
+  const sejour = trip.kind === "sejour";
 
   // Étapes avant et après chaque trajet (pour vérifier son tracé)
   const near = (i, step) => { for (let j = i + step; j >= 0 && j < trip.items.length; j += step) if (trip.items[j].type === "stop") return trip.items[j]; return null; };
@@ -60,6 +62,12 @@ export function publicCopy(trip) {
           nights: nights(it.arrive, it.depart),
           geo: roundGeo(it.geo),
           todos: (it.todos || []).map((t) => String(t.text || "").slice(0, 120)).filter(Boolean).slice(0, 30),
+          ...(sejour ? { program: (it.todos || []).filter((t) => t.text).slice(0, 60).map((t) => ({
+            text: String(t.text).slice(0, 120),
+            day: day(t.date),
+            time: /^([01]\d|2[0-3]):[0-5]\d$/.test(t.time || "") ? t.time : "",
+            how: String(t.how || "").slice(0, 200),
+          })) } : {}),
         }
       : {
           type: "transport",
@@ -81,6 +89,7 @@ export function publicCopy(trip) {
   const countries = [...new Set([country, ...stops.map((s) => COUNTRIES.find((c) => c.name === s.country)?.code)].filter(Boolean))].slice(0, 10);
   // Pas de nom de voyage : la publication a son propre titre
   return {
+    ...(sejour ? { kind: "sejour" } : {}),
     country,
     countries,
     days: start && end ? nights(start, end) + 1 : null,

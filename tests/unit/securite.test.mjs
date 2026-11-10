@@ -44,6 +44,12 @@ const post = normalizePost("p1", { owner: "u", ownerName: TRAP, ownerHandle: "h"
 assert.equal(post.trip.days, null);
 assert.equal(post.trip.items[0].nights, null);
 assert.deepEqual(post.recos, []);
+// Programme d'un séjour publié : entiers, heure bien formée, textes coupés
+{ const q = normalizePost("p2", { trip: { kind: "sejour", items: [{ type: "stop", program: [null, { text: "ok", day: 2, time: "09:45", how: "Tram" },
+    { text: TRAP, day: "2", time: "<b>", how: { x: 1 } }, { text: "", day: 1 }] }] } });
+  assert.equal(q.trip.kind, "sejour");
+  assert.deepEqual(q.trip.items[0].program.map((a) => [a.day, a.time, a.how]), [[2, "09:45", "Tram"], [null, "", ""]]);
+  assert.equal(normalizePost("p3", { trip: { kind: "x" } }).trip.kind, ""); }
 const html = postCard(post);
 assert.doesNotMatch(html, /<iframe|<script/);
 
