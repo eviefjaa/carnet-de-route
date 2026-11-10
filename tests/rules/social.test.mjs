@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { initializeTestEnvironment, assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, query, collection, where, orderBy, startAt, endAt, limit, writeBatch, serverTimestamp, addDoc, increment } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, query, collection, where, orderBy, startAt, endAt, limit, writeBatch, serverTimestamp, addDoc, increment, arrayUnion, arrayRemove, collectionGroup } from "firebase/firestore";
 
 const env = await initializeTestEnvironment({
   projectId: "demo-social",
@@ -103,6 +103,29 @@ await t("alice commente « moi seul » de bob", setDoc(doc(alice, `posts/${P.p3}
 await t("alice lit les commentaires « moi seul » de bob", getDocs(collection(alice, `posts/${P.p3}/comments`)), false);
 await setDoc(doc(carla, `posts/${P.p7}/comments/c9`), comment(carla, "carla", "Carla", "carla"));
 await t("carla supprime son commentaire", deleteDoc(doc(carla, `posts/${P.p7}/comments/c9`)), true);
+
+// Réponses : rattachées à un vrai commentaire de cet itinéraire, en prévenant son auteur
+await setDoc(doc(carla, `posts/${P.p7}/comments/r0`), comment(carla, "carla", "Carla", "carla"));
+const reply = (extra) => comment(alice, "alice", "Alice", "alice", { replyTo: "r0", replyToAuthor: "carla", ...extra });
+await t("alice répond à carla", setDoc(doc(alice, `posts/${P.p7}/comments/r1`), reply()), true);
+await t("réponse à un commentaire inexistant", setDoc(doc(alice, `posts/${P.p7}/comments/r2`), reply({ replyTo: "nope" })), false);
+await t("réponse qui prévient la mauvaise personne", setDoc(doc(alice, `posts/${P.p7}/comments/r3`), reply({ replyToAuthor: "bob" })), false);
+await t("réponse sans dire à qui", setDoc(doc(alice, `posts/${P.p7}/comments/r4`), comment(alice, "alice", "Alice", "alice", { replyTo: "r0" })), false);
+await t("réponse à une réponse (un seul niveau)", setDoc(doc(carla, `posts/${P.p7}/comments/r5`), comment(carla, "carla", "Carla", "carla", { replyTo: "r1", replyToAuthor: "alice" })), false);
+await t("carla retrouve les réponses qui lui sont adressées", getDocs(query(collectionGroup(carla, "comments"), where("replyToAuthor", "==", "carla"))), true);
+await t("alice lit les réponses adressées à carla", getDocs(query(collectionGroup(alice, "comments"), where("replyToAuthor", "==", "carla"))), false);
+
+// J'aime : chacun s'ajoute ou se retire lui-même, jamais sur son propre commentaire
+const r0 = (db) => doc(db, `posts/${P.p7}/comments/r0`);
+await t("alice aime le commentaire de carla", updateDoc(r0(alice), { likedBy: arrayUnion("alice") }), true);
+await t("alice l'aime deux fois", updateDoc(r0(alice), { likedBy: ["alice", "alice"] }), false);
+await t("bob ajoute un j'aime au nom de quelqu'un d'autre", updateDoc(r0(bob), { likedBy: ["alice", "bob", "eve"] }), false);
+await t("bob retire le j'aime d'alice", updateDoc(r0(bob), { likedBy: [] }), false);
+await t("carla aime son propre commentaire", updateDoc(r0(carla), { likedBy: arrayUnion("carla") }), false);
+await t("j'aime + texte modifié", updateDoc(r0(bob), { likedBy: arrayUnion("bob"), text: "modifié" }), false);
+await t("sans compte : aimer", updateDoc(r0(anon), { likedBy: arrayUnion("x") }), false);
+await t("alice retire son j'aime", updateDoc(r0(alice), { likedBy: arrayRemove("alice") }), true);
+await t("alice aime un commentaire « moi seul »", updateDoc(doc(alice, `posts/${P.p3}/comments/zz`), { likedBy: arrayUnion("alice") }), false);
 
 // ---------- Mises en favori ----------
 const like = (name, handle, extra = {}) => ({ name, handle, at: serverTimestamp(), ...extra });

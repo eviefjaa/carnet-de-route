@@ -254,6 +254,32 @@ await goHash(alice, "voyages");
 check("notifications marquées comme lues", !/\d/.test(await alice.$eval('#sidebar a[href="#notifications"]', (a) => a.innerText)));
 await goHash(alice, "decouvrir");
 await goHash(alice, postHash.slice(1));
+// ---------- J'aime et réponse sur le commentaire de Bob ----------
+await alice.waitForSelector('[data-act="like-comment"]', { timeout: 10000 });
+await alice.click('[data-act="like-comment"]');
+await sleep(2500);
+check("Alice aime le commentaire : cœur plein, 1", (await alice.$eval('[data-act="like-comment"]', (b) => b.getAttribute("aria-pressed") + b.textContent.trim())) === "true1");
+await alice.click('[data-act="reply-comment"]');
+await alice.waitForSelector("form[data-reply-to] textarea");
+await alice.type("form[data-reply-to] textarea", "Avec plaisir, bon voyage !");
+await alice.click('form[data-reply-to] button[type="submit"]');
+await sleep(3000);
+check("réponse affichée en retrait sous le commentaire", (await alice.$eval(".comment-replies", (e) => e.innerText).catch(() => "")).includes("Avec plaisir"));
+if (process.env.SHOTS) await alice.$eval(".comments", (e) => e.scrollIntoView()).then(() => alice.screenshot({ path: process.env.SHOTS + "/commentaires.png" }));
+await bob.reload(); // Bob avait la publication ouverte depuis son commentaire
+await bob.waitForSelector(".comment-like", { timeout: 10000 }).catch(() => {});
+const bobLike = await bob.$eval(".comment-like", (e) => e.tagName + e.textContent.trim()).catch((e) => "absent " + e.message);
+check(`Bob voit 1 j'aime sur son commentaire, sans pouvoir l'aimer lui-même (${bobLike})`, bobLike === "SPAN1");
+await bob.evaluate(async () => (await import("/js/social.js")).refreshNotifications());
+await sleep(2500);
+await goHash(bob, "notifications");
+await sleep(2500);
+check("Bob est prévenu de la réponse", (await text(bob)).includes("Alice a répondu à votre commentaire"));
+await bob.goto(SITE + postHash); // Bob revient sur la publication (la suite du parcours la recharge)
+// La réponse d'Alice, puis le commentaire de Bob
+await alice.click('.comment.is-reply [data-act="delete-comment"]');
+await alice.click('[data-act="delete-comment-yes"]');
+await sleep(2500);
 await alice.waitForSelector('.comment [data-act="delete-comment"]', { timeout: 10000 });
 await alice.click('.comment [data-act="delete-comment"]');
 await alice.click('[data-act="delete-comment-yes"]');

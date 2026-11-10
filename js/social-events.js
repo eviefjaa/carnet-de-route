@@ -91,6 +91,23 @@ export function onSocialClick(act, b) {
     case "rm-reco-row":
       b.closest("[data-reco-row]").remove();
       return true;
+    case "like-comment": {
+      const btn = b;
+      const on = btn.getAttribute("aria-pressed") !== "true";
+      btn.disabled = true;
+      attempt(() => social.likeComment(btn.dataset.post, btn.dataset.comment, on),
+        "Impossible d'enregistrer votre j'aime. Vérifiez votre connexion.");
+      return true;
+    }
+    case "reply-comment":
+      state.replyTo = b.dataset.comment;
+      render();
+      document.querySelector("form[data-reply-to] textarea")?.focus();
+      return true;
+    case "reply-cancel":
+      state.replyTo = null;
+      render();
+      return true;
     case "delete-comment":
       state.confirm = "comment:" + b.dataset.comment;
       render();
@@ -156,9 +173,11 @@ export function onSocialSubmit(e) {
     const btn = f.querySelector("button[type=submit]");
     btn.disabled = true;
     // En cas d'échec, la page n'est pas réaffichée : le texte tapé reste dans le champ
-    social.addComment(f.dataset.commentForm, text.slice(0, 1000))
+    const reply = f.dataset.replyTo ? { id: f.dataset.replyTo, author: f.dataset.replyAuthor } : null;
+    social.addComment(f.dataset.commentForm, text.slice(0, 1000), reply)
       .then(() => {
-        toast("Commentaire publié");
+        if (reply) state.replyTo = null;
+        toast(reply ? "Réponse publiée" : "Commentaire publié");
         render();
       })
       .catch(() => {

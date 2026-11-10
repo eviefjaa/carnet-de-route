@@ -4,7 +4,8 @@
 //   handles/{pseudo}      { uid } : réserve un pseudo unique
 //   follows/{abonné_suivi} { follower, followed, status: "accepted" | "pending", createdAt }
 //   posts/{id}            { owner, ownerName, ownerHandle, title, visibility, publishedAt, trip, recos }
-//   posts/{id}/comments/{id} { author, authorName, authorHandle, text, createdAt }
+//   posts/{id}/comments/{id} { author, authorName, authorHandle, text, createdAt,
+//                              replyTo, replyToAuthor (réponse à un commentaire), likedBy (qui l'aime) }
 //   posts/{id}/likes/{uid}   { name, handle, at } : mis en favori (visible par l'auteur seulement)
 //
 // Les identifiants des publications commencent par un compte à rebours de l'heure :
@@ -268,18 +269,35 @@ export async function unlikePost(id) {
 export async function listComments(postId) {
   const { fb, db } = F();
   const snap = await fb.getDocs(fb.query(fb.collection(db, "posts", postId, "comments"), fb.orderBy("createdAt"), fb.limit(200)));
-  return snap.docs.map((d) => {
-    const c = d.data();
-    return { id: d.id, ...c, createdAt: c.createdAt && c.createdAt.toMillis ? c.createdAt.toMillis() : Date.now() };
-  });
+  return snap.docs.map((d) => normalizeComment(d.id, d.data()));
 }
 
-export async function addComment(postId, text) {
+// Chaque champ remis au bon type (un commentaire a pu être écrit sans passer par le site)
+function normalizeComment(id, c) {
+  return {
+    id, author: text(c.author, 128), authorName: text(c.authorName, 40), authorHandle: text(c.authorHandle, 20),
+    text: text(c.text, 1000), createdAt: toMs(c.createdAt) || Date.now(),
+    replyTo: text(c.replyTo, 128), replyToAuthor: text(c.replyToAuthor, 128),
+    likedBy: (Array.isArray(c.likedBy) ? c.likedBy : []).filter((u) => typeof u === "string"),
+  };
+}
+export { normalizeComment }; // pour les tests
+
+// reply : { id, author } du commentaire auquel on répond (les réponses restent sur un seul niveau)
+export async function addComment(postId, body, reply = null) {
   const { fb, db } = F();
   const p = state.profile;
   await fb.addDoc(fb.collection(db, "posts", postId, "comments"), {
-    author: me(), authorName: p.name, authorHandle: p.handle, text, createdAt: fb.serverTimestamp(),
+    author: me(), authorName: p.name, authorHandle: p.handle, text: body, createdAt: fb.serverTimestamp(),
+    ...(reply ? { replyTo: reply.id, replyToAuthor: reply.author } : {}),
   });
+  cache.delete("comments:" + postId);
+}
+
+// J'aime / je n'aime plus un commentaire : les règles vérifient que seul mon identifiant bouge
+export async function likeComment(postId, commentId, on) {
+  const { fb, db } = F();
+  await fb.updateDoc(fb.doc(db, "posts", postId, "comments", commentId), { likedBy: on ? fb.arrayUnion(me()) : fb.arrayRemove(me()) });
   cache.delete("comments:" + postId);
 }
 
@@ -330,6 +348,7 @@ export async function topPostsIn(country, max = 4) {
 // ---------- Notifications ----------
 // Déduites de ce qui existe déjà (abonnements, commentaires) : personne ne peut en fabriquer.
 //   comment   quelqu'un a commenté un de mes itinéraires
+//   reply     quelqu'un a répondu à un de mes commentaires
 //   follow    quelqu'un s'est abonné à moi
 //   request   quelqu'un demande à s'abonner (compte privé)
 //   accepted  quelqu'un a accepté ma demande d'abonnement
@@ -356,11 +375,20 @@ async function loadNotifications() {
   const comments = await Promise.all(posts.slice(0, 30).map((p) =>
     listComments(p.id)
       .then((list) => list.filter((c) => c.author !== me()).map((c) => ({
-        type: "comment", who: c.author, name: c.authorName, handle: c.authorHandle, at: c.createdAt,
+        type: c.replyToAuthor === me() ? "reply" : "comment", who: c.author, name: c.authorName, handle: c.authorHandle, at: c.createdAt,
         postId: p.id, postTitle: p.title, text: c.text,
       })))
       .catch(() => [])));
   items.push(...comments.flat());
+
+  // Réponses à mes commentaires sur les itinéraires des autres (les miens sont déjà comptés)
+  const mineIds = new Set(posts.map((p) => p.id));
+  const replies = await fb.getDocs(fb.query(fb.collectionGroup(db, "comments"), fb.where("replyToAuthor", "==", me()), fb.limit(50)))
+    .then((snap) => snap.docs.map((d) => ({ postId: d.ref.parent.parent.id, c: normalizeComment(d.id, d.data()) })))
+    .catch(() => []);
+  items.push(...replies.filter((r) => !mineIds.has(r.postId) && r.c.author !== me()).map(({ postId, c }) => ({
+    type: "reply", who: c.author, name: c.authorName, handle: c.authorHandle, at: c.createdAt, postId, postTitle: "", text: c.text,
+  })));
 
   const likes = await Promise.all(posts.slice(0, 30).map((p) =>
     fb.getDocs(fb.collection(db, "posts", p.id, "likes"))

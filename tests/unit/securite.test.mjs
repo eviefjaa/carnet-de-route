@@ -9,7 +9,7 @@ const TRAP = '<iframe srcdoc="<script src=https://unpkg.com/piege/x.js></script>
 const { plural } = await import(root + "/js/utils.js");
 const { fmtSize } = await import(root + "/js/views/tickets.js");
 const { normalizeTrip } = await import(root + "/js/cloud.js");
-const { normalizePost } = await import(root + "/js/social.js");
+const { normalizePost, normalizeComment } = await import(root + "/js/social.js");
 const { postCard } = await import(root + "/js/views/social.js");
 
 // Nombres : toujours de vrais nombres
@@ -37,6 +37,14 @@ assert.equal(trip.items[0].tickets[0].size, 0);
   assert.equal("kind" in t, false, "type inconnu : road trip");
   assert.deepEqual(t.items[0].todos.map((x) => [x.time, x.how]), [["10:30", "Métro 1"], ["", ""]]);
   assert.equal(normalizeTrip({ kind: "sejour", items: [] }).kind, "sejour"); }
+
+// Commentaire reçu : textes, réponse et j'aime au bon type
+{ const c = normalizeComment("c1", { author: 5, text: TRAP, replyTo: { x: 1 }, likedBy: ["a", 3, null, "b"], createdAt: "hier" });
+  assert.equal(c.author, "");
+  assert.equal(c.replyTo, "");
+  assert.deepEqual(c.likedBy, ["a", "b"]);
+  assert.ok(Number.isFinite(c.createdAt));
+  assert.deepEqual(normalizeComment("c2", {}).likedBy, []); }
 
 // Publication reçue : nombres entiers seulement, textes coupés, aucun HTML dans la carte affichée
 const post = normalizePost("p1", { owner: "u", ownerName: TRAP, ownerHandle: "h", title: TRAP, visibility: "public", publishedAt: 1,

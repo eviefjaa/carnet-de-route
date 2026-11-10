@@ -420,18 +420,16 @@ const fmtDateTime = (ms) => new Date(ms).toLocaleString("fr-FR", { day: "numeric
 function commentsSection(p) {
   const e = social.load("comments:" + p.id, () => social.listComments(p.id));
   const list = e.status === "ok" ? e.data : [];
-  const canDelete = (c) => state.user && (c.author === me() || p.owner === me());
-  const items = list.map((c) => `<li class="comment">
-      <div class="comment-head">
-        <a class="post-author" href="#personne-${esc(c.author)}">${avatar({ name: c.authorName })}<span>${esc(c.authorName)} <span class="handle">@${esc(c.authorHandle)}</span></span></a>
-        <span class="comment-date">${esc(fmtDateTime(c.createdAt))}</span>
-      </div>
-      <p class="comment-text">${esc(c.text)}</p>
-      ${!canDelete(c) ? "" : state.confirm === "comment:" + c.id
-        ? `<div class="confirm">Supprimer ce commentaire ?
-            <button class="btn small danger" data-act="delete-comment-yes" data-post="${esc(p.id)}" data-comment="${esc(c.id)}" type="button">Supprimer</button>
-            <button class="btn small" data-act="cancel-confirm" type="button">Annuler</button></div>`
-        : `<div><button class="link-btn" data-act="delete-comment" data-comment="${esc(c.id)}" type="button">Supprimer</button></div>`}
+  // Réponses rangées sous leur commentaire ; celles dont le commentaire a disparu restent visibles
+  const ids = new Set(list.map((c) => c.id));
+  const top = list.filter((c) => !c.replyTo || !ids.has(c.replyTo));
+  const repliesOf = (c) => list.filter((r) => r.replyTo === c.id);
+  const items = top.map((c) => `<li class="comment">
+      ${commentBody(p, c)}
+      ${repliesOf(c).length || state.replyTo === c.id ? `<ul class="comment-replies">
+        ${repliesOf(c).map((r) => `<li class="comment is-reply">${commentBody(p, r, c)}</li>`).join("")}
+        ${state.replyTo === c.id ? `<li>${replyForm(p, c)}</li>` : ""}
+      </ul>` : ""}
     </li>`).join("");
 
   const form = !isEnabled() ? ""
@@ -447,6 +445,42 @@ function commentsSection(p) {
     ${e.status === "loading" ? loadingNote : e.status === "error" ? errorNote("Impossible de charger les commentaires.") : list.length ? `<ul class="comment-list">${items}</ul>` : `<p class="note">Aucun commentaire pour l'instant.</p>`}
     ${form}
   </section>`;
+}
+
+// Un commentaire ou une réponse ; parent : le commentaire auquel la réponse est rattachée
+function commentBody(p, c, parent = null) {
+  const canDelete = state.user && (c.author === me() || p.owner === me());
+  const n = c.likedBy.length;
+  const liked = state.user && c.likedBy.includes(me());
+  const heart = `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="${liked ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
+  // On n'aime pas son propre commentaire ; sans compte, on voit seulement le nombre
+  const like = !state.user || c.author === me()
+    ? (n ? `<span class="comment-like is-static" aria-label="${n} j'aime">${heart}${n}</span>` : "")
+    : `<button class="comment-like${liked ? " is-on" : ""}" data-act="like-comment" data-post="${esc(p.id)}" data-comment="${esc(c.id)}" type="button"
+        aria-pressed="${liked}" aria-label="${liked ? "Je n'aime plus" : "J'aime"} ce commentaire${n ? ` (${n} j'aime)` : ""}">${heart}${n || ""}</button>`;
+  // Répondre à une réponse : la réponse va sous le même commentaire, sur un seul niveau
+  const target = parent || c;
+  const reply = state.user && state.profile
+    ? `<button class="link-btn" data-act="reply-comment" data-comment="${esc(target.id)}" type="button">Répondre</button>` : "";
+  const del = !canDelete ? "" : state.confirm === "comment:" + c.id
+    ? `<div class="confirm">Supprimer ce commentaire ?
+        <button class="btn small danger" data-act="delete-comment-yes" data-post="${esc(p.id)}" data-comment="${esc(c.id)}" type="button">Supprimer</button>
+        <button class="btn small" data-act="cancel-confirm" type="button">Annuler</button></div>`
+    : `<button class="link-btn" data-act="delete-comment" data-comment="${esc(c.id)}" type="button">Supprimer</button>`;
+  return `<div class="comment-head">
+      <a class="post-author" href="#personne-${esc(c.author)}">${avatar({ name: c.authorName })}<span>${esc(c.authorName)} <span class="handle">@${esc(c.authorHandle)}</span></span></a>
+      <span class="comment-date">${esc(fmtDateTime(c.createdAt))}</span>
+    </div>
+    <p class="comment-text">${esc(c.text)}</p>
+    <div class="comment-actions">${like}${reply}${del}</div>`;
+}
+
+function replyForm(p, c) {
+  return `<form class="comment-form" data-comment-form="${esc(p.id)}" data-reply-to="${esc(c.id)}" data-reply-author="${esc(c.author)}">
+    <label class="f">Répondre à ${esc(c.authorName)}<textarea name="text" maxlength="1000" required placeholder="Votre réponse…"></textarea></label>
+    <div class="row-btns"><button class="btn primary small" type="submit">Répondre</button>
+      <button class="btn small" data-act="reply-cancel" type="button">Annuler</button></div>
+  </form>`;
 }
 
 // ---------- Notifications ----------
@@ -477,7 +511,8 @@ function ago(ms) {
 function notifLine(n, seen) {
   const who = `<b>${esc(n.name)}</b>`;
   const [text, href] =
-    n.type === "comment" ? [`${who} a commenté « ${esc(n.postTitle)} » : <span class="notif-quote">${esc(n.text.length > 90 ? n.text.slice(0, 90) + "…" : n.text)}</span>`, `#publication-${n.postId}`]
+    n.type === "reply" ? [`${who} a répondu à votre commentaire${n.postTitle ? ` sur « ${esc(n.postTitle)} »` : ""} : <span class="notif-quote">${esc(n.text.length > 90 ? n.text.slice(0, 90) + "…" : n.text)}</span>`, `#publication-${n.postId}`]
+    : n.type === "comment" ? [`${who} a commenté « ${esc(n.postTitle)} » : <span class="notif-quote">${esc(n.text.length > 90 ? n.text.slice(0, 90) + "…" : n.text)}</span>`, `#publication-${n.postId}`]
     : n.type === "request" ? [`${who} demande à s'abonner à vous. Vous pouvez accepter ou refuser dans Mon profil.`, "#profil"]
     : n.type === "accepted" ? [`${who} a accepté votre demande d'abonnement.`, `#personne-${n.who}`]
     : n.type === "joined" ? [`${who} a rejoint votre voyage « ${esc(n.tripName)} ».`, `#voyage-${n.tripId}`]

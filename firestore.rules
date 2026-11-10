@@ -10,6 +10,11 @@ service cloud.firestore {
     // Voyages, partagés entre leurs voyageurs :
     //   owner (créateur), members (uid des voyageurs), invites (e-mails invités, en minuscules),
     //   emails ({ uid: e-mail } des voyageurs), joined ({ uid: date d'arrivée }, pour les notifications)
+    // Réponses à mes commentaires, où qu'elles soient (pour mes notifications)
+    match /{path=**}/comments/{commentId} {
+      allow read: if request.auth != null && resource.data.replyToAuthor == request.auth.uid;
+    }
+
     match /trips/{tripId} {
       function signedIn() { return request.auth != null; }
       function uid() { return request.auth.uid; }
@@ -200,9 +205,21 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
 
       // Commentaires : lisibles par qui voit l'itinéraire ; écrits par qui le voit et a un profil.
-      // Supprimés par leur auteur, ou par l'auteur de l'itinéraire. Jamais modifiés.
+      // Supprimés par leur auteur, ou par l'auteur de l'itinéraire. Le texte n'est jamais modifié.
+      // Réponse : replyTo = un commentaire (pas lui-même une réponse) de cet itinéraire, et
+      // replyToAuthor = son auteur (pour le prévenir). J'aime : likedBy, où chacun ne peut
+      // ajouter ou retirer que lui-même, et jamais sur son propre commentaire.
       match /comments/{commentId} {
         function post() { return get(/databases/$(database)/documents/posts/$(postId)).data; }
+        function parentPath() { return /databases/$(database)/documents/posts/$(postId)/comments/$(request.resource.data.replyTo); }
+        function likers(d) { return d.get("likedBy", []); }
+        function validReply() {
+          return !("replyTo" in request.resource.data)
+            || (request.resource.data.replyTo is string
+              && exists(parentPath())
+              && !("replyTo" in get(parentPath()).data)
+              && request.resource.data.replyToAuthor == get(parentPath()).data.author);
+        }
         function canSeePost() {
           return post().visibility == "public"
             || (request.auth != null && (post().owner == request.auth.uid
@@ -210,12 +227,24 @@ service cloud.firestore {
         }
         allow read: if canSeePost();
         allow create: if request.auth != null && canSeePost()
-          && request.resource.data.keys().hasOnly(["author", "authorName", "authorHandle", "text", "createdAt"])
+          && request.resource.data.keys().hasOnly(["author", "authorName", "authorHandle", "text", "createdAt", "replyTo", "replyToAuthor"])
+          && ("replyTo" in request.resource.data) == ("replyToAuthor" in request.resource.data)
+          && validReply()
           && request.resource.data.author == request.auth.uid
           && request.resource.data.authorName == profile().name
           && request.resource.data.authorHandle == profile().handle
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
           && request.resource.data.createdAt == request.time;
+        allow update: if request.auth != null && canSeePost()
+          && resource.data.author != request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["likedBy"])
+          && request.resource.data.likedBy is list
+          && ((!(request.auth.uid in likers(resource.data))
+              && likers(request.resource.data).size() == likers(resource.data).size() + 1
+              && likers(request.resource.data).toSet() == likers(resource.data).toSet().union([request.auth.uid].toSet()))
+            || (request.auth.uid in likers(resource.data)
+              && likers(request.resource.data).size() == likers(resource.data).size() - 1
+              && likers(request.resource.data).toSet() == likers(resource.data).toSet().difference([request.auth.uid].toSet())));
         allow delete: if request.auth != null
           && (resource.data.author == request.auth.uid || post().owner == request.auth.uid);
       }
