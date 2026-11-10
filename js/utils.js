@@ -48,6 +48,8 @@ export function source(u) {
 // "2026-12-19" (date seule) ou "2026-12-19T08:30" (date et heure)
 export const toDate = (s) => (s ? new Date(s.length <= 10 ? s + "T12:00:00" : s) : null);
 const valid = (d) => d && !isNaN(d);
+// Date seule bien formée (AAAA-MM-JJ), sinon chaîne vide
+export const dayOrEmpty = (s) => (typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && valid(toDate(s)) ? s : "");
 
 export function fmtDay(s) {
   const d = toDate(s);

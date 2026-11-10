@@ -27,6 +27,10 @@ assert.equal(trip.items[0].arrive, "");
 assert.equal("nights" in trip.items[0], false);
 assert.deepEqual(trip.items[0].todos, []);
 assert.equal(trip.items[0].tickets[0].size, 0);
+// Date d'activité : seule une vraie date AAAA-MM-JJ est gardée
+{ const t = normalizeTrip({ items: [{ id: "s", type: "stop", todos: [{ id: "a", text: "ok", date: "2030-03-03" },
+    { id: "b", text: "piège", date: '"><img src=x onerror=alert(1)>' }, { id: "c", text: "objet", date: { x: 1 } }] }] });
+  assert.deepEqual(t.items[0].todos.map((x) => x.date), ["2030-03-03", "", ""]); }
 
 // Publication reçue : nombres entiers seulement, textes coupés, aucun HTML dans la carte affichée
 const post = normalizePost("p1", { owner: "u", ownerName: TRAP, ownerHandle: "h", title: TRAP, visibility: "public", publishedAt: 1,

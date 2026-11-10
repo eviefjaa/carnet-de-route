@@ -5,6 +5,7 @@
 
 import { firebaseConfig } from "./firebase-config.js";
 import { mergeTrip } from "./merge.js";
+import { dayOrEmpty } from "./utils.js";
 
 const V = "10.12.2";
 const SDK = `https://www.gstatic.com/firebasejs/${V}`;
@@ -133,7 +134,7 @@ function normalize(t) {
     if ("nights" in i) delete i.nights; // calculé à partir des dates, jamais lu tel quel
     ["geo", "fromGeo", "toGeo"].forEach((k) => { if (k in i && !(isObj(i[k]) && Number.isFinite(i[k].lat) && Number.isFinite(i[k].lng))) delete i[k]; });
     if ("route" in i && !(isObj(i.route) && typeof i.route.key === "string")) delete i.route;
-    i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true, ...("maps" in x ? { maps: str(x.maps) } : {}) }));
+    i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true, ...("maps" in x ? { maps: str(x.maps) } : {}), ...("date" in x ? { date: dayOrEmpty(x.date) } : {}) }));
     i.links = (Array.isArray(i.links) ? i.links : []).filter(isObj).map((l) => ({ id: str(l.id), label: str(l.label), url: str(l.url) }));
     const files = (list) => (Array.isArray(list) ? list : []).filter(isObj).map((f) => ({ id: str(f.id), name: str(f.name), type: str(f.type), size: Number(f.size) || 0 }));
     i.tickets = files(i.tickets);

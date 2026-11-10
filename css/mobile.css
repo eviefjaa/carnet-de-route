@@ -3,6 +3,6 @@
 /* Champs en 16 px minimum : en dessous, Safari sur iPhone zoome la page à chaque saisie */
 @media (max-width: 520px) {
   label.f input, label.f select, label.f textarea,
-  .link-edit input, .todo-edit input[name="todoText"], .cl-form input,
+  .link-edit input, .todo-edit input[name="todoText"], .todo-edit input, .cl-form input,
   input.search, .currency select { font-size: 16px; }
 }

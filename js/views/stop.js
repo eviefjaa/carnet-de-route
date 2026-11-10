@@ -1,10 +1,10 @@
 // Affichage et formulaire d'une étape (lieu, dates, hébergement, liens de réservation)
 
-import { esc, uid, safeUrl, source, fmtDay, nights, plural, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
+import { esc, uid, safeUrl, dayOrEmpty, source, fmtDay, nights, plural, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
 import { state, tripStart } from "../store.js";
 import { itemActions } from "./actions.js";
 import { pickedPlace } from "../autocomplete.js";
-import { checklist } from "./checklist.js";
+import { checklist, dateRange } from "./checklist.js";
 
 export function stopCard(it, trip, idx) {
   const start = tripStart(trip);
@@ -84,7 +84,7 @@ export function stopForm(it, isNew) {
     <div><button class="btn small" data-act="add-link" type="button">+ Ajouter un lien</button></div>
     <div class="f-label">
       À faire et à réserver (cochez ce qui est déjà réservé)
-      <div class="todos-edit" data-todos>${(it.todos || []).map(todoRow).join("")}</div>
+      <div class="todos-edit" data-todos>${(it.todos || []).map((t) => todoRow(t, it)).join("")}</div>
     </div>
     <div><button class="btn small" data-act="add-todo-row" type="button">+ Ajouter une activité</button></div>
     <label class="f">Notes<textarea name="notes" id="f-notes-${esc(it.id)}" placeholder="Code d'accès, heure de check-in, idées de visites…">${esc(it.notes)}</textarea></label>
@@ -104,14 +104,17 @@ export function linkRow(l) {
 }
 
 // Une activité dans le formulaire : case « réservé », texte, retrait
-export function todoRow(t) {
+export function todoRow(t, stop = {}) {
   const n = (t.tickets || []).length;
   return `<div class="todo-edit" data-todo-row="${esc(t.id)}">
     <input type="checkbox" name="todoDone" id="td-done-${esc(t.id)}"${t.done ? " checked" : ""} aria-label="Déjà réservé ou fait">
     <input name="todoText" id="td-text-${esc(t.id)}" value="${esc(t.text)}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" aria-label="Activité">
     ${n ? `<span class="todo-tk" title="Billets gérés depuis la checklist de l'étape">${n} billet${n > 1 ? "s" : ""}</span>` : "<span></span>"}
     <button class="btn ghost small" data-act="rm-todo-row" type="button" aria-label="Retirer cette activité">✕</button>
-    <input name="todoMaps" id="td-maps-${esc(t.id)}" value="${esc(t.maps || "")}" placeholder="Lien Google Maps du lieu (facultatif)" inputmode="url" autocomplete="off" aria-label="Lien Google Maps du lieu">
+    <div class="todo-extra">
+      <label class="todo-date">Date<input type="date" name="todoDate" id="td-date-${esc(t.id)}" value="${esc(t.date || "")}"${dateRange(stop)}></label>
+      <input name="todoMaps" id="td-maps-${esc(t.id)}" value="${esc(t.maps || "")}" placeholder="Lien Google Maps du lieu (facultatif)" inputmode="url" autocomplete="off" aria-label="Lien Google Maps du lieu">
+    </div>
   </div>`;
 }
 
@@ -140,6 +143,7 @@ export function readStopForm(f) {
       text: r.querySelector('[name="todoText"]').value.trim(),
       done: r.querySelector('[name="todoDone"]').checked,
       maps: safeUrl(r.querySelector('[name="todoMaps"]').value),
+      date: dayOrEmpty(r.querySelector('[name="todoDate"]').value),
     }))
     .filter((t) => t.text);
   return o;

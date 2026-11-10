@@ -55,4 +55,18 @@ assert.match(stopForm(withMaps, false), /name="todoMaps"[^>]*value="https:\/\/ma
   assert.equal(red(card("", "2030-03-05")), "Arrivée à définir");
   assert.equal(red(card("2030-03-02", "2030-03-05")), "", "dates complètes : rien en rouge"); }
 
+// Date d'une activité : affichée dans la checklist, proposée dans les deux formulaires, bornée par l'étape
+{ const it = { ...newStop("Lyon", "2030-03-02"), depart: "2030-03-05", todos: [
+    { id: "d1", text: "Restaurant", done: false, date: "2030-03-03" }, { id: "d2", text: "Musée", done: false }] };
+  state.todoAdding = null;
+  const cl = checklist(it);
+  assert.match(cl, /<time class="cl-date" datetime="2030-03-03">[^<]*3 mars<\/time>/);
+  assert.equal((cl.match(/cl-date/g) || []).length, 1, "pas de date affichée pour l'activité sans date");
+  state.todoAdding = it.id;
+  assert.match(checklist(it), /type="date" name="date"[^>]* min="2030-03-02" max="2030-03-05"/);
+  state.todoAdding = null;
+  const sf = stopForm(it, false);
+  assert.match(sf, /name="todoDate" id="td-date-d1" value="2030-03-03" min="2030-03-02" max="2030-03-05"/);
+  assert.match(sf, /name="todoDate" id="td-date-d2" value=""/); }
+
 console.log("Formulaires et checklist : tous les tests passent.");
