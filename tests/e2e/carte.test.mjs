@@ -81,6 +81,23 @@ const typeIn = async (txt) => {
 check("faute de frappe : conseil d'essayer le nom local", (await typeIn("foz de iguazu")).includes("Essayez le nom local"));
 check("bon nom : pas de conseil", !(await typeIn("paraty")).includes("Essayez le nom local"));
 
+// Trajet : l'aéroport de São Paulo trouvé par son code GRU
+await page.reload({ waitUntil: "networkidle0" });
+await page.click('[data-act="add-leg"]');
+await page.waitForSelector('form[data-form="transport"] [name="from"]');
+await page.type('form[data-form="transport"] [name="from"]', "GRU");
+await page.waitForFunction(() => [...document.querySelectorAll(".ac-list li")].some((li) => li.textContent.includes("(GRU)")), { timeout: 5000 }).catch(() => {});
+const sugg = await page.$$eval(".ac-list li", (l) => l.map((li) => li.textContent.replace(/\s+/g, " ").trim()));
+check("GRU proposé en premier, comme aéroport", /São Paulo \(GRU\).*Guarulhos.*Aéroport/.test(sugg[0] || ""));
+if (process.env.SHOTS) await page.screenshot({ path: process.env.SHOTS + "/gru.png" });
+await page.$eval(".ac-list li[data-i='0']", (li) => li.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })));
+check("le champ prend « São Paulo (GRU) »", (await page.$eval('form[data-form="transport"] [name="from"]', (e) => e.value)) === "São Paulo (GRU)");
+await page.type('form[data-form="transport"] [name="to"]', "Paraty");
+await page.$eval('form[data-form="transport"]', (f) => f.requestSubmit());
+await sleep(400);
+const leg = await page.evaluate(() => JSON.parse(localStorage.getItem("carnet-route-trips"))["v-br"].items.find((i) => i.from === "São Paulo (GRU)"));
+check("trajet enregistré avec la position de l'aéroport", leg && leg.fromGeo && Math.abs(leg.fromGeo.lat + 23.43) < 0.01);
+
 console.log(`Carte : ${ok} vérifications réussies, ${ko} échec(s).`);
 await browser.close();
 server.close();

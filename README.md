@@ -59,6 +59,8 @@ js/
     countries.js      Fiches pays (ajoutez-en en copiant une ligne)
     country-details.js  Frise historique et incontournables détaillés de chaque pays
     urgences.js       Numéros d'urgence de chaque pays (source en commentaire, à revérifier chaque année)
+    airports.js       Aéroports avec vols réguliers et code IATA (OurAirports, domaine public),
+                      régénérés par : node scripts/aeroports/build.mjs airports.csv
   views/
     trips-list.js     Page Mes voyages : une carte par voyage
     trip.js           Page d'un voyage (et choix de la page à afficher)

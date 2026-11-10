@@ -86,7 +86,7 @@ function show(el) {
 // suggestion ne contient ce qui a été tapé (accents et majuscules ignorés)
 const HINT = "Pas le bon lieu ? Essayez le nom local, sans faute de frappe (ex. Foz do Iguaçu).";
 const plain = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-const closeMatch = (q, results) => results.some((r) => plain(r.name).includes(plain(q)));
+const closeMatch = (q, results) => results.some((r) => plain(r.name + " " + (r.sub || "")).includes(plain(q)));
 
 function onKeydown(e) {
   if (!list || e.target !== input) return;
