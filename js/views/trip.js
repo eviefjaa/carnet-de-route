@@ -15,7 +15,8 @@ import { renderSidebar } from "./sidebar.js";
 import { exploreView, filterCountries, countryView, favoritesView, detailsReady, loadDetails } from "./explore.js";
 import { profileView, settingsView } from "./pages.js";
 import { prefs } from "../prefs.js";
-import { tripsListView } from "./trips-list.js";
+import { tripsListView, newTripView } from "./trips-list.js";
+import { sejourView, sejourStats } from "./sejour.js";
 import { tripPending } from "./checklist.js";
 import { shareSection, travellers } from "./share.js";
 import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel, socialTitle, notificationsView, markNotificationsSeen, networkView, NETWORK_PAGES, favoritePostsSection, countryPostsSection } from "./social.js";
@@ -86,6 +87,9 @@ export function render() {
     case "trips":
       app.innerHTML = tripsListView();
       return;
+    case "newTrip":
+      app.innerHTML = newTripView(state.newCountry);
+      return;
     case "explore":
       app.innerHTML = exploreView();
       filterCountries();
@@ -152,7 +156,7 @@ export function render() {
   }
 
   const stops = t.items.filter((i) => i.type === "stop");
-  app.innerHTML = hero(t) + shareSection(t) + (stops.length ? mapSection() : "") + (t.items.length ? budgetSection(t) : "") + itinerary(t);
+  app.innerHTML = hero(t) + shareSection(t) + (stops.length ? mapSection() : "") + (t.items.length ? budgetSection(t) : "") + (t.kind === "sejour" ? sejourView(t) : itinerary(t));
   drawMap();
   scheduleGeo();
   if (state.focusName) {
@@ -186,16 +190,30 @@ function hero(t) {
     <h1><input id="tripName" value="${esc(t.name)}" maxlength="200" aria-label="Nom du voyage"></h1>
     <div class="stats">
       ${start ? `<span><b>${esc(fmtDay(start))}</b> → <b>${esc(fmtDay(end))}</b></span>` : ""}
-      <span><b>${stops.length}</b> étape${stops.length > 1 ? "s" : ""}</span>
+      ${t.kind === "sejour" ? sejourHeroStats(t, totalNights) : `<span><b>${stops.length}</b> étape${stops.length > 1 ? "s" : ""}</span>
       <span><b>${plural(totalNights, "nuit")}</b></span>
-      <span><b>${legs.length}</b> trajet${legs.length > 1 ? "s" : ""}</span>
+      <span><b>${legs.length}</b> trajet${legs.length > 1 ? "s" : ""}</span>`}
       ${budget ? `<span><b>${esc(fmtMoney(budget, t.currency || "EUR"))}</b></span>` : ""}
     </div>
     ${tripPending(t) ? `<span class="todo-alert">${tripPending(t)} chose${tripPending(t) > 1 ? "s" : ""} à réserver</span>` : ""}
+    ${kindLine(t, stops.length)}
     ${isEnabled() ? `<p class="sync-note${sync.status === "error" ? " is-error" : ""}" id="syncNote" role="status">${esc(syncNote(travellers(t)))}</p>` : ""}
     ${publishPanel(t)}
     ${del}
   </section>`;
+}
+
+function sejourHeroStats(t, totalNights) {
+  const s = sejourStats(t);
+  return `${s.days ? `<span><b>${plural(s.days, "jour")}</b></span>` : ""}
+      <span><b>${plural(totalNights, "nuit")}</b></span>
+      <span><b>${plural(s.activities, "activité")}</b></span>`;
+}
+
+// Type du voyage, et passage de l'un à l'autre (un séjour n'a qu'un lieu)
+function kindLine(t, nStops) {
+  if (t.kind === "sejour") return `<p class="kind-line">Séjour · <button class="link-btn" data-act="set-kind" data-kind="road" type="button">passer en road trip</button></p>`;
+  return nStops <= 1 ? `<p class="kind-line">Road trip · <button class="link-btn" data-act="set-kind" data-kind="sejour" type="button">passer en séjour</button></p>` : "";
 }
 
 function mapSection() {

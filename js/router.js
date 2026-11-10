@@ -23,6 +23,12 @@ export function readHash() {
   try { h = decodeURIComponent(h); } catch {} // lien abîmé : on garde le texte brut
   state.country = null;
   state.tripId = null;
+  // Choix du type de voyage avant sa création (#nouveau-voyage, ou #nouveau-voyage-BR depuis une destination)
+  if (h === "nouveau-voyage" || h.startsWith("nouveau-voyage-")) {
+    state.view = "newTrip";
+    state.newCountry = h.slice("nouveau-voyage-".length).toUpperCase() || null;
+    return;
+  }
   if (h.startsWith("voyage-")) {
     state.view = "trip";
     state.tripId = h.slice("voyage-".length);

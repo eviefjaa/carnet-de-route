@@ -89,6 +89,8 @@ await page_newTrip(alice);
 async function page_newTrip(page) {
   await page.waitForSelector('[data-act="new-trip"]', { timeout: 15000 });
   await page.click('[data-act="new-trip"]');
+  await page.waitForSelector('[data-act="create-trip"][data-kind="road"]'); // choix du type de voyage
+  await page.click('[data-act="create-trip"][data-kind="road"]');
   await page.waitForSelector("#tripName");
   await page.click("#tripName", { clickCount: 3 });
   await page.type("#tripName", "Japon en train");
@@ -362,6 +364,8 @@ check("le voyage, lui, est toujours là", (await text(alice)).includes("Japon en
 // ---------- Fiche pays : idées d'itinéraires publiés, classées par mises en favori ----------
 await goHash(alice, "destination-JP");
 await alice.click('[data-act="trip-from-country"]');
+await alice.waitForSelector('[data-act="create-trip"][data-kind="road"]');
+await alice.click('[data-act="create-trip"][data-kind="road"]');
 await sleep(2500);
 await alice.click('[data-act="open-publish"]');
 await alice.waitForSelector("[data-publish-form]");

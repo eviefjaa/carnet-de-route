@@ -1,8 +1,9 @@
 // Réactions aux clics, saisies et envois de formulaires
 
-import { state, currentTrip, save, flush, createTrip, deleteTrip, neighbours, isOwner } from "./store.js";
+import { state, currentTrip, save, flush, createTrip, deleteTrip, neighbours, isOwner, resetUi } from "./store.js";
 import { render } from "./views/trip.js";
 import { linkRow, todoRow, newStop, readStopForm } from "./views/stop.js";
+import { readActivityForm } from "./views/sejour.js";
 import { newTransport, readTransportForm } from "./views/transport.js";
 import { uid, nights, duration, plural, safeUrl, dayOrEmpty } from "./utils.js";
 import { toast } from "./toast.js";
@@ -52,9 +53,16 @@ export function bindEvents() {
   });
 }
 
+// Nouveau voyage : on choisit d'abord entre road trip et séjour (#nouveau-voyage)
 function newTrip() {
-  const id = createTrip();
-  state.focusName = true; // on place le curseur sur le nom du voyage
+  go("nouveau-voyage");
+}
+function createKind(b) {
+  const x = b.dataset.country ? countryByCode(b.dataset.country) : null;
+  const kind = b.dataset.kind === "sejour" ? "sejour" : "";
+  const id = createTrip(x ? { name: x.name, currency: x.currency, country: x.code, kind } : { kind });
+  if (x) toast(`Voyage « ${x.name} » créé : ${kind ? "indiquez où vous allez" : "ajoutez vos étapes"}`);
+  else state.focusName = true; // on place le curseur sur le nom du voyage
   go("voyage-" + id);
 }
 
@@ -84,6 +92,7 @@ function onClick(e) {
   if (!b) return;
   const act = b.dataset.act;
   if (act === "new-trip") return newTrip();
+  if (act === "create-trip") return createKind(b);
   if (onSocialClick(act, b)) return;
   if (onAccountClick(act, b)) return;
   if (onPageClick(act, b)) return;
@@ -163,6 +172,28 @@ function onClick(e) {
     case "cancel-confirm":
       state.confirm = null;
       break;
+    case "set-kind":
+      // Un séjour n'a qu'un lieu : un road trip à plusieurs étapes reste un road trip
+      if (b.dataset.kind === "sejour" && t.items.filter((i) => i.type === "stop").length > 1) return;
+      if (b.dataset.kind === "sejour") t.kind = "sejour";
+      else delete t.kind;
+      resetUi();
+      save();
+      toast(t.kind ? "C'est maintenant un séjour" : "C'est maintenant un road trip");
+      break;
+    case "act-add":
+      state.actForm = { stop: b.dataset.stop, date: b.dataset.date || "" };
+      render();
+      document.querySelector("form[data-act-form] input[name=text]")?.focus();
+      return;
+    case "act-edit":
+      state.actForm = { stop: b.dataset.stop, todo: b.dataset.todo };
+      render();
+      document.querySelector("form[data-act-form] input[name=text]")?.focus();
+      return;
+    case "act-cancel":
+      state.actForm = null;
+      break;
     case "add-link": {
       const box = b.closest("form").querySelector("[data-links]");
       box.insertAdjacentHTML("beforeend", linkRow({ id: uid(), label: "", url: "" }));
@@ -207,6 +238,25 @@ function addTodo(stopId, text, maps = "", date = "") {
   s.todos = [...(s.todos || []), { id: uid(), text, done: false, ...(link ? { maps: link } : {}), ...(day ? { date: day } : {}) }];
   save();
   return true;
+}
+// Séjour : ajout ou modification d'une activité du programme
+function saveActivity(f) {
+  const s = findStop(f.dataset.actForm);
+  if (!s) return;
+  const v = readActivityForm(f);
+  if (!v.text) { toast("Indiquez l'activité."); f.text.focus(); return; }
+  const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, x]) => x)); // pas de champ vide
+  const old = f.dataset.todo && (s.todos || []).find((x) => x.id === f.dataset.todo);
+  if (old) {
+    ["date", "time", "how", "maps"].forEach((k) => delete old[k]);
+    Object.assign(old, clean(v));
+  } else {
+    s.todos = [...(s.todos || []), { id: uid(), done: false, ...clean(v) }];
+  }
+  state.actForm = null;
+  save();
+  render();
+  toast(old ? "Enregistré" : "Activité ajoutée");
 }
 function focusTodoInput() {
   const input = document.querySelector("form[data-todo-form] input[name=text]");
@@ -270,9 +320,7 @@ function onPageClick(act, b) {
     case "trip-from-country": {
       const x = countryByCode(b.dataset.code);
       if (!x) return true;
-      const id = createTrip({ name: x.name, currency: x.currency, country: x.code });
-      toast(`Voyage « ${x.name} » créé : ajoutez vos étapes`);
-      go("voyage-" + id);
+      go("nouveau-voyage-" + x.code);
       return true;
     }
     case "export":
@@ -530,6 +578,12 @@ async function onAuthSubmit(f) {
 
 function onSubmit(e) {
   if (onSocialSubmit(e)) return;
+  const actForm = e.target.closest("form[data-act-form]");
+  if (actForm) {
+    e.preventDefault();
+    saveActivity(actForm);
+    return;
+  }
   const todoForm = e.target.closest("form[data-todo-form]");
   if (todoForm) {
     e.preventDefault();
@@ -576,9 +630,12 @@ function onSubmit(e) {
 
   const old = f.dataset.new === "1" ? null : t.items.find((x) => x.id === item.id);
   if (item.type === "transport") commitFormTickets(item, old);
+  if (item.type === "stop" && f.dataset.sejour) item.todos = (old && old.todos) || []; // le programme se gère à part
   if (item.type === "stop") keepTodoTickets(item, old);
 
   if (f.dataset.new === "1") {
+    // Premier lieu d'un séjour encore sans nom : le séjour prend le nom du lieu
+    if (f.dataset.sejour && t.name === "Nouveau voyage" && item.place) t.name = item.place;
     t.items.splice(state.insertAt.pos, 0, item);
     state.insertAt = null;
   } else {

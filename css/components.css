@@ -41,7 +41,7 @@ label.f textarea { min-height: 70px; resize: vertical; }
 
 /* Dates et heures sur iPhone : Safari leur donne son propre style (champ vide plus bas,
    date centrée, débordement). On les aligne sur les autres champs. */
-label.f input[type="date"], label.f input[type="datetime-local"] {
+label.f input[type="date"], label.f input[type="datetime-local"], label.f input[type="time"] {
   -webkit-appearance: none; appearance: none;
   display: block; min-height: 40px; line-height: 22px; text-align: left;
 }

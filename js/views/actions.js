@@ -12,9 +12,10 @@ export function itemActions(it, idx, trip) {
       <button class="btn small" data-act="cancel-confirm" type="button">Non</button>
     </div>`;
   }
-  const last = trip.items.length - 1;
+  // Séjour : l'ordre est fixe (aller, lieu, retour), pas de flèches
+  const last = trip.kind === "sejour" ? -1 : trip.items.length - 1;
   return `<div class="row-actions">
-    ${idx > 0 ? `<button class="btn ghost small" data-act="up" data-id="${esc(it.id)}" type="button" aria-label="Monter">↑</button>` : ""}
+    ${idx > 0 && last >= 0 ? `<button class="btn ghost small" data-act="up" data-id="${esc(it.id)}" type="button" aria-label="Monter">↑</button>` : ""}
     ${idx < last ? `<button class="btn ghost small" data-act="down" data-id="${esc(it.id)}" type="button" aria-label="Descendre">↓</button>` : ""}
     <button class="btn ghost small" data-act="edit" data-id="${esc(it.id)}" type="button">Modifier</button>
     <button class="btn ghost small" data-act="del" data-id="${esc(it.id)}" type="button">Supprimer</button>

@@ -6,9 +6,10 @@ import { itemActions } from "./actions.js";
 import { pickedPlace } from "../autocomplete.js";
 import { checklist, dateRange } from "./checklist.js";
 
-export function stopCard(it, trip, idx) {
+// sejour : lieu d'un séjour, sans numéro de jour ni checklist (le programme les remplace)
+export function stopCard(it, trip, idx, { sejour = false } = {}) {
   const start = tripStart(trip);
-  const dayN = it.arrive && start ? nights(start, it.arrive) + 1 : null;
+  const dayN = !sejour && it.arrive && start ? nights(start, it.arrive) + 1 : null;
   const n = nights(it.arrive, it.depart);
   const links = (it.links || []).filter((l) => safeUrl(l.url));
   const where = it.address || it.place;
@@ -20,7 +21,7 @@ export function stopCard(it, trip, idx) {
 
   // Carte repliée : l'essentiel, et ce qui reste à réserver en rouge. Un clic l'ouvre.
   const open = state.openItems.has(it.id);
-  const toBook = (it.todos || []).filter((t) => !t.done).map((t) => t.text);
+  const toBook = sejour ? [] : (it.todos || []).filter((t) => !t.done).map((t) => t.text);
   const detailId = `stop-detail-${esc(it.id)}`;
 
   return `<article class="item stop${open ? " open" : ""}">
@@ -43,7 +44,7 @@ export function stopCard(it, trip, idx) {
     ${links.length ? `<div class="links">${links.map(linkCard).join("")}</div>` : ""}
     ${it.notes ? `<div class="notes">${esc(it.notes)}</div>` : ""}
     ${maps ? `<div class="leg-extra"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Ouvrir dans Google Maps ↗</a></div>` : ""}
-    ${checklist(it)}
+    ${sejour ? "" : checklist(it)}
     ${itemActions(it, idx, trip)}
     </div>` : ""}
   </article>`;
@@ -65,10 +66,10 @@ function linkCard(l) {
   </a>`;
 }
 
-export function stopForm(it, isNew) {
+export function stopForm(it, isNew, { sejour = false } = {}) {
   const links = it.links && it.links.length ? it.links : [{ id: uid(), label: "", url: "" }];
-  return `<form class="form" data-form="stop" data-id="${esc(it.id)}" data-new="${isNew ? 1 : 0}">
-    <h3>${isNew ? "Nouvelle étape" : "Modifier l'étape"}</h3>
+  return `<form class="form" data-form="stop" data-id="${esc(it.id)}" data-new="${isNew ? 1 : 0}"${sejour ? ` data-sejour="1"` : ""}>
+    <h3>${sejour ? (isNew ? "Où allez-vous ?" : "Modifier le lieu") : isNew ? "Nouvelle étape" : "Modifier l'étape"}</h3>
     <div class="grid">
       <label class="f full">Lieu<span class="ac"><input name="place" id="f-place-${esc(it.id)}" value="${esc(it.place)}" placeholder="Tapez une ville, une région ou un pays" required data-place="place" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
       <label class="f">Arrivée<input type="date" name="arrive" id="f-arr-${esc(it.id)}" value="${esc(it.arrive)}"></label>
@@ -82,14 +83,14 @@ export function stopForm(it, isNew) {
       <div class="links-edit" data-links>${links.map(linkRow).join("")}</div>
     </div>
     <div><button class="btn small" data-act="add-link" type="button">+ Ajouter un lien</button></div>
-    <div class="f-label">
+    ${sejour ? "" : `<div class="f-label">
       À faire et à réserver (cochez ce qui est déjà réservé)
       <div class="todos-edit" data-todos>${(it.todos || []).map((t) => todoRow(t, it)).join("")}</div>
     </div>
-    <div><button class="btn small" data-act="add-todo-row" type="button">+ Ajouter une activité</button></div>
+    <div><button class="btn small" data-act="add-todo-row" type="button">+ Ajouter une activité</button></div>`}
     <label class="f">Notes<textarea name="notes" id="f-notes-${esc(it.id)}" placeholder="Code d'accès, heure de check-in, idées de visites…">${esc(it.notes)}</textarea></label>
     <div class="form-actions">
-      <button class="btn" data-act="cancel" type="button">Annuler</button>
+      ${sejour && isNew ? "" : `<button class="btn" data-act="cancel" type="button">Annuler</button>`}
       <button class="btn primary" type="submit">Enregistrer</button>
     </div>
   </form>`;

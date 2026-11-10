@@ -8,6 +8,7 @@ import { COUNTRIES } from "../data/countries.js";
 import { tripPending } from "./checklist.js";
 import { isEnabled } from "../cloud.js";
 import { invitationsBlock } from "./share.js";
+import { sejourStats } from "./sejour.js";
 import { selectButtons, selectAttrs, selectBox, selectBar } from "./select.js";
 
 // Premier écran d'un nouveau visiteur : ce que fait le site, et de quoi commencer tout de suite
@@ -132,7 +133,9 @@ function cardBody(s, title) {
     ${tripPending(trip) ? `<span class="todo-alert">${tripPending(trip)} à réserver</span>` : ""}
     ${dots ? `<div class="tc-dots" aria-hidden="true">${dots}</div>` : ""}
     <dl class="tc-stats">
-      <div><dt>Étapes</dt><dd>${stops.length}</dd></div>
+      ${trip.kind === "sejour"
+        ? `<div><dt>Séjour</dt><dd>${plural(sejourStats(trip).activities, "activité")}</dd></div>`
+        : `<div><dt>Étapes</dt><dd>${stops.length}</dd></div>`}
       <div><dt>Nuits</dt><dd>${s.nights}</dd></div>
       <div><dt>Budget</dt><dd>${s.budget ? esc(fmtMoney(s.budget, trip.currency || "EUR")) : "–"}</dd></div>
     </dl>`;
@@ -190,4 +193,28 @@ function selectionBar(all) {
     yesAct: "select-delete-yes",
     yesLabel: del ? "Supprimer" : "Quitter",
   });
+}
+
+// Création d'un voyage : road trip (plusieurs étapes) ou séjour (un lieu, programme par jour)
+export function newTripView(code) {
+  const c = code ? COUNTRIES.find((x) => x.code === code) : null;
+  const choice = (kind, title, text, icon) => `<button class="kind-card" data-act="create-trip" data-kind="${kind}"${c ? ` data-country="${esc(c.code)}"` : ""} type="button">
+      <svg class="kind-icon" viewBox="0 0 64 32" width="64" height="32" aria-hidden="true">${icon}</svg>
+      <b>${title}</b>
+      <span>${text}</span>
+    </button>`;
+  return `<section class="page new-trip">
+    <a class="trip-back" href="#voyages">← Mes voyages</a>
+    <header class="page-head">
+      <h1>Nouveau voyage${c ? ` : ${esc(c.name)}` : ""}</h1>
+      <p class="lead">Quel genre de voyage préparez-vous ?</p>
+    </header>
+    <div class="kind-grid">
+      ${choice("road", "Road trip", "Plusieurs étapes reliées par des trajets, placées sur une carte, avec le budget de chaque étape.",
+        `<path d="M8 22 C20 6, 30 28, 44 12 S58 14, 58 14" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 4"/><circle cx="8" cy="22" r="4"/><circle cx="31" cy="17" r="4"/><circle cx="56" cy="12" r="4"/>`)}
+      ${choice("sejour", "Séjour", "Un seul lieu : l'aller, l'hébergement, puis vos activités jour par jour avec l'heure, les billets et comment y aller.",
+        `<path d="M32 4a9 9 0 0 1 9 9c0 7-9 15-9 15s-9-8-9-15a9 9 0 0 1 9-9z" fill="currentColor"/><circle cx="32" cy="13" r="3" fill="var(--surface)"/>`)}
+    </div>
+    <p class="note">Vous pourrez changer plus tard tant que le voyage n'a qu'une étape.</p>
+  </section>`;
 }

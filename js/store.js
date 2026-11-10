@@ -19,6 +19,8 @@ export const state = {
   insertAt: null,   // { pos, draft } : nouvel élément en cours de création
   confirm: null,    // id de l'élément à confirmer pour suppression ("trip" pour le voyage)
   todoAdding: null, // id de l'étape dont on remplit la checklist
+  actForm: null,    // séjour : formulaire d'activité ouvert { stop, todo (modification) ou date (ajout) }
+  newCountry: null, // pays choisi avant de créer un voyage (#nouveau-voyage-BR)
   formTickets: { pending: [], removed: [] }, // billets choisis dans le formulaire d'un trajet
   user: null,       // { uid, email } quand on est connecté
   authOpen: false,  // écran de connexion affiché
@@ -224,6 +226,7 @@ export function resetUi() {
   state.insertAt = null;
   state.confirm = null;
   state.todoAdding = null;
+  state.actForm = null;
   state.formTickets = { pending: [], removed: [] };
   state.publishOpen = false;
   state.inviteOpen = false;
@@ -238,9 +241,10 @@ export function selectTrip(id) {
   rememberCurrent();
 }
 
-export function createTrip({ name = "Nouveau voyage", currency = prefs.currency || "EUR", country = "" } = {}) {
+// kind : "sejour" (un seul lieu, programme jour par jour) ; road trip sinon
+export function createTrip({ name = "Nouveau voyage", currency = prefs.currency || "EUR", country = "", kind = "" } = {}) {
   const id = "v-" + uid();
-  state.trips[id] = { name, currency, country, createdAt: Date.now(), items: [] };
+  state.trips[id] = { name, currency, country, createdAt: Date.now(), items: [], ...(kind === "sejour" ? { kind } : {}) };
   selectTrip(id);
   save();
   return id;

@@ -31,6 +31,12 @@ assert.equal(trip.items[0].tickets[0].size, 0);
 { const t = normalizeTrip({ items: [{ id: "s", type: "stop", todos: [{ id: "a", text: "ok", date: "2030-03-03" },
     { id: "b", text: "piège", date: '"><img src=x onerror=alert(1)>' }, { id: "c", text: "objet", date: { x: 1 } }] }] });
   assert.deepEqual(t.items[0].todos.map((x) => x.date), ["2030-03-03", "", ""]); }
+// Séjour : type, heure et « comment y aller » remis au bon format
+{ const t = normalizeTrip({ kind: "<b>", items: [{ id: "s", type: "stop", todos: [{ id: "a", text: "ok", time: "10:30", how: "Métro 1" },
+    { id: "b", text: "piège", time: "25:99<script>", how: { x: 1 } }] }] });
+  assert.equal("kind" in t, false, "type inconnu : road trip");
+  assert.deepEqual(t.items[0].todos.map((x) => [x.time, x.how]), [["10:30", "Métro 1"], ["", ""]]);
+  assert.equal(normalizeTrip({ kind: "sejour", items: [] }).kind, "sejour"); }
 
 // Publication reçue : nombres entiers seulement, textes coupés, aucun HTML dans la carte affichée
 const post = normalizePost("p1", { owner: "u", ownerName: TRAP, ownerHandle: "h", title: TRAP, visibility: "public", publishedAt: 1,

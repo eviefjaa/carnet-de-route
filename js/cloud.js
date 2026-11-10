@@ -127,6 +127,7 @@ const str = (x) => (typeof x === "string" ? x : "");
 function normalize(t) {
   if (typeof t.name !== "string") t.name = "Sans titre";
   if (typeof t.currency !== "string") t.currency = "EUR";
+  if ("kind" in t && t.kind !== "sejour") delete t.kind; // road trip par défaut
   t.items = (Array.isArray(t.items) ? t.items : []).filter((i) => isObj(i) && typeof i.id === "string" && (i.type === "stop" || i.type === "transport"));
   t.items.forEach((i) => {
     STR.forEach((k) => { if (k in i) i[k] = str(i[k]); });
@@ -134,7 +135,8 @@ function normalize(t) {
     if ("nights" in i) delete i.nights; // calculé à partir des dates, jamais lu tel quel
     ["geo", "fromGeo", "toGeo"].forEach((k) => { if (k in i && !(isObj(i[k]) && Number.isFinite(i[k].lat) && Number.isFinite(i[k].lng))) delete i[k]; });
     if ("route" in i && !(isObj(i.route) && typeof i.route.key === "string")) delete i.route;
-    i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true, ...("maps" in x ? { maps: str(x.maps) } : {}), ...("date" in x ? { date: dayOrEmpty(x.date) } : {}) }));
+    i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true, ...("maps" in x ? { maps: str(x.maps) } : {}), ...("date" in x ? { date: dayOrEmpty(x.date) } : {}),
+      ...("time" in x ? { time: /^([01]\d|2[0-3]):[0-5]\d$/.test(x.time) ? x.time : "" } : {}), ...("how" in x ? { how: str(x.how) } : {}) }));
     i.links = (Array.isArray(i.links) ? i.links : []).filter(isObj).map((l) => ({ id: str(l.id), label: str(l.label), url: str(l.url) }));
     const files = (list) => (Array.isArray(list) ? list : []).filter(isObj).map((f) => ({ id: str(f.id), name: str(f.name), type: str(f.type), size: Number(f.size) || 0 }));
     i.tickets = files(i.tickets);
