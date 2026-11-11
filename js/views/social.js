@@ -1,7 +1,8 @@
 // Pages sociales : fil d'actualité, Découvrir (et recherche de personnes), profil d'une
 // personne, publication d'un itinéraire ; sections « Publier » d'un voyage et « Profil public »
 
-import { esc, plural, MODES, safeUrl } from "../utils.js";
+import { esc, plural, MODES, safeUrl, fmtMoney } from "../utils.js";
+import { computeBudget } from "../budget.js";
 import { state } from "../store.js";
 import { prefs, savePrefs, isFavoritePost } from "../prefs.js";
 import { invitationsBlock } from "./share.js";
@@ -55,10 +56,16 @@ export function postCard(p) {
     </div>
     <h2><a class="tc-link" href="#publication-${esc(p.id)}">${esc(p.title)}</a></h2>
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
-    <p class="tc-dates">${trip.kind === "sejour" ? "Séjour" : plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
+    <p class="tc-dates">${trip.kind === "sejour" ? "Séjour" : plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""}${budgetTotal(trip) ? ` · ${esc(budgetTotal(trip))}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
     ${p.owner === me() ? `<span class="vis-badge is-published">Publié · ${esc(social.VISIBILITIES[p.visibility] || "")}</span>` : ""}
   </article>`;
 }
+
+// Total du budget publié, formaté (vide s'il n'est pas montré ou nul)
+const budgetTotal = (trip) => {
+  const b = trip.budget;
+  return b && b.lodging + b.transport ? fmtMoney(b.lodging + b.transport, b.currency) : "";
+};
 
 // Ma publication en mode sélection : toucher la carte la coche, sans l'ouvrir
 function selectablePostCard(p) {
@@ -196,6 +203,7 @@ export function postView(id) {
         ${trip.kind === "sejour" ? `<span><b>Séjour</b></span>` : `<span><b>${stops.length}</b> étape${stops.length > 1 ? "s" : ""}</span>`}
         ${trip.days ? `<span><b>${plural(trip.days, "jour")}</b></span>` : ""}
         ${trip.nights ? `<span><b>${plural(trip.nights, "nuit")}</b></span>` : ""}
+        ${budgetTotal(trip) ? `<span><b>${esc(budgetTotal(trip))}</b></span>` : ""}
       </div>
       <p class="sync-note">Publié le ${esc(fmtDate(p.publishedAt))}${mine ? "" : " · lecture seule"}</p>
       ${mine ? `<div class="post-owner">
@@ -209,6 +217,7 @@ export function postView(id) {
     </header>
     ${stops.some((s) => s.geo) ? `<section class="map-box" aria-label="Carte de l'itinéraire"><div id="mapSlot"></div></section>` : ""}
     <section class="route" aria-label="Itinéraire">${items.map((it, i) => readOnlyItem(it, stopRecos(p, i))).join("")}</section>
+    ${budgetTotal(trip) ? publicBudgetSection(trip.budget) : ""}
     ${recosSection(p)}
     ${commentsSection(p)}
   </section>`;
@@ -257,6 +266,31 @@ function programSection(program) {
   </section>`;
 }
 
+// Budget publié, en lecture seule : total, puis coût par destination
+function publicBudgetSection(b) {
+  const m = (n) => esc(fmtMoney(n, b.currency));
+  const rows = b.rows.filter((r) => r.lodging + r.transport);
+  return `<section class="budget" aria-label="Budget">
+    <div class="budget-head"><h2>Budget</h2></div>
+    <div class="budget-total">
+      <span class="b-big">${m(b.lodging + b.transport)}</span>
+      <span class="note">dont ${m(b.lodging)} d'hébergement et ${m(b.transport)} de transport</span>
+    </div>
+    ${rows.length ? `<div class="table-scroll">
+      <table class="budget-table">
+        <thead><tr><th scope="col">Destination</th><th scope="col">Hébergement</th><th scope="col">Transport</th><th scope="col">Total</th></tr></thead>
+        <tbody>${rows.map((r) => `<tr>
+          <th scope="row">${esc(r.place)}</th>
+          <td>${r.lodging ? m(r.lodging) : "–"}</td>
+          <td>${r.transport ? m(r.transport) : "–"}</td>
+          <td class="b-total">${m(r.lodging + r.transport)}</td>
+        </tr>`).join("")}</tbody>
+      </table>
+    </div>` : ""}
+    <p class="note">Hébergement et transport seulement, d'après les prix notés par l'auteur.${b.missing ? ` ${+b.missing} prix n'${b.missing > 1 ? "étaient" : "était"} pas encore renseigné${b.missing > 1 ? "s" : ""}.` : ""}</p>
+  </section>`;
+}
+
 // Données de la carte d'une publication déjà chargée (ou null)
 export function loadedPostTrip(id) {
   const e = social.load("post:" + id, () => social.getPost(id));
@@ -264,6 +298,15 @@ export function loadedPostTrip(id) {
 }
 
 // ---------- Publier un voyage (sous l'en-tête du voyage) ----------
+// Montrer le budget : au choix, décoché par défaut (seulement s'il y a des prix)
+function budgetChoice(t) {
+  const { total } = computeBudget(t);
+  if (!total.total) return "";
+  const cur = /^[A-Z]{3}$/.test(t.currency || "") ? t.currency : "EUR";
+  return `<label class="radio publish-budget"><input type="checkbox" name="budget">
+    <span>Montrer le budget : ${esc(fmtMoney(total.total, cur))}, avec le coût de chaque destination (hébergement et transport)</span></label>`;
+}
+
 export function publishPanel(t) {
   if (!isEnabled() || !state.user) return "";
   if (!state.publishOpen) {
@@ -284,8 +327,9 @@ export function publishPanel(t) {
     <fieldset class="radios"><legend>Visible par</legend>
       ${Object.entries(social.VISIBILITIES).map(([k, v]) => `<label class="radio"><input type="radio" name="visibility" value="${k}"${k === def ? " checked" : ""}> ${esc(v)}${k === "public" ? " (même sans compte, avec le lien)" : ""}</label>`).join("")}
     </fieldset>
+    ${budgetChoice(t)}
     <p class="note"><b>Publié :</b> les étapes, les activités, la carte (positions arrondies à environ 2 km) et les trajets, avec leurs lieux de départ et d'arrivée tels que vous les avez écrits. « Jour 1, Jour 2… » remplacent les dates.<br>
-      <b>Jamais publié :</b> dates, prix, notes, adresses d'hébergement, liens et numéros de réservation, billets, co-voyageurs.<br>
+      <b>Jamais publié :</b> dates, prix (sauf le budget si vous le montrez), notes, adresses d'hébergement, liens et numéros de réservation, billets, co-voyageurs.<br>
       La publication est une copie : vos modifications du voyage ne s'y reportent pas, et personne ne peut la modifier.</p>
     <div class="f-label">Recommandations (facultatif)
       <p class="note">Vos bonnes adresses : un restaurant, un hébergement, un lieu à voir. Elles seront visibles par les mêmes personnes que l'itinéraire.</p>

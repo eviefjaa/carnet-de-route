@@ -106,3 +106,7 @@ button.comment-like:hover, .comment-like.is-on { color: var(--danger); }
 .comment.is-reply { padding: 8px 0; }
 .comment.is-reply:first-child { border-top: 0; }
 .comment-replies .comment-form { padding: 8px 0; }
+
+/* Case « Montrer le budget » du panneau de publication */
+.publish-budget { align-items: flex-start; font-weight: 500; }
+.publish-budget input { flex: none; margin: 2px 0 0; }

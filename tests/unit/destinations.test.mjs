@@ -26,6 +26,15 @@ for (const x of COUNTRIES) {
     { id: "b", type: "stop", place: "Turin", country: "Italie" }, { id: "c", type: "stop", place: "Atlantide", country: "Nulle part" }] });
   assert.deepEqual(c.countries, ["FR", "IT"], "pays traversés");
   assert.deepEqual(publicCopy({ items: [] }).countries, [], "aucun pays"); }
+// Budget : publié seulement sur demande, sans notes ni liens, totaux par destination
+{ const { publicCopy } = await import(root + "/js/publish.js");
+  const t = { currency: "JPY", items: [{ id: "l", type: "transport", mode: "train", price: 120.456 }, { id: "a", type: "stop", place: "Kyoto", price: 999, notes: "Code 4321" },
+    { id: "b", type: "stop", place: "Osaka" }] };
+  assert.equal("budget" in publicCopy(t), false, "pas de budget par défaut");
+  const b = publicCopy(t, { budget: true }).budget;
+  assert.deepEqual(b, { currency: "JPY", lodging: 999, transport: 120.46, missing: 1,
+    rows: [{ place: "Kyoto", lodging: 999, transport: 120.46 }, { place: "Osaka", lodging: 0, transport: 0 }] });
+  assert.ok(!JSON.stringify(b).includes("4321")); }
 // Un numéro qui sert à tout n'est affiché qu'une fois
 assert.equal(ex.countryView("US").match(/>911</g).length, 1, "911 une seule fois");
 console.log(`Destinations : les ${COUNTRIES.length} fiches sont complètes.`);

@@ -9,6 +9,7 @@
 // adresses, liens de réservation, billets, numéros de réservation, co-voyageurs.
 
 import { MODES, nights, duration, byDate } from "./utils.js";
+import { computeBudget } from "./budget.js";
 import { tripStart, tripEnd } from "./store.js";
 import { COUNTRIES } from "./data/countries.js";
 import { ROAD_MODES, routeKey, decodeLine, encodeLine } from "./routes.js";
@@ -53,7 +54,20 @@ function publicLine(leg, [from, to]) {
 
 const withLine = (line, route) => (line ? { line, km: Number.isFinite(+route.km) ? Math.round(+route.km) : null } : {});
 
-export function publicCopy(trip) {
+// Budget publié, seulement si on le choisit : totaux et coût par destination, sans le détail des prix
+const cents = (n) => Math.round(n * 100) / 100;
+export function publicBudget(trip) {
+  const { rows, total } = computeBudget(trip);
+  return {
+    currency: /^[A-Z]{3}$/.test(trip.currency || "") ? trip.currency : "EUR",
+    lodging: cents(total.lodging),
+    transport: cents(total.transport),
+    missing: total.missing,
+    rows: rows.slice(0, 60).map((r) => ({ place: String(r.place).slice(0, 120), lodging: cents(r.lodging), transport: cents(r.transport) })),
+  };
+}
+
+export function publicCopy(trip, { budget = false } = {}) {
   const start = tripStart(trip);
   const end = tripEnd(trip);
   const day = (date) => (date && start ? nights(start, date.slice(0, 10)) + 1 : null);
@@ -102,5 +116,6 @@ export function publicCopy(trip) {
     days: start && end ? nights(start, end) + 1 : null,
     nights: stops.reduce((n, s) => n + (s.nights || 0), 0),
     items,
+    ...(budget ? { budget: publicBudget(trip) } : {}),
   };
 }

@@ -159,7 +159,7 @@ export function onSocialSubmit(e) {
       stop: r.querySelector('[name="recoStop"]').value === "" ? null : +r.querySelector('[name="recoStop"]').value,
     }));
     attempt(async () => {
-      await social.publish(t, { title, visibility: f.elements.visibility.value, recos });
+      await social.publish(t, { title, visibility: f.elements.visibility.value, recos, budget: !!(f.elements.budget && f.elements.budget.checked) });
       state.publishOpen = false;
       toast("Itinéraire publié : il est dans Mes publications");
       go("mes-publications");

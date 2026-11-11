@@ -4,6 +4,7 @@
 //   handles/{pseudo}      { uid } : réserve un pseudo unique
 //   follows/{abonné_suivi} { follower, followed, status: "accepted" | "pending", createdAt }
 //   posts/{id}            { owner, ownerName, ownerHandle, title, visibility, publishedAt, trip, recos }
+//                         (trip.budget : seulement si l'auteur a choisi de montrer le budget)
 //   posts/{id}/comments/{id} { author, authorName, authorHandle, text, createdAt,
 //                              replyTo, replyToAuthor (réponse à un commentaire), likedBy (qui l'aime) }
 //   posts/{id}/likes/{uid}   { name, handle, at } : mis en favori (visible par l'auteur seulement)
@@ -165,6 +166,17 @@ const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
 const text = (x, max = 500) => (typeof x === "string" ? x.slice(0, max) : "");
 const intOrNull = (x) => (Number.isInteger(x) && x >= 0 ? x : null);
 const geoOrNull = (g) => (isObj(g) && Number.isFinite(g.lat) && Number.isFinite(g.lng) ? { lat: g.lat, lng: g.lng } : null);
+// Budget publié (facultatif) : montants positifs, devise en 3 lettres, sinon pas de budget
+const amount = (n) => (typeof n === "number" && Number.isFinite(n) && n >= 0 && n < 1e9 ? n : 0);
+function normalizeBudget(b) {
+  if (!isObj(b) || !/^[A-Z]{3}$/.test(b.currency)) return null;
+  return {
+    currency: b.currency, lodging: amount(b.lodging), transport: amount(b.transport),
+    missing: Number.isInteger(b.missing) && b.missing > 0 ? b.missing : 0,
+    rows: (Array.isArray(b.rows) ? b.rows : []).filter(isObj).slice(0, 60).map((r) => ({ place: text(r.place, 120), lodging: amount(r.lodging), transport: amount(r.transport) })),
+  };
+}
+
 function normalizePost(id, p) {
   const trip = isObj(p.trip) ? p.trip : {};
   const items = (Array.isArray(trip.items) ? trip.items : []).filter(isObj).map((i) => i.type === "transport"
@@ -185,7 +197,8 @@ function normalizePost(id, p) {
     visibility: VISIBILITIES[p.visibility] ? p.visibility : "private",
     publishedAt: toMs(p.publishedAt),
     favCount: Number.isInteger(p.favCount) && p.favCount > 0 ? p.favCount : 0, // nombre de mises en favori (public)
-    trip: { kind: trip.kind === "sejour" ? "sejour" : "", country: text(trip.country, 2), countries: (Array.isArray(trip.countries) ? trip.countries : []).filter((c) => /^[A-Z]{2}$/.test(c)).slice(0, 10), days: intOrNull(trip.days), nights: intOrNull(trip.nights), items },
+    trip: { kind: trip.kind === "sejour" ? "sejour" : "", country: text(trip.country, 2), countries: (Array.isArray(trip.countries) ? trip.countries : []).filter((c) => /^[A-Z]{2}$/.test(c)).slice(0, 10), days: intOrNull(trip.days), nights: intOrNull(trip.nights), items,
+      budget: normalizeBudget(trip.budget) },
     recos: (Array.isArray(p.recos) ? p.recos : []).filter(isObj).slice(0, 50).map((r) => ({
       kind: RECO_KINDS[r.kind] ? r.kind : "autre", name: text(r.name, 100), where: text(r.where, 120),
       note: text(r.note, 500), url: text(r.url, 500), stop: Number.isInteger(r.stop) ? r.stop : null,
@@ -209,12 +222,12 @@ const cleanRecos = (recos) => (recos || [])
     stop: Number.isInteger(r.stop) ? r.stop : null,
   }));
 
-export async function publish(trip, { title, visibility, recos }) {
+export async function publish(trip, { title, visibility, recos, budget = false }) {
   const p = state.profile;
   const id = newPostId();
   await F().fb.setDoc(F().fb.doc(F().db, "posts", id), {
     owner: me(), ownerName: p.name, ownerHandle: p.handle,
-    title, visibility, publishedAt: F().fb.serverTimestamp(), trip: publicCopy(trip), recos: cleanRecos(recos),
+    title, visibility, publishedAt: F().fb.serverTimestamp(), trip: publicCopy(trip, { budget }), recos: cleanRecos(recos),
   });
   resetSocial();
   return id;

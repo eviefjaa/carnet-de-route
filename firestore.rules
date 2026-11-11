@@ -160,6 +160,13 @@ service cloud.firestore {
         return exists(f) && get(f).data.status == "accepted";
       }
       function profile() { return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data; }
+      function validBudget(b) {
+        return b is map && b.keys().hasOnly(["currency", "lodging", "transport", "missing", "rows"])
+          && b.currency is string && b.currency.matches('^[A-Z]{3}$')
+          && b.lodging is number && b.lodging >= 0 && b.transport is number && b.transport >= 0
+          && b.missing is int && b.missing >= 0
+          && b.rows is list && b.rows.size() <= 60;
+      }
       // Compteur public de mises en favori (absent = 0) et mon favori sur cet itinéraire
       function favs(d) { return d.get("favCount", 0); }
       function myLike() { return /databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid); }
@@ -173,7 +180,9 @@ service cloud.firestore {
         && postId.matches('^p[0-9]{13}[a-z0-9]{4,12}$')
         && math.abs((10000000000000 - int(postId[1:14])) - request.time.toMillis()) < 3600000
         && request.resource.data.publishedAt == request.time
-        && request.resource.data.trip.keys().hasOnly(["kind", "country", "countries", "days", "nights", "items"])
+        && request.resource.data.trip.keys().hasOnly(["kind", "country", "countries", "days", "nights", "items", "budget"])
+        // Budget, seulement si l'auteur choisit de le montrer : devise, totaux positifs, 60 destinations au plus
+        && (!("budget" in request.resource.data.trip) || validBudget(request.resource.data.trip.budget))
         // Type du voyage : séjour (un lieu, programme jour par jour), road trip sinon
         && (!("kind" in request.resource.data.trip) || request.resource.data.trip.kind == "sejour")
         // Pays traversés : 10 codes au plus (fiches pays)

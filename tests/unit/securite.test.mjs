@@ -64,6 +64,12 @@ assert.deepEqual(post.recos, []);
   assert.equal(q.trip.kind, "sejour");
   assert.deepEqual(q.trip.items[0].program.map((a) => [a.day, a.time, a.how]), [[2, "09:45", "Tram"], [null, "", ""]]);
   assert.equal(normalizePost("p3", { trip: { kind: "x" } }).trip.kind, ""); }
+// Budget publié : montants positifs, devise en 3 lettres, sinon pas de budget
+{ const b = normalizePost("p4", { trip: { budget: { currency: "EUR", lodging: 999, transport: -3, missing: "x", rows: [null, { place: TRAP, lodging: "<b>", transport: 50 }] } } }).trip.budget;
+  assert.deepEqual([b.lodging, b.transport, b.missing, b.rows.length, b.rows[0].lodging, b.rows[0].transport], [999, 0, 0, 1, 0, 50]);
+  assert.ok(b.rows[0].place.length <= 120);
+  assert.equal(normalizePost("p5", { trip: { budget: { currency: "<b>" } } }).trip.budget, null);
+  assert.equal(normalizePost("p6", { trip: {} }).trip.budget, null); }
 const html = postCard(post);
 assert.doesNotMatch(html, /<iframe|<script/);
 

@@ -362,9 +362,31 @@ check("sans compte : publication publique lisible", (await text(anon)).includes(
 await goHash(alice, tripHash.slice(1));
 await alice.click('[data-act="open-publish"]');
 await alice.waitForSelector("[data-publish-form]");
+// Budget : au choix, décoché par défaut
+check("case « Montrer le budget » décochée, avec le total", !(await alice.$eval('[data-publish-form] [name="budget"]', (e) => e.checked))
+  && (await alice.$eval(".publish-budget", (e) => e.textContent)).includes("999"));
+if (process.env.SHOTS) { const vp = alice.viewport(); await alice.setViewport({ width: 375, height: 760 }); await sleep(300);
+  await (await alice.$("[data-publish-form]")).screenshot({ path: process.env.SHOTS + "/publier-budget.png" }); await alice.setViewport(vp); }
+await alice.click('[data-publish-form] [name="budget"]');
 await alice.click('[data-publish-form] button[type="submit"]');
 await sleep(3000);
 check("deuxième publication : deux cartes dans Mes publications", (await alice.$$(".post-card")).length === 2);
+{ const cards = await alice.$$eval(".post-card", (l) => l.map((c) => c.querySelector(".tc-dates").textContent));
+  check("carte : total du budget seulement sur la publication qui le montre", cards.filter((c) => /999\s?€/.test(c)).length === 1); }
+{ const href = await alice.$$eval(".post-card", (l) => l.find((c) => /999/.test(c.textContent)).querySelector(".tc-link").getAttribute("href"));
+  await goHash(alice, href.slice(1));
+  await alice.waitForSelector(".post .budget", { timeout: 10000 }).catch(() => {});
+  const b = await alice.$eval(".post .budget", (e) => e.innerText).catch(() => "");
+  check("publication : section Budget, par destination", b.includes("999") && b.includes("Kyoto") && b.includes("d'hébergement"));
+  check("publication avec budget : toujours ni notes ni adresse", !(await text(alice)).includes("4321") && !(await text(alice)).includes("secrète"));
+  if (process.env.SHOTS) { // à la largeur d'un téléphone
+    const vp = alice.viewport();
+    await alice.setViewport({ width: 375, height: 760 });
+    await sleep(300);
+    await (await alice.$(".post .budget")).screenshot({ path: process.env.SHOTS + "/publication-budget.png" });
+    await alice.setViewport(vp);
+  }
+  await goHash(alice, "mes-publications"); }
 await alice.click('[data-act="select-start"]');
 await sleep(300);
 check("Mes publications : mode sélection, une case par publication", (await alice.$$(".post-card .tc-check")).length === 2 && !(await alice.$(".post-card .tc-link")));

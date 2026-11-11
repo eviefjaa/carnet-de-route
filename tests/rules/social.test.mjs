@@ -60,6 +60,13 @@ await t("abonnement daté à la main", setDoc(doc(alice, "follows/alice_carla"),
 await t("publication antidatée (tête de Découvrir)", setDoc(doc(bob, "posts/p0000000000000aaaa"), post({ visibility: "public" })), false);
 await t("publication avec fausse date", setDoc(doc(bob, `posts/${pid()}`), post({ publishedAt: 1 })), false);
 await t("publication : séjour", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { kind: "sejour", items: [] } })), true);
+const B = { currency: "EUR", lodging: 999, transport: 120.5, missing: 1, rows: [{ place: "Kyoto", lodging: 999, transport: 120.5 }] };
+await t("publication avec budget", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: B } })), true);
+await t("budget : montant négatif", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: { ...B, lodging: -5 } } })), false);
+await t("budget : montant en texte", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: { ...B, transport: "<b>" } } })), false);
+await t("budget : devise inconnue", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: { ...B, currency: "euro" } } })), false);
+await t("budget : champ en plus", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: { ...B, notes: "Code 4321" } } })), false);
+await t("budget : trop de destinations", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: { ...B, rows: Array(61).fill(B.rows[0]) } } })), false);
 await t("publication : type de voyage inconnu", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { kind: "<b>", items: [] } })), false);
 await t("publication : nombre de jours en texte (injection)", setDoc(doc(bob, `posts/${pid()}`), post({ visibility: "public", trip: { items: [], days: "<iframe>" } })), false);
 await t("bob publie (abonnés)", setDoc(doc(bob, `posts/${P.p1}`), post()), true);
