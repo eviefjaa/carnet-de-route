@@ -4,8 +4,8 @@ import * as cloud from "./cloud.js";
 import { state, setCloud, replaceTrips, loadLocal, clearLocal, applyRemote, hasPendingChanges, hasUnsaved, save, flush, resetUi, setSync, syncError, onTripsMerged } from "./store.js";
 import { render } from "./views/trip.js";
 import { toast } from "./toast.js";
-import { usePrefsCloud, resetPrefs } from "./prefs.js";
-import { loadMyProfile, resetSocial, refreshNotifications } from "./social.js";
+import { prefs, usePrefsCloud, resetPrefs } from "./prefs.js";
+import { loadMyProfile, resetSocial, refreshNotifications, deleteMySocialData } from "./social.js";
 
 let stopWatching = null;
 
@@ -96,6 +96,31 @@ async function onUserChange(user) {
   }
   state.loading = false;
   render();
+}
+
+// Supprime le compte et tout ce qui s'y rattache. Le mot de passe est vérifié d'abord :
+// s'il est faux, rien n'est touché. Renvoie un message d'erreur, ou "" si tout est supprimé.
+export async function deleteAccount(password) {
+  try {
+    await cloud.reauthenticate(password);
+  } catch (err) {
+    return cloud.errorMessage(err);
+  }
+  try {
+    await flush(); // dernières modifications envoyées, pour ne rien réécrire après coup
+    if (stopWatching) { stopWatching(); stopWatching = null; }
+    setCloud(null);
+    await deleteMySocialData([...prefs.favoritePosts]);
+    await cloud.releaseMyTrips();
+    await cloud.deleteMyPrivateData();
+    await cloud.deleteAuthUser(); // la déconnexion suit (onUserChange)
+  } catch (err) {
+    console.error(err);
+    return "La suppression s'est arrêtée en cours de route. Rechargez la page, reconnectez-vous et recommencez : ce qui reste sera supprimé.";
+  }
+  replaceTrips({});
+  clearLocal(); // rien ne reste non plus sur cet appareil
+  return "";
 }
 
 // Versions reçues pendant une saisie, appliquées dès que la saisie est finie

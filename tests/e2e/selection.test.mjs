@@ -24,7 +24,15 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: true,
 const page = await browser.newPage();
 await page.setViewport({ width: 375, height: 760, isMobile: true, hasTouch: true });
 page.on("pageerror", (e) => check(`erreur JS : ${e.message}`, false));
+// Confidentialité : polices et carte viennent du site, aucune requête vers Google Fonts ni unpkg
+const outside = [];
+page.on("request", (r) => { if (/fonts\.(googleapis|gstatic)\.com|unpkg\.com/.test(r.url())) outside.push(r.url()); });
 await page.goto(`http://localhost:${PORT}/index.html#voyages`, { waitUntil: "networkidle0" });
+await page.evaluate(() => document.fonts.ready);
+check("polices du site chargées", await page.evaluate(() => document.fonts.check("600 16px 'Instrument Sans'") && document.fonts.check("700 30px 'Bricolage Grotesque'")
+  && [...document.fonts].some((f) => f.family.includes("Instrument") && f.status === "loaded")));
+check("Leaflet chargé depuis le site", await page.evaluate(() => typeof L === "object" && L.version === "1.9.4"));
+check("aucune requête vers Google Fonts ni unpkg", !outside.length);
 await page.evaluate(() => localStorage.setItem("carnet-route-trips", JSON.stringify({
   "v-a": { name: "Lyon et Paris", currency: "EUR", createdAt: 2, items: [{ id: "a", type: "stop", place: "Lyon", arrive: "2030-11-02", depart: "2030-11-04" }] },
   "v-b": { name: "Japon", currency: "JPY", createdAt: 1, items: [] },

@@ -10,9 +10,11 @@ service cloud.firestore {
     // Voyages, partagés entre leurs voyageurs :
     //   owner (créateur), members (uid des voyageurs), invites (e-mails invités, en minuscules),
     //   emails ({ uid: e-mail } des voyageurs), joined ({ uid: date d'arrivée }, pour les notifications)
-    // Réponses à mes commentaires, où qu'elles soient (pour mes notifications)
+    // Réponses à mes commentaires, où qu'elles soient (pour mes notifications),
+    // et mes propres commentaires (pour les supprimer avec mon compte)
     match /{path=**}/comments/{commentId} {
-      allow read: if request.auth != null && resource.data.replyToAuthor == request.auth.uid;
+      allow read: if request.auth != null
+        && (resource.data.replyToAuthor == request.auth.uid || resource.data.author == request.auth.uid);
     }
 
     match /trips/{tripId} {
@@ -26,6 +28,12 @@ service cloud.firestore {
       function isInvited() { return request.auth.token.email_verified == true && email() in resource.data.invites; }
       function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
       function newData() { return request.resource.data; }
+      // Je me retire de « joined » (date d'arrivée) sans toucher à celles des autres
+      function leftJoined() {
+        return !changed().hasAny(["joined"])
+          || (newData().joined.diff(resource.data.get("joined", {})).affectedKeys().hasOnly([uid()])
+              && !(uid() in newData().joined));
+      }
       // Forme minimale d'un voyage : sinon un voyageur pourrait bloquer l'affichage des autres
       function validTrip() {
         return newData().items is list
@@ -59,9 +67,15 @@ service cloud.firestore {
         || (isMember() && !changed().hasAny(["owner", "members", "emails", "joined"])
             && newData().invites.hasAll(resource.data.invites))
         // Un voyageur quitte le voyage
-        || (isMember() && !isOwner() && changed().hasOnly(["members", "emails"])
+        || (isMember() && !isOwner() && changed().hasOnly(["members", "emails", "joined"])
             && newData().members == resource.data.members.removeAll([uid()])
-            && !(uid() in newData().emails))
+            && !(uid() in newData().emails) && leftJoined())
+        // Le créateur supprime son compte : il confie le voyage à un autre voyageur et s'en retire
+        || (isOwner() && changed().hasOnly(["owner", "members", "emails", "joined"])
+            && newData().owner in resource.data.members && newData().owner != uid()
+            && newData().members == resource.data.members.removeAll([uid()])
+            && newData().emails.diff(resource.data.emails).affectedKeys().hasOnly([uid()])
+            && !(uid() in newData().emails) && leftJoined())
         // Une personne invitée refuse : elle retire seulement sa propre adresse des invitations
         || (isInvited() && !isMember() && changed().hasOnly(["invites"])
             && newData().invites == resource.data.invites.removeAll([email()]))

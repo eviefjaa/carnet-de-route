@@ -58,6 +58,24 @@ export function profileView() {
   </section>`;
 }
 
+// Suppression du compte : ce qui part, ce qui reste aux autres, puis le mot de passe pour confirmer
+function deleteAccountBlock() {
+  if (!state.deleteAccount) {
+    return `<div class="row-btns"><button class="btn ghost small danger" data-act="delete-account-open" type="button">Supprimer mon compte</button></div>`;
+  }
+  const busy = state.deleteAccount === "busy";
+  return `<form class="delete-account" data-delete-account>
+    <h3>Supprimer mon compte</h3>
+    <p>Tout est supprimé définitivement : vos voyages et leurs billets, vos publications avec leurs commentaires, vos commentaires et réponses chez les autres, vos favoris, vos abonnements et abonnés, votre profil, vos préférences et votre compte.</p>
+    <p>Un voyage que vous partagez n'est pas supprimé pour vos co-voyageurs : vous en êtes retiré(e), et s'il est à vous, il est confié au voyageur suivant. Téléchargez vos voyages avant si vous voulez les garder.</p>
+    <label class="f">Votre mot de passe, pour confirmer<input type="password" name="password" id="deletePassword" autocomplete="current-password" required${busy ? " disabled" : ""}></label>
+    <div class="row-btns">
+      <button class="btn danger" type="submit"${busy ? " disabled" : ""}>${busy ? "Suppression en cours…" : "Supprimer définitivement"}</button>
+      ${busy ? "" : `<button class="btn" data-act="delete-account-cancel" type="button">Annuler</button>`}
+    </div>
+  </form>`;
+}
+
 export function settingsView() {
   const themes = [["auto", "Automatique (comme l'appareil)"], ["light", "Clair"], ["dark", "Sombre"]];
   const currencies = Object.entries(CURRENCIES)
@@ -100,7 +118,8 @@ export function settingsView() {
     ${isEnabled() ? `<div class="panel">
       <h2>Compte</h2>
       ${state.user
-        ? `<p class="note">Connecté(e) avec ${esc(state.user.email)}.</p><div class="row-btns"><button class="btn" data-act="sign-out" type="button">Se déconnecter</button></div>`
+        ? `<p class="note">Connecté(e) avec ${esc(state.user.email)}.</p><div class="row-btns"><button class="btn" data-act="sign-out" type="button">Se déconnecter</button></div>
+          ${deleteAccountBlock()}`
         : `<p class="note">Vous n'êtes pas connecté(e).</p><div class="row-btns"><button class="btn primary" data-act="open-auth" data-mode="signin" type="button">Se connecter</button></div>`}
     </div>` : ""}
   </section>`;

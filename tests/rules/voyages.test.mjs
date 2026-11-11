@@ -102,6 +102,25 @@ await t("le créateur annule une invitation", updateDoc(T(alice, "trips/v1"), { 
 await t("le créateur supprime un billet", deleteDoc(T(alice, "trips/v1/files/f1")), true);
 await t("le créateur supprime le voyage", deleteDoc(T(alice, "trips/v1")), true);
 
+// ---------- Suppression du compte : le créateur confie un voyage partagé ----------
+const shared = (id) => env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), "trips/" + id),
+  trip({ members: ["alice", "bob", "carla"], emails: { alice: "alice@x.fr", bob: "bob@x.fr", carla: "carla@x.fr" }, joined: { bob: 1, carla: 2 } })));
+const carla = as("carla", "carla@x.fr");
+const handOver = (to, extra = {}) => ({ owner: to, members: arrayRemove("alice"), "emails.alice": deleteField(), ...extra });
+await shared("v20");
+await t("confié à quelqu'un hors du voyage", updateDoc(T(alice, "trips/v20"), handOver("eve")), false);
+await t("confié sans s'en retirer", updateDoc(T(alice, "trips/v20"), { owner: "bob" }), false);
+await t("confié en retirant aussi un voyageur", updateDoc(T(alice, "trips/v20"), handOver("bob", { members: arrayRemove("alice", "carla") })), false);
+await t("confié en changeant aussi le nom", updateDoc(T(alice, "trips/v20"), handOver("bob", { name: "x" })), false);
+await t("confié en effaçant une date d'arrivée d'un autre", updateDoc(T(alice, "trips/v20"), handOver("bob", { "joined.carla": deleteField() })), false);
+await t("un voyageur se donne le voyage", updateDoc(T(bob, "trips/v20"), { owner: "bob" }), false);
+await t("le créateur confie le voyage à bob et s'en retire", updateDoc(T(alice, "trips/v20"), handOver("bob")), true);
+await t("alice ne voit plus le voyage", getDoc(T(alice, "trips/v20")), false);
+await t("bob, nouveau créateur, peut le supprimer", deleteDoc(T(bob, "trips/v20")), true);
+await shared("v21");
+await t("carla quitte en effaçant la date de bob", updateDoc(T(carla, "trips/v21"), { members: arrayRemove("carla"), "emails.carla": deleteField(), "joined.bob": deleteField() }), false);
+await t("carla quitte avec sa date d'arrivée", updateDoc(T(carla, "trips/v21"), { members: arrayRemove("carla"), "emails.carla": deleteField(), "joined.carla": deleteField() }), true);
+
 // ---------- Données personnelles ----------
 await t("ses préférences", setDoc(T(alice, "users/alice/meta/prefs"), { theme: "dark" }), true);
 await t("préférences d'un autre (écrire)", setDoc(T(eve, "users/alice/meta/prefs"), { theme: "dark" }), false);

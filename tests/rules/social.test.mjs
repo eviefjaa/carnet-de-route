@@ -121,6 +121,9 @@ await t("réponse sans dire à qui", setDoc(doc(alice, `posts/${P.p7}/comments/r
 await t("réponse à une réponse (un seul niveau)", setDoc(doc(carla, `posts/${P.p7}/comments/r5`), comment(carla, "carla", "Carla", "carla", { replyTo: "r1", replyToAuthor: "alice" })), false);
 await t("carla retrouve les réponses qui lui sont adressées", getDocs(query(collectionGroup(carla, "comments"), where("replyToAuthor", "==", "carla"))), true);
 await t("alice lit les réponses adressées à carla", getDocs(query(collectionGroup(alice, "comments"), where("replyToAuthor", "==", "carla"))), false);
+// Suppression du compte : chacun retrouve ses propres commentaires, pas ceux des autres
+await t("carla retrouve ses commentaires partout", getDocs(query(collectionGroup(carla, "comments"), where("author", "==", "carla"))), true);
+await t("alice cherche tous les commentaires de carla", getDocs(query(collectionGroup(alice, "comments"), where("author", "==", "carla"))), false);
 
 // J'aime : chacun s'ajoute ou se retire lui-même, jamais sur son propre commentaire
 const r0 = (db) => doc(db, `posts/${P.p7}/comments/r0`);

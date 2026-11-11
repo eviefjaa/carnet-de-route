@@ -8,6 +8,7 @@ import { newTransport, readTransportForm } from "./views/transport.js";
 import { uid, nights, duration, plural, safeUrl, dayOrEmpty } from "./utils.js";
 import { toast } from "./toast.js";
 import * as cloud from "./cloud.js";
+import { deleteAccount } from "./account.js";
 import { setAuthMode } from "./views/auth.js";
 import { prefs, savePrefs, applyTheme, toggleFavorite } from "./prefs.js";
 import { openMenu, closeMenu, go } from "./router.js";
@@ -492,6 +493,15 @@ function onAccountClick(act, b) {
     case "retry-sync":
       flush();
       return true;
+    case "delete-account-open":
+      state.deleteAccount = "open";
+      render();
+      document.getElementById("deletePassword")?.focus();
+      return true;
+    case "delete-account-cancel":
+      state.deleteAccount = null;
+      render();
+      return true;
     case "sign-out":
       // On envoie d'abord les dernières modifications, encore en attente
       flush().then(() => cloud.signOut()).then(() => toast("Vous êtes déconnecté(e)"));
@@ -593,6 +603,26 @@ function onSubmit(e) {
       render();
       focusTodoInput(); // on peut enchaîner plusieurs ajouts
     }
+    return;
+  }
+  const delForm = e.target.closest("form[data-delete-account]");
+  if (delForm) {
+    e.preventDefault();
+    const password = delForm.password.value;
+    if (!password || state.deleteAccount === "busy") return;
+    state.deleteAccount = "busy";
+    render();
+    deleteAccount(password).then((error) => {
+      state.deleteAccount = error ? "open" : null;
+      if (error) {
+        render();
+        toast(error);
+        document.getElementById("deletePassword")?.focus();
+        return;
+      }
+      toast("Votre compte et toutes ses données ont été supprimés");
+      go("voyages");
+    });
     return;
   }
   const inviteForm = e.target.closest("form[data-invite-form]");

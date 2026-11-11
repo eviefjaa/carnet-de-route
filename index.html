@@ -7,10 +7,10 @@
   <meta name="description" content="Préparez votre road trip étape par étape : vos villes et vos trajets sur une carte, avec le budget calculé au fur et à mesure.">
   <link rel="canonical" href="https://eviefjaa.github.io/carnet-de-route/">
 
-  <!-- Sécurité : scripts autorisés seulement depuis le site, la carte Leaflet 1.9.4 (vérifiée par SRI) et Firebase 10.12.2.
-       Dossiers précis : un script publié par n'importe qui ailleurs sur unpkg.com est refusé.
+  <!-- Sécurité : scripts autorisés seulement depuis le site et Firebase 10.12.2 (dossier précis).
+       Polices et carte Leaflet sont hébergées sur le site : rien n'est demandé à un autre serveur pour les afficher.
        Les en-têtes HTTP ne se règlent pas sur GitHub Pages : cette balise en tient lieu. -->
-  <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://unpkg.com/leaflet@1.9.4/ https://www.gstatic.com/firebasejs/10.12.2/; style-src 'self' https://unpkg.com/leaflet@1.9.4/ https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org; connect-src 'self' https://*.googleapis.com https://photon.komoot.io https://nominatim.openstreetmap.org https://routing.openstreetmap.de; frame-src https://carnet-de-route-23ffc.firebaseapp.com; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://www.gstatic.com/firebasejs/10.12.2/; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://*.tile.openstreetmap.org; connect-src 'self' https://*.googleapis.com https://photon.komoot.io https://nominatim.openstreetmap.org https://routing.openstreetmap.de; frame-src https://carnet-de-route-23ffc.firebaseapp.com; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
 
   <!-- Icônes et partage sur les réseaux -->
@@ -30,14 +30,13 @@
   <meta property="og:image:alt" content="Carnet de route : un itinéraire Lisbonne, Porto, Saint-Jacques tracé en pointillés, avec le titre « Préparez votre road trip, étape par étape ».">
   <meta name="twitter:card" content="summary_large_image">
 
-  <!-- Polices -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+  <!-- Polices (hébergées sur le site) -->
+  <link rel="preload" href="fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/fonts.css">
 
-  <!-- Carte (Leaflet) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Carte : Leaflet 1.9.4, copie du site (empreintes SRI identiques à la version publiée) -->
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=">
+  <script src="vendor/leaflet/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="></script>
 
   <!-- Styles du site -->
   <link rel="stylesheet" href="css/base.css">

@@ -253,6 +253,49 @@ export async function loadPrefs(uid) {
 }
 export const savePrefs = (p) => fb.setDoc(fb.doc(db, "users", me.uid, "meta", "prefs"), clean(p));
 
+// ---------- Suppression du compte ----------
+// Firebase demande une connexion récente pour supprimer un compte : on redemande le mot de passe
+export async function reauthenticate(password) {
+  const u = auth.currentUser;
+  await fb.reauthenticateWithCredential(u, fb.EmailAuthProvider.credential(u.email, password));
+}
+
+// Mes voyages : supprimés (avec leurs billets) si j'y suis seul(e) ; sinon je m'en retire,
+// et un voyage que j'ai créé est confié au voyageur suivant, pour ne rien effacer aux autres
+export async function releaseMyTrips() {
+  const snap = await fb.getDocs(myTrips(me.uid));
+  for (const d of snap.docs) {
+    const t = d.data();
+    const others = (Array.isArray(t.members) ? t.members : []).filter((u) => u !== me.uid);
+    const out = {
+      members: fb.arrayRemove(me.uid),
+      [`emails.${me.uid}`]: fb.deleteField(),
+      ...(t.joined && me.uid in t.joined ? { [`joined.${me.uid}`]: fb.deleteField() } : {}),
+    };
+    if (t.owner !== me.uid) await fb.updateDoc(d.ref, out);
+    else if (others.length) await fb.updateDoc(d.ref, { ...out, owner: others[0] });
+    else await deleteTrip(d.id);
+  }
+  // Invitations reçues : refusées, pour que mon adresse disparaisse des voyages des autres
+  // (lisibles seulement avec une adresse confirmée)
+  if (auth.currentUser.emailVerified) {
+    const inv = await listInvitations();
+    for (const i of inv) await declineInvite(i.id);
+  }
+}
+
+// Préférences, rappels déjà envoyés et anciens voyages (users/{uid}/…)
+export async function deleteMyPrivateData() {
+  const old = await fb.getDocs(fb.collection(db, "users", me.uid, "trips"));
+  await Promise.all([
+    ...old.docs.map((d) => fb.deleteDoc(d.ref)),
+    fb.deleteDoc(fb.doc(db, "users", me.uid, "meta", "prefs")),
+    fb.deleteDoc(fb.doc(db, "users", me.uid, "meta", "reminders")),
+  ]);
+}
+
+export const deleteAuthUser = () => fb.deleteUser(auth.currentUser);
+
 // Écoute les modifications faites depuis un autre appareil ou par les autres voyageurs
 export function watchTrips(uid, onChange, onError) {
   return fb.onSnapshot(myTrips(uid), (snap) => {

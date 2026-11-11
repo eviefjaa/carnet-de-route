@@ -20,6 +20,7 @@ export const state = {
   confirm: null,    // id de l'élément à confirmer pour suppression ("trip" pour le voyage)
   todoAdding: null, // id de l'étape dont on remplit la checklist
   replyTo: null,    // commentaire auquel on est en train de répondre
+  deleteAccount: null, // suppression du compte : null, "open" (formulaire) ou "busy" (en cours)
   actForm: null,    // séjour : formulaire d'activité ouvert { stop, todo (modification) ou date (ajout) }
   newCountry: null, // pays choisi avant de créer un voyage (#nouveau-voyage-BR)
   formTickets: { pending: [], removed: [] }, // billets choisis dans le formulaire d'un trajet
@@ -229,6 +230,7 @@ export function resetUi() {
   state.todoAdding = null;
   state.actForm = null;
   state.replyTo = null;
+  if (state.deleteAccount !== "busy") state.deleteAccount = null;
   state.formTickets = { pending: [], removed: [] };
   state.publishOpen = false;
   state.inviteOpen = false;

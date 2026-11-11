@@ -11,6 +11,8 @@ index.html            Page principale
 firebase.json         Configuration Firebase (règles, émulateurs pour les tests)
 tests/                Tests : unitaires, règles Firestore, parcours complet dans Chrome
 404.html              Page « introuvable » (GitHub Pages)
+fonts/                Polices du site (woff2) et leurs licences SIL OFL
+vendor/leaflet/       Leaflet 1.9.4 (carte), copie de la version publiée et sa licence
 sitemap.xml           Plan du site pour les moteurs de recherche
 img/                  Favicons et image de partage sur les réseaux
 firestore.rules       Règles de sécurité Firestore (à copier dans la console Firebase)
@@ -19,6 +21,7 @@ firestore.rules       Règles de sécurité Firestore (à copier dans la console
 scripts/reminders/    Programme d'envoi des rappels (Node.js)
 css/
   base.css            Couleurs (thèmes clair et sombre), polices
+  fonts.css           Polices hébergées sur le site (aucune requête vers Google Fonts)
   layout.css          Menu de gauche et mise en page
   components.css      Boutons, formulaires, en-tête, messages
   itinerary.css       Ligne de route, étapes, trajets

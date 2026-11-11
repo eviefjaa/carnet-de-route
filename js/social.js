@@ -255,6 +255,32 @@ export async function deletePost(id) {
   resetSocial();
 }
 
+// Suppression du compte : tout ce que j'ai publié ou écrit. Mes publications (avec leurs commentaires
+// et favoris), mes commentaires et réponses chez les autres, mes favoris, mes abonnements dans
+// les deux sens, mon profil et mon pseudo. favoritePosts : les itinéraires que j'ai mis en favori.
+export async function deleteMySocialData(favoritePosts = []) {
+  const { fb, db } = F();
+  const mine = await fb.getDocs(fb.query(postsCol(), fb.where("owner", "==", me())));
+  for (const d of mine.docs) await deletePost(d.id);
+  const comments = await fb.getDocs(fb.query(fb.collectionGroup(db, "comments"), fb.where("author", "==", me())));
+  await Promise.all(comments.docs.map((d) => fb.deleteDoc(d.ref)));
+  // Un favori sur un itinéraire supprimé depuis, ou d'avant mon profil, n'a rien à retirer
+  for (const id of favoritePosts) await unlikePost(id).catch(() => {});
+  const follows = fb.collection(db, "follows");
+  const [a, b] = await Promise.all([
+    fb.getDocs(fb.query(follows, fb.where("follower", "==", me()))),
+    fb.getDocs(fb.query(follows, fb.where("followed", "==", me()))),
+  ]);
+  await Promise.all([...a.docs, ...b.docs].map((d) => fb.deleteDoc(d.ref)));
+  const profile = await getProfile(me());
+  const batch = fb.writeBatch(db);
+  if (profile && HANDLE_RE.test(profile.handle || "")) batch.delete(fb.doc(db, "handles", profile.handle));
+  batch.delete(fb.doc(db, "profiles", me()));
+  await batch.commit();
+  state.profile = null;
+  resetSocial();
+}
+
 // ---------- Mises en favori (pour prévenir l'auteur, et classer les itinéraires) ----------
 // Sans profil, le favori reste seulement dans mes préférences : l'auteur n'est pas prévenu et rien n'est compté.
 // Le compteur public favCount change dans la même écriture que mon favori : les règles vérifient

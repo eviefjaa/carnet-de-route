@@ -67,3 +67,9 @@
   .menu-btn { display: inline-flex; }
   .top .brand { display: inline; }
 }
+
+/* Suppression du compte (Paramètres) */
+.delete-account { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; padding: 14px; border: 1px solid var(--danger); border-radius: 12px; }
+.delete-account h3 { color: var(--danger); font-size: 16px; }
+.delete-account p { margin: 0; font-size: 14px; line-height: 1.5; }
+.delete-account button[type="submit"] { background: var(--danger); border-color: var(--danger); color: #fff; }

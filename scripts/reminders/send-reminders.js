@@ -50,7 +50,7 @@ function explain(trips, sent) {
     const trip = cleanTrip(raw);
     for (const stop of trip.items) {
       if (stop.type !== "stop") continue;
-      const left = stop.todos.filter((t) => !t.done && t.text).length;
+      const left = stop.todos.filter((t) => t.book && !t.done && t.text).length;
       if (!left) continue;
       const date = stopDate(trip, stop);
       if (!date) { lines.push("étape sans date → ignorée"); continue; }
