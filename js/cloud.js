@@ -5,7 +5,7 @@
 
 import { firebaseConfig } from "./firebase-config.js";
 import { mergeTrip } from "./merge.js";
-import { dayOrEmpty } from "./utils.js";
+import { dayOrEmpty, timeOrEmpty } from "./utils.js";
 
 const V = "10.12.2";
 const SDK = `https://www.gstatic.com/firebasejs/${V}`;
@@ -133,6 +133,7 @@ function normalize(t) {
     STR.forEach((k) => { if (k in i) i[k] = str(i[k]); });
     if ("price" in i && !(typeof i.price === "number" && Number.isFinite(i.price))) i.price = null;
     if ("nights" in i) delete i.nights; // calculé à partir des dates, jamais lu tel quel
+    ["arriveTime", "departTime"].forEach((k) => { if (k in i) i[k] = timeOrEmpty(i[k]); });
     ["geo", "fromGeo", "toGeo"].forEach((k) => { if (k in i && !(isObj(i[k]) && Number.isFinite(i[k].lat) && Number.isFinite(i[k].lng))) delete i[k]; });
     if ("route" in i && !(isObj(i.route) && typeof i.route.key === "string")) delete i.route;
     i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true, ...("maps" in x ? { maps: str(x.maps) } : {}), ...("date" in x ? { date: dayOrEmpty(x.date) } : {}),

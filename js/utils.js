@@ -50,6 +50,9 @@ export const toDate = (s) => (s ? new Date(s.length <= 10 ? s + "T12:00:00" : s)
 const valid = (d) => d && !isNaN(d);
 // Date seule bien formée (AAAA-MM-JJ), sinon chaîne vide
 export const dayOrEmpty = (s) => (typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && valid(toDate(s)) ? s : "");
+// Heure bien formée (HH:MM), sinon chaîne vide
+export const timeOrEmpty = (s) => (typeof s === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(s) ? s : "");
+export const fmtHour = (s) => s.replace(":", " h ");
 
 export function fmtDay(s) {
   const d = toDate(s);

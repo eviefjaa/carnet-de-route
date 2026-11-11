@@ -1,6 +1,6 @@
 // Affichage et formulaire d'une étape (lieu, dates, hébergement, liens de réservation)
 
-import { esc, uid, safeUrl, dayOrEmpty, source, fmtDay, nights, plural, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
+import { esc, uid, safeUrl, dayOrEmpty, timeOrEmpty, fmtHour, source, fmtDay, nights, plural, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
 import { state, tripStart } from "../store.js";
 import { itemActions } from "./actions.js";
 import { pickedPlace } from "../autocomplete.js";
@@ -54,7 +54,8 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
 function datesLine(it) {
   const todo = (txt) => `<span class="to-define">${txt}</span>`;
   if (!it.arrive && !it.depart) return todo("Dates à définir");
-  return `${it.arrive ? esc(fmtDay(it.arrive)) : todo("Arrivée à définir")} → ${it.depart ? esc(fmtDay(it.depart)) : todo("départ à définir")}`;
+  const at = (t) => (t ? `, ${esc(fmtHour(t))}` : "");
+  return `${it.arrive ? esc(fmtDay(it.arrive)) + at(it.arriveTime) : todo("Arrivée à définir")} → ${it.depart ? esc(fmtDay(it.depart)) + at(it.departTime) : todo("départ à définir")}`;
 }
 
 function linkCard(l) {
@@ -73,7 +74,9 @@ export function stopForm(it, isNew, { sejour = false } = {}) {
     <div class="grid">
       <label class="f full">Lieu<span class="ac"><input name="place" id="f-place-${esc(it.id)}" value="${esc(it.place)}" placeholder="Tapez une ville, une région ou un pays" required data-place="place" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
       <label class="f">Arrivée<input type="date" name="arrive" id="f-arr-${esc(it.id)}" value="${esc(it.arrive)}"></label>
+      ${sejour ? `<label class="f">Heure d'arrivée<input type="time" name="arriveTime" id="f-arrt-${esc(it.id)}" value="${esc(it.arriveTime || "")}"></label>` : ""}
       <label class="f">Départ<input type="date" name="depart" id="f-dep-${esc(it.id)}" value="${esc(it.depart)}" min="${esc(it.arrive)}"></label>
+      ${sejour ? `<label class="f">Heure de départ<input type="time" name="departTime" id="f-dept-${esc(it.id)}" value="${esc(it.departTime || "")}"></label>` : ""}
       <label class="f">Prix de l'hébergement (séjour complet)<input name="price" id="f-price-${esc(it.id)}" value="${esc(priceInput(it.price))}" inputmode="decimal" placeholder="Ex. 450"></label>
       <label class="f">Adresse de l'hébergement<input name="address" id="f-addr-${esc(it.id)}" value="${esc(it.address)}" placeholder="Optionnel : sert aussi à placer l'étape sur la carte"></label>
     </div>
@@ -123,6 +126,9 @@ export function readStopForm(f) {
   const o = { id: f.dataset.id, type: "stop" };
   ["place", "arrive", "depart", "address", "notes"].forEach((k) => (o[k] = f[k].value.trim()));
   o.price = parsePrice(f.price.value);
+  // Heures d'arrivée et de départ : seulement dans le formulaire d'un séjour (sinon reprises de l'étape, events.js)
+  if (f.arriveTime) o.arriveTime = timeOrEmpty(f.arriveTime.value);
+  if (f.departTime) o.departTime = timeOrEmpty(f.departTime.value);
 
   // Lieu choisi dans les suggestions : on garde sa position exacte et son pays
   const picked = pickedPlace(f.place);

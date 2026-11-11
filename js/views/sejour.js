@@ -4,7 +4,7 @@
 // trip.kind = "sejour", une seule étape (le lieu), les trajets avant elle (aller) et après (retour).
 // Les activités sont les « todos » de l'étape : { id, text, done, date, time, how, maps, tickets }.
 
-import { esc, safeUrl, fmtDay, toDate } from "../utils.js";
+import { esc, safeUrl, fmtDay, fmtHour, toDate } from "../utils.js";
 import { state } from "../store.js";
 import { stopCard, stopForm, newStop } from "./stop.js";
 import { transportCard, transportForm } from "./transport.js";
@@ -80,26 +80,35 @@ function program(stop) {
   const inDays = new Set(days);
   const loose = todos.filter((x) => !inDays.has(x.date));
 
-  const dayBlocks = days.map((d, i) => dayBlock(stop, `Jour ${i + 1}`, fmtDay(d), d, todos.filter((x) => x.date === d).sort(byTime))).join("");
+  const dayBlocks = days.map((d, i) => dayBlock(stop, `Jour ${i + 1}`, fmtDay(d), d, todos.filter((x) => x.date === d).sort(byTime), {
+    arrive: i === 0 ? stop.arriveTime : "",
+    depart: i === days.length - 1 && stop.depart === d ? stop.departTime : "",
+  })).join("");
   return `<h2 class="sj-title">Programme jour par jour</h2>
     ${days.length ? "" : `<p class="note">Ajoutez les dates d'arrivée et de départ dans « Le lieu » pour avoir un programme par jour.</p>`}
     ${dayBlocks}
     ${loose.length || !days.length ? dayBlock(stop, days.length ? "Pas encore de jour" : "Activités", "", "", loose.sort(byTime)) : ""}`;
 }
 
-function dayBlock(stop, title, sub, date, list) {
+// moves : heure d'arrivée (premier jour) et de départ (dernier jour), placées parmi les activités
+function dayBlock(stop, title, sub, date, list, moves = {}) {
   const f = state.actForm;
   const adding = f && !f.todo && f.stop === stop.id && f.date === date;
+  const move = (time, label) => ({ move: true, time, text: label });
+  const rows = [...list, ...(moves.arrive ? [move(moves.arrive, "Arrivée")] : []), ...(moves.depart ? [move(moves.depart, "Départ")] : [])].sort(byTime);
   return `<section class="sj-day${date ? "" : " is-loose"}" aria-label="${esc(title)}${sub ? " " + esc(sub) : ""}">
     <div class="sj-day-head">
       <h3>${esc(title)}${sub ? ` <span>${esc(sub)}</span>` : ""}</h3>
       ${adding ? "" : `<button class="cl-add" data-act="act-add" data-stop="${esc(stop.id)}" data-date="${esc(date)}" type="button" aria-label="Ajouter une activité${sub ? " le " + esc(sub) : ""}" title="Ajouter une activité">+</button>`}
     </div>
-    ${list.length ? `<ul class="sj-acts">${list.map((x) => f && f.todo === x.id ? `<li>${activityForm(stop, x)}</li>` : activity(stop, x)).join("")}</ul>`
-      : adding || !date ? "" : `<p class="note">Rien de prévu pour l'instant.</p>`}
+    ${rows.length ? `<ul class="sj-acts">${rows.map((x) => x.move ? moveRow(x) : f && f.todo === x.id ? `<li>${activityForm(stop, x)}</li>` : activity(stop, x)).join("")}</ul>` : ""}
+    ${list.length || adding || !date ? "" : `<p class="note">Rien de prévu pour l'instant.</p>`}
     ${adding ? activityForm(stop, { date }) : ""}
   </section>`;
 }
+
+// Arrivée ou départ du lieu : une ligne fixe, modifiable dans « Le lieu »
+const moveRow = (x) => `<li class="sj-move"><time class="sj-time">${esc(fmtHour(x.time))}</time><span>${esc(x.text)}</span></li>`;
 
 function activity(stop, x) {
   const maps = safeUrl(x.maps);
@@ -107,7 +116,7 @@ function activity(stop, x) {
     <div class="sj-act-main">
       <label>
         <input type="checkbox" data-todo="${esc(x.id)}" data-stop="${esc(stop.id)}" id="todo-${esc(x.id)}"${x.done ? " checked" : ""} aria-label="Réservé ou fait : ${esc(x.text)}">
-        ${x.time ? `<time class="sj-time">${esc(x.time.replace(":", " h "))}</time>` : ""}
+        ${x.time ? `<time class="sj-time">${esc(fmtHour(x.time))}</time>` : ""}
         <span class="sj-text">${esc(x.text)}</span>
       </label>
       <button class="cl-del" data-act="act-edit" data-stop="${esc(stop.id)}" data-todo="${esc(x.id)}" type="button" aria-label="Modifier « ${esc(x.text)} »" title="Modifier">

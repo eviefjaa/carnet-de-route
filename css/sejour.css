@@ -41,6 +41,9 @@
 .sj-how b { font-weight: 600; color: var(--ink); }
 .sj-tk { margin-left: 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .sj-tk:empty { display: none; }
+/* Arrivée et départ du lieu, alignés sur les heures des activités */
+.sj-move { display: flex; align-items: center; gap: 10px; padding: 9px 2px 9px 30px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--muted); }
+.sj-move:first-child { border-top: 0; }
 
 /* Formulaire d'une activité */
 .sj-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 0 2px; }

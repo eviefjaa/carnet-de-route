@@ -60,11 +60,17 @@ await page.$eval(".ac-list li[data-i='0']", (li) => li.dispatchEvent(new MouseEv
 await page.$eval('form[data-form="stop"] [name="arrive"]', (e) => { e.value = "2030-05-01"; });
 await page.$eval('form[data-form="stop"] [name="depart"]', (e) => { e.value = "2030-05-04"; });
 await page.$eval('form[data-form="stop"] [name="address"]', (e) => { e.value = "12 rue des Martyrs"; });
+await page.$eval('form[data-form="stop"] [name="arriveTime"]', (e) => { e.value = "15:00"; });
+await page.$eval('form[data-form="stop"] [name="departTime"]', (e) => { e.value = "11:30"; });
+if (SHOTS) await (await page.$('form[data-form="stop"]')).screenshot({ path: SHOTS + "/sejour-heures-form.png" });
 await page.$eval('form[data-form="stop"]', (f) => f.requestSubmit());
 await sleep(300);
 check("le séjour prend le nom du lieu", (await one()).name === "Paris");
 check("quatre jours au programme", (await page.$$(".sj-day")).length === 4);
-check("parties aller, lieu, programme, retour", (await page.$$eval(".sj-title", (l) => l.map((h) => h.textContent).join(" | "))) === "Aller | Le lieu | Programme jour par jour | Retour");
+{ const s = (await one()).items.find((i) => i.type === "stop");
+  check("heures d'arrivée et de départ enregistrées", s.arriveTime === "15:00" && s.departTime === "11:30"); }
+check("carte du lieu : dates avec les heures", /, 15 h 00 → .*, 11 h 30/.test(await page.$eval(".stop .dates", (e) => e.textContent.replace(/\s+/g, " "))));
+check("arrivée au jour 1, départ au jour 4", (await page.$$eval(".sj-day", (l) => l.map((d) => [...d.querySelectorAll(".sj-move")].map((m) => m.textContent.replace(/\s+/g, " ").trim()).join("")).join("|"))) === "15 h 00Arrivée|||11 h 30Départ");check("parties aller, lieu, programme, retour", (await page.$$eval(".sj-title", (l) => l.map((h) => h.textContent).join(" | "))) === "Aller | Le lieu | Programme jour par jour | Retour");
 
 // 3. Activités du jour 2, rangées par heure
 const addAct = async (day, text, time, how = "", maps = "") => {
@@ -82,6 +88,13 @@ await addAct("2030-05-02", "Musée du Louvre", "10:00", "Métro 1, arrêt Palais
 await addAct("2030-05-02", "Petit-déjeuner au café", "08:30");
 let d = await days();
 check("jour 2 : par ordre d'heure", /^Jour 2.*= 08 h 30 Petit-déj.* \/ 10 h 00 Musée du Lo/.test(d[1]));
+await addAct("2030-05-04", "Croissants chez Stohrer", "09:00");
+await addAct("2030-05-04", "Dernier tour à Montmartre", "13:00");
+check("jour 4 : le départ se range entre les activités", (await page.$$eval(".sj-day:nth-of-type(4) .sj-acts > li", (l) => l.map((x) => x.querySelector("time")?.textContent).join(" "))).replace(/\s+/g, "") === "09h0011h3013h00");
+if (SHOTS) await (await page.$$(".sj-day"))[3].screenshot({ path: SHOTS + "/sejour-depart.png" });
+{ const s = (await one()).items.find((i) => i.type === "stop");
+  await page.evaluate(async (ids) => { for (const id of ids) document.querySelector(`[data-act="todo-del"][data-todo="${id}"]`).click(); }, s.todos.filter((x) => x.date === "2030-05-04").map((x) => x.id));
+  await sleep(300); }
 check("comment y aller affiché", (await page.$eval(".sj-day:nth-of-type(2), .sj-how", (e) => e.textContent)).includes("Métro 1, arrêt Palais-Royal"));
 let stop = (await one()).items.find((i) => i.type === "stop");
 const louvre = stop.todos.find((x) => x.text === "Musée du Louvre");
@@ -141,6 +154,13 @@ await page.waitForSelector(".sj-day");
 // 8. Passer en road trip et revenir
 await click('[data-act="set-kind"][data-kind="road"]');
 check("road trip : étapes et checklist classiques", !(await one()).kind && !!(await page.$(".route .insert [data-act='add-stop']")));
+if (!(await page.$(`[data-act="edit"][data-id="${stop.id}"]`))) await click(`[data-act="toggle-item"][data-id="${stop.id}"]`);
+await click(`[data-act="edit"][data-id="${stop.id}"]`);
+check("étape de road trip : pas de champ d'heure", !(await page.$('form[data-form="stop"] [name="arriveTime"]')));
+await page.$eval('form[data-form="stop"]', (f) => f.requestSubmit());
+await sleep(300);
+{ const s = (await one()).items.find((i) => i.type === "stop");
+  check("enregistrée en road trip, l'étape garde ses heures", s.arriveTime === "15:00" && s.departTime === "11:30"); }
 await click('[data-act="set-kind"][data-kind="sejour"]');
 check("retour en séjour", (await one()).kind === "sejour" && (await page.$$(".sj-day")).length === 4);
 

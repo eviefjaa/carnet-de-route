@@ -631,6 +631,8 @@ function onSubmit(e) {
   const old = f.dataset.new === "1" ? null : t.items.find((x) => x.id === item.id);
   if (item.type === "transport") commitFormTickets(item, old);
   if (item.type === "stop" && f.dataset.sejour) item.todos = (old && old.todos) || []; // le programme se gère à part
+  // Formulaire de road trip : les heures d'un ancien séjour sont gardées
+  if (item.type === "stop" && !f.dataset.sejour && old) for (const k of ["arriveTime", "departTime"]) if (old[k]) item[k] = old[k];
   if (item.type === "stop") keepTodoTickets(item, old);
 
   if (f.dataset.new === "1") {
