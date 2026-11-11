@@ -1,29 +1,38 @@
 // Checklist d'une étape : activités à faire et choses à réserver
-// Chaque élément : { id, text, done, date, maps, tickets }. La date (AAAA-MM-JJ) est facultative. Coché = réservé / fait.
+// Chaque élément : { id, text, done, book, date, maps, tickets }. La date (AAAA-MM-JJ) est facultative.
+// book: false = rien à réserver (coché = fait) ; sinon à réserver (coché = réservé), en rouge tant que ce n'est pas fait.
 // Une activité peut avoir ses billets (musée, excursion…) : voir views/tickets.js.
 
-import { esc, safeUrl, fmtDay, byDate } from "../utils.js";
+import { esc, safeUrl, fmtDay, byDate, needsBooking } from "../utils.js";
 import { state } from "../store.js";
 import { todoTickets, todoTicketButton } from "./tickets.js";
 
-export const pending = (stop) => (stop.todos || []).filter((t) => !t.done).length;
+export const pending = (stop) => (stop.todos || []).filter((t) => needsBooking(t) && !t.done).length;
 export const tripPending = (trip) => trip.items.filter((i) => i.type === "stop").reduce((n, s) => n + pending(s), 0);
+
+// Case « à réserver » des formulaires d'activité (décochée par défaut)
+export const bookBox = (name, id, on) =>
+  `<label class="todo-book"><input type="checkbox" name="${name}" id="${esc(id)}"${on ? " checked" : ""}>À réserver</label>`;
+
+// Ce que veut dire la case d'une activité : réservé, ou simplement fait
+export const doneLabel = (t) => (needsBooking(t) ? "Réservé" : "Fait");
 
 export function checklist(stop) {
   const todos = byDate(stop.todos);
-  const done = todos.length - pending(stop);
+  const toBook = todos.filter(needsBooking);
+  const booked = toBook.length - pending(stop);
   const adding = state.todoAdding === stop.id;
 
   return `<section class="checklist" aria-label="Checklist de ${esc(stop.place || "l'étape")}">
     <div class="cl-head">
       <h3>À faire et à réserver</h3>
-      ${todos.length ? `<span class="cl-progress${done === todos.length ? " all" : ""}">${done}/${todos.length} réservé${done > 1 ? "s" : ""}</span>` : ""}
+      ${toBook.length ? `<span class="cl-progress${booked === toBook.length ? " all" : ""}">${booked}/${toBook.length} réservé${booked > 1 ? "s" : ""}</span>` : ""}
       ${adding ? "" : `<button class="cl-add" data-act="todo-add" data-stop="${esc(stop.id)}" type="button" aria-label="Ajouter une activité" title="Ajouter une activité">+</button>`}
     </div>
     ${todos.length ? `<ul class="cl-list">${todos.map((t) => `
-      <li class="${t.done ? "done" : ""}">
+      <li class="${t.done ? "done" : needsBooking(t) ? "" : "is-free"}">
         <label>
-          <input type="checkbox" data-todo="${esc(t.id)}" data-stop="${esc(stop.id)}" id="todo-${esc(t.id)}"${t.done ? " checked" : ""}>
+          <input type="checkbox" data-todo="${esc(t.id)}" data-stop="${esc(stop.id)}" id="todo-${esc(t.id)}"${t.done ? " checked" : ""} aria-label="${doneLabel(t)} : ${esc(t.text)}">
           <span>${esc(t.text)}</span>
           ${t.date ? `<time class="cl-date" datetime="${esc(t.date)}">${esc(fmtDay(t.date))}</time>` : ""}
         </label>
@@ -37,6 +46,7 @@ export function checklist(stop) {
       <input name="text" id="todo-new-${esc(stop.id)}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" required>
       <label class="todo-date">Date<input type="date" name="date" id="todo-date-${esc(stop.id)}"${dateRange(stop)}></label>
       <input name="maps" id="todo-maps-${esc(stop.id)}" placeholder="Lien Google Maps du lieu (facultatif)" inputmode="url" autocomplete="off" aria-label="Lien Google Maps du lieu">
+      ${bookBox("book", "todo-book-" + stop.id, false)}
       <button class="btn primary small" type="submit">Ajouter</button>
       <button class="btn ghost small" data-act="todo-close" type="button">Fermer</button>
     </form>` : ""}

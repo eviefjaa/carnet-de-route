@@ -229,13 +229,13 @@ function findTodo(stopId, todoId) {
   return s && (s.todos || []).find((x) => x.id === todoId);
 }
 // Ajoute un élément à la checklist d'une étape ; renvoie false si rien à ajouter
-function addTodo(stopId, text, maps = "", date = "") {
+function addTodo(stopId, text, maps = "", date = "", book = false) {
   text = text.trim();
   const s = findStop(stopId);
   if (!text || !s) return false;
   const link = safeUrl(maps);
   const day = dayOrEmpty(date);
-  s.todos = [...(s.todos || []), { id: uid(), text, done: false, ...(link ? { maps: link } : {}), ...(day ? { date: day } : {}) }];
+  s.todos = [...(s.todos || []), { id: uid(), text, done: false, book, ...(link ? { maps: link } : {}), ...(day ? { date: day } : {}) }];
   save();
   return true;
 }
@@ -247,11 +247,12 @@ function saveActivity(f) {
   if (!v.text) { toast("Indiquez l'activité."); f.text.focus(); return; }
   const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, x]) => x)); // pas de champ vide
   const old = f.dataset.todo && (s.todos || []).find((x) => x.id === f.dataset.todo);
+  // book reste enregistré même à false : sans lui, l'activité serait comptée comme à réserver
   if (old) {
     ["date", "time", "how", "maps"].forEach((k) => delete old[k]);
-    Object.assign(old, clean(v));
+    Object.assign(old, clean(v), { book: v.book });
   } else {
-    s.todos = [...(s.todos || []), { id: uid(), done: false, ...clean(v) }];
+    s.todos = [...(s.todos || []), { id: uid(), done: false, ...clean(v), book: v.book }];
   }
   state.actForm = null;
   save();
@@ -274,7 +275,7 @@ function onPageClick(act, b) {
     case "todo-close": {
       // Ce qui est tapé est enregistré aussi, pour ne pas le perdre
       const form = b.closest("form[data-todo-form]");
-      if (form) addTodo(form.dataset.todoForm, form.text.value, form.maps ? form.maps.value : "", form.date ? form.date.value : "");
+      if (form) addTodo(form.dataset.todoForm, form.text.value, form.maps ? form.maps.value : "", form.date ? form.date.value : "", !!(form.book && form.book.checked));
       state.todoAdding = null;
       render();
       return true;
@@ -587,7 +588,7 @@ function onSubmit(e) {
   const todoForm = e.target.closest("form[data-todo-form]");
   if (todoForm) {
     e.preventDefault();
-    if (addTodo(todoForm.dataset.todoForm, todoForm.text.value, todoForm.maps ? todoForm.maps.value : "", todoForm.date ? todoForm.date.value : "")) {
+    if (addTodo(todoForm.dataset.todoForm, todoForm.text.value, todoForm.maps ? todoForm.maps.value : "", todoForm.date ? todoForm.date.value : "", !!(todoForm.book && todoForm.book.checked))) {
       render();
       focusTodoInput(); // on peut enchaîner plusieurs ajouts
     }
@@ -668,7 +669,7 @@ function keepTodoTickets(stop, old) {
 // Nouvelle activité dans le formulaire d'étape (après la ligne donnée, sinon à la fin)
 function addTodoRow(after, form) {
   const f = form || after.closest("form");
-  const html = todoRow({ id: uid(), text: "", done: false }, { arrive: f.arrive.value, depart: f.depart.value });
+  const html = todoRow({ id: uid(), text: "", done: false, book: false }, { arrive: f.arrive.value, depart: f.depart.value });
   if (after) after.insertAdjacentHTML("afterend", html);
   else form.querySelector("[data-todos]").insertAdjacentHTML("beforeend", html);
   const row = after ? after.nextElementSibling : form.querySelector("[data-todos]").lastElementChild;

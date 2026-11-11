@@ -80,4 +80,27 @@ assert.match(stopForm(withMaps, false), /name="todoMaps"[^>]*value="https:\/\/ma
   const cl = checklist(it);
   assert.ok(cl.indexOf("A matin") < cl.indexOf(">B<") && cl.indexOf(">B<") < cl.indexOf("Sans date 1"), "checklist dans l'ordre des dates"); }
 
+// À réserver ou non : seules les activités à réserver sont en rouge et comptées ; sans « book », une activité ancienne reste à réserver
+{ const { tripPending } = await import(root + "/js/views/checklist.js");
+  const it = { ...newStop("Lyon"), todos: [{ id: "r", text: "Resto", done: false, book: true }, { id: "f", text: "Balade", done: false, book: false },
+    { id: "o", text: "Ancienne", done: false }, { id: "v", text: "Visite faite", done: true, book: false }] };
+  const cl = checklist(it);
+  assert.match(cl, /<li class="is-free">[\s\S]*?Balade/);
+  assert.match(cl, /<li class="">[\s\S]*?Resto/);
+  assert.match(cl, /<li class="done">[\s\S]*?Visite faite/);
+  assert.match(cl, /0\/2 réservé</, "seules les deux activités à réserver sont comptées");
+  assert.match(cl, /aria-label="Fait : Balade"/);
+  assert.match(cl, /aria-label="Réservé : Resto"/);
+  assert.equal(tripPending({ items: [it] }), 2);
+  assert.equal(checklist({ ...it, todos: [it.todos[1]] }).includes("cl-progress"), false, "rien à réserver : pas de compteur");
+  const card = stopCard({ ...it, id: "s" }, { currency: "EUR", items: [it] }, 0);
+  assert.match(card, /À réserver : Resto, Ancienne</);
+  const sf = stopForm(it, false);
+  assert.match(sf, /name="todoBook" id="td-book-r" checked/);
+  assert.match(sf, /name="todoBook" id="td-book-f">/);
+  assert.match(sf, /name="todoBook" id="td-book-o" checked/);
+  state.todoAdding = it.id;
+  assert.match(checklist(it), /name="book" id="todo-book-[^"]+">À réserver/, "case décochée à l'ajout");
+  state.todoAdding = null; }
+
 console.log("Formulaires et checklist : tous les tests passent.");

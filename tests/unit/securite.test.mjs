@@ -37,6 +37,9 @@ assert.equal(trip.items[0].tickets[0].size, 0);
   assert.equal("kind" in t, false, "type inconnu : road trip");
   assert.deepEqual(t.items[0].todos.map((x) => [x.time, x.how]), [["10:30", "Métro 1"], ["", ""]]);
   assert.equal(normalizeTrip({ kind: "sejour", items: [] }).kind, "sejour"); }
+// « À réserver » : un booléen, et seul false veut dire « rien à réserver »
+{ const t = normalizeTrip({ items: [{ id: "s", type: "stop", todos: [{ id: "a", text: "x", book: false }, { id: "b", text: "y", book: "<b>" }, { id: "c", text: "z" }] }] }).items[0].todos;
+  assert.deepEqual(t.map((x) => x.book), [false, true, undefined]); }
 // Heures d'arrivée et de départ d'un séjour : HH:MM ou vide
 { const s = normalizeTrip({ items: [{ id: "s", type: "stop", arriveTime: "15:00", departTime: "<img onerror>" }, { id: "t", type: "stop", arriveTime: { x: 1 } }] }).items;
   assert.deepEqual([s[0].arriveTime, s[0].departTime, s[1].arriveTime, "departTime" in s[1]], ["15:00", "", "", false]); }

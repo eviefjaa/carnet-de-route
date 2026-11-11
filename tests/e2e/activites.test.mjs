@@ -43,10 +43,12 @@ const bounds = await page.$eval("form[data-todo-form] input[name=date]", (e) => 
 check("date bornée par l'étape", bounds === "2030-03-02 2030-03-05");
 await page.type("form[data-todo-form] input[name=text]", "Bouchon Daniel et Denise");
 await page.$eval("form[data-todo-form] input[name=date]", (e) => { e.value = "2030-03-03"; });
+check("case « À réserver » décochée à l'ajout", !(await page.$eval("form[data-todo-form] input[name=book]", (e) => e.checked)));
+await page.click("form[data-todo-form] input[name=book]");
 await page.$eval("form[data-todo-form]", (f) => f.requestSubmit());
 await sleep(300);
 let todos = await stored();
-check("activité enregistrée avec sa date", todos[1] && todos[1].text === "Bouchon Daniel et Denise" && todos[1].date === "2030-03-03");
+check("activité enregistrée avec sa date, à réserver", todos[1] && todos[1].text === "Bouchon Daniel et Denise" && todos[1].date === "2030-03-03" && todos[1].book === true);
 check("activité sans date : pas de date inventée", !("date" in todos[0]));
 await page.click('[data-act="todo-close"]');
 await sleep(200);
@@ -73,7 +75,11 @@ check("date ajoutée depuis le formulaire", byId("a").date === "2030-03-04" && t
 // Ordre chronologique : le 3 mars, le 4 mars, puis l'activité sans date
 const order = await page.$$eval(".cl-list li span", (l) => l.map((e) => e.textContent.slice(0, 12)).join(" | "));
 check("checklist dans l'ordre des dates, sans date à la fin", order === "Bouchon Dani | Musée des Co | Pentes de la");
-check("« À réserver » dans le même ordre", (await page.$eval(".to-book", (e) => e.textContent)).startsWith("À réserver : Bouchon Daniel et Denise, Musée des Confluences, Pentes"));
+check("« À réserver » dans l'ordre, sans l'activité qui n'a rien à réserver", (await page.$eval(".to-book", (e) => e.textContent.trim())) === "À réserver : Bouchon Daniel et Denise, Musée des Confluences");
+check("activité sans réservation : pas en rouge", (await page.$$eval(".cl-list li", (l) => l.map((li) => li.className).join(","))) === ",,is-free"
+  && (await page.$eval(".cl-list li.is-free span", (e) => getComputedStyle(e).color)) !== (await page.$eval(".cl-list li:not(.is-free) span", (e) => getComputedStyle(e).color)));
+check("compteur sur les seules activités à réserver", (await page.$eval(".cl-progress", (e) => e.textContent)) === "0/2 réservé");
+check("nouvelle ligne du formulaire : rien à réserver", (await stored()).find((x) => x.text.startsWith("Pentes")).book === false);
 if (SHOTS) await (await page.$(".item.stop")).screenshot({ path: SHOTS + "/activites-ordre.png" });
 await page.click('[data-act="edit"][data-id="s1"]');
 await page.waitForSelector('form[data-form="stop"] [name="todoText"]');

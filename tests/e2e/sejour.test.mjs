@@ -73,7 +73,7 @@ check("carte du lieu : dates avec les heures", /, 15 h 00 → .*, 11 h 30/.test(
 check("arrivée au jour 1, départ au jour 4", (await page.$$eval(".sj-day", (l) => l.map((d) => [...d.querySelectorAll(".sj-move")].map((m) => m.textContent.replace(/\s+/g, " ").trim()).join("")).join("|"))) === "15 h 00Arrivée|||11 h 30Départ");check("parties aller, lieu, programme, retour", (await page.$$eval(".sj-title", (l) => l.map((h) => h.textContent).join(" | "))) === "Aller | Le lieu | Programme jour par jour | Retour");
 
 // 3. Activités du jour 2, rangées par heure
-const addAct = async (day, text, time, how = "", maps = "") => {
+const addAct = async (day, text, time, how = "", maps = "", book = false) => {
   await click(`[data-act="act-add"][data-date="${day}"]`);
   await page.waitForSelector("form[data-act-form] [name=text]");
   check(`jour pré-rempli (${day})`, (await page.$eval("form[data-act-form] [name=date]", (e) => e.value)) === day);
@@ -81,10 +81,11 @@ const addAct = async (day, text, time, how = "", maps = "") => {
   await page.$eval("form[data-act-form] [name=time]", (e, v) => { e.value = v; }, time);
   if (how) await page.type("form[data-act-form] [name=how]", how);
   if (maps) await page.type("form[data-act-form] [name=maps]", maps);
+  if (book) await page.click("form[data-act-form] [name=book]");
   await page.$eval("form[data-act-form]", (f) => f.requestSubmit());
   await sleep(250);
 };
-await addAct("2030-05-02", "Musée du Louvre", "10:00", "Métro 1, arrêt Palais-Royal", "https://maps.app.goo.gl/louvre");
+await addAct("2030-05-02", "Musée du Louvre", "10:00", "Métro 1, arrêt Palais-Royal", "https://maps.app.goo.gl/louvre", true);
 await addAct("2030-05-02", "Petit-déjeuner au café", "08:30");
 let d = await days();
 check("jour 2 : par ordre d'heure", /^Jour 2.*= 08 h 30 Petit-déj.* \/ 10 h 00 Musée du Lo/.test(d[1]));
@@ -99,6 +100,8 @@ check("comment y aller affiché", (await page.$eval(".sj-day:nth-of-type(2), .sj
 let stop = (await one()).items.find((i) => i.type === "stop");
 const louvre = stop.todos.find((x) => x.text === "Musée du Louvre");
 check("activité enregistrée complète", louvre.date === "2030-05-02" && louvre.time === "10:00" && louvre.how === "Métro 1, arrêt Palais-Royal" && louvre.maps === "https://maps.app.goo.gl/louvre");
+check("Louvre à réserver, petit-déjeuner non", louvre.book === true && stop.todos.find((x) => x.text.startsWith("Petit")).book === false);
+check("seul le Louvre est en rouge", (await page.$$eval(".sj-day:nth-of-type(2) .sj-act", (l) => l.map((x) => x.className).join(","))) === "sj-act is-free,sj-act");
 check("pas de champ vide enregistré", !("how" in stop.todos.find((x) => x.text === "Petit-déjeuner au café")));
 if (SHOTS) await (await page.$$(".sj-day"))[1].screenshot({ path: SHOTS + "/sejour-jour.png" });
 

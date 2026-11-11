@@ -2,14 +2,14 @@
 //
 // Même format de données qu'un road trip (synchronisation, fusion et billets inchangés) :
 // trip.kind = "sejour", une seule étape (le lieu), les trajets avant elle (aller) et après (retour).
-// Les activités sont les « todos » de l'étape : { id, text, done, date, time, how, maps, tickets }.
+// Les activités sont les « todos » de l'étape : { id, text, done, book, date, time, how, maps, tickets }.
 
-import { esc, safeUrl, fmtDay, fmtHour, toDate } from "../utils.js";
+import { esc, safeUrl, fmtDay, fmtHour, toDate, needsBooking } from "../utils.js";
 import { state } from "../store.js";
 import { stopCard, stopForm, newStop } from "./stop.js";
 import { transportCard, transportForm } from "./transport.js";
 import { todoTickets, todoTicketButton } from "./tickets.js";
-import { dateRange } from "./checklist.js";
+import { dateRange, bookBox, doneLabel } from "./checklist.js";
 
 const MAX_DAYS = 60;
 
@@ -112,10 +112,10 @@ const moveRow = (x) => `<li class="sj-move"><time class="sj-time">${esc(fmtHour(
 
 function activity(stop, x) {
   const maps = safeUrl(x.maps);
-  return `<li class="sj-act${x.done ? " done" : ""}">
+  return `<li class="sj-act${x.done ? " done" : needsBooking(x) ? "" : " is-free"}">
     <div class="sj-act-main">
       <label>
-        <input type="checkbox" data-todo="${esc(x.id)}" data-stop="${esc(stop.id)}" id="todo-${esc(x.id)}"${x.done ? " checked" : ""} aria-label="Réservé ou fait : ${esc(x.text)}">
+        <input type="checkbox" data-todo="${esc(x.id)}" data-stop="${esc(stop.id)}" id="todo-${esc(x.id)}"${x.done ? " checked" : ""} aria-label="${doneLabel(x)} : ${esc(x.text)}">
         ${x.time ? `<time class="sj-time">${esc(fmtHour(x.time))}</time>` : ""}
         <span class="sj-text">${esc(x.text)}</span>
       </label>
@@ -138,6 +138,7 @@ function activityForm(stop, x) {
     <label class="f">Heure<input type="time" name="time" id="act-time-${esc(id)}" value="${esc(x.time || "")}"></label>
     <label class="f full">Comment y aller<input name="how" id="act-how-${esc(id)}" value="${esc(x.how || "")}" placeholder="Ex. Métro 1, arrêt Palais-Royal, puis 5 min à pied" maxlength="200" autocomplete="off"></label>
     <label class="f full">Lien Google Maps<input name="maps" id="act-maps-${esc(id)}" value="${esc(x.maps || "")}" placeholder="Facultatif" inputmode="url" autocomplete="off"></label>
+    <div class="f full">${bookBox("book", "act-book-" + id, x.id ? needsBooking(x) : false)}</div>
     <div class="form-actions">
       <button class="btn" data-act="act-cancel" type="button">Annuler</button>
       <button class="btn primary" type="submit">${x.id ? "Enregistrer" : "Ajouter"}</button>
@@ -154,6 +155,7 @@ export function readActivityForm(f) {
     time,
     how: f.how.value.trim().slice(0, 200),
     maps: safeUrl(f.maps.value.trim()),
+    book: f.book.checked,
   };
 }
 

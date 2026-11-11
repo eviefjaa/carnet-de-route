@@ -56,7 +56,9 @@ export const timeOrEmpty = (s) => (typeof s === "string" && /^([01]\d|2[0-3]):[0
 // celles sans date ensuite, dans l'ordre où elles ont été ajoutées
 export const byDate = (todos) =>
   [...(todos || [])].sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999") || (a.time || "99").localeCompare(b.time || "99"));
-export const fmtHour =(s) => s.replace(":", " h ");
+// Activité à réserver ? book: false = rien à réserver ; absent (activités d'avant l'option) = à réserver
+export const needsBooking = (t) => t.book !== false;
+export const fmtHour = (s) => s.replace(":", " h ");
 
 export function fmtDay(s) {
   const d = toDate(s);

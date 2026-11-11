@@ -136,7 +136,7 @@ function normalize(t) {
     ["arriveTime", "departTime"].forEach((k) => { if (k in i) i[k] = timeOrEmpty(i[k]); });
     ["geo", "fromGeo", "toGeo"].forEach((k) => { if (k in i && !(isObj(i[k]) && Number.isFinite(i[k].lat) && Number.isFinite(i[k].lng))) delete i[k]; });
     if ("route" in i && !(isObj(i.route) && typeof i.route.key === "string")) delete i.route;
-    i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true, ...("maps" in x ? { maps: str(x.maps) } : {}), ...("date" in x ? { date: dayOrEmpty(x.date) } : {}),
+    i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true, ...("book" in x ? { book: x.book !== false } : {}), ...("maps" in x ? { maps: str(x.maps) } : {}), ...("date" in x ? { date: dayOrEmpty(x.date) } : {}),
       ...("time" in x ? { time: /^([01]\d|2[0-3]):[0-5]\d$/.test(x.time) ? x.time : "" } : {}), ...("how" in x ? { how: str(x.how) } : {}) }));
     i.links = (Array.isArray(i.links) ? i.links : []).filter(isObj).map((l) => ({ id: str(l.id), label: str(l.label), url: str(l.url) }));
     const files = (list) => (Array.isArray(list) ? list : []).filter(isObj).map((f) => ({ id: str(f.id), name: str(f.name), type: str(f.type), size: Number(f.size) || 0 }));

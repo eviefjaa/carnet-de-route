@@ -28,7 +28,7 @@ export function cleanTrip(trip) {
       arrive: DATE.test(s(i.arrive)) ? s(i.arrive).slice(0, 10) : "",
       dep: DATE.test(s(i.dep)) ? s(i.dep).slice(0, 10) : "",
       todos: (Array.isArray(i.todos) ? i.todos : []).filter((t) => t && typeof t === "object")
-        .map((t) => ({ text: s(t.text).slice(0, 200), done: t.done === true })),
+        .map((t) => ({ text: s(t.text).slice(0, 200), done: t.done === true, book: t.book !== false })),
     })),
   };
 }
@@ -50,7 +50,7 @@ export function findDueReminders(trips, today, daysBefore = 3, sent = {}) {
     const trip = cleanTrip(raw);
     for (const stop of trip.items) {
       if (stop.type !== "stop") continue;
-      const left = stop.todos.filter((t) => !t.done && t.text);
+      const left = stop.todos.filter((t) => t.book && !t.done && t.text); // seulement ce qui est à réserver
       if (!left.length) continue;
       const date = stopDate(trip, stop);
       if (!date) continue;
