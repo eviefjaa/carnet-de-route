@@ -1,6 +1,6 @@
 // Checklist d'une étape : activités à faire et choses à réserver
 // Chaque élément : { id, text, done, book, date, maps, tickets }. La date (AAAA-MM-JJ) est facultative.
-// book: false = rien à réserver (coché = fait) ; sinon à réserver (coché = réservé), en rouge tant que ce n'est pas fait.
+// book: false = rien à réserver (pas de case) ; sinon à réserver : la case veut dire réservé, en rouge tant qu'elle n'est pas cochée.
 // Une activité peut avoir ses billets (musée, excursion…) : voir views/tickets.js.
 
 import { esc, safeUrl, fmtDay, byDate, needsBooking } from "../utils.js";
@@ -14,8 +14,11 @@ export const tripPending = (trip) => trip.items.filter((i) => i.type === "stop")
 export const bookBox = (name, id, on) =>
   `<label class="todo-book"><input type="checkbox" name="${name}" id="${esc(id)}"${on ? " checked" : ""}>À réserver</label>`;
 
-// Ce que veut dire la case d'une activité : réservé, ou simplement fait
-export const doneLabel = (t) => (needsBooking(t) ? "Réservé" : "Fait");
+// Devant une activité : la case « réservé » si elle est à réserver, sinon un simple point
+export const bookMark = (stop, t) => needsBooking(t)
+  ? `<input type="checkbox" data-todo="${esc(t.id)}" data-stop="${esc(stop.id)}" id="todo-${esc(t.id)}"${t.done ? " checked" : ""} aria-label="Réservé : ${esc(t.text)}">`
+  : `<span class="cl-dot" aria-hidden="true"></span>`;
+export const markClass = (t) => (!needsBooking(t) ? "is-free" : t.done ? "done" : "");
 
 export function checklist(stop) {
   const todos = byDate(stop.todos);
@@ -30,9 +33,9 @@ export function checklist(stop) {
       ${adding ? "" : `<button class="cl-add" data-act="todo-add" data-stop="${esc(stop.id)}" type="button" aria-label="Ajouter une activité" title="Ajouter une activité">+</button>`}
     </div>
     ${todos.length ? `<ul class="cl-list">${todos.map((t) => `
-      <li class="${t.done ? "done" : needsBooking(t) ? "" : "is-free"}">
+      <li class="${markClass(t)}">
         <label>
-          <input type="checkbox" data-todo="${esc(t.id)}" data-stop="${esc(stop.id)}" id="todo-${esc(t.id)}"${t.done ? " checked" : ""} aria-label="${doneLabel(t)} : ${esc(t.text)}">
+          ${bookMark(stop, t)}
           <span>${esc(t.text)}</span>
           ${t.date ? `<time class="cl-date" datetime="${esc(t.date)}">${esc(fmtDay(t.date))}</time>` : ""}
         </label>

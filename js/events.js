@@ -251,6 +251,7 @@ function saveActivity(f) {
   if (old) {
     ["date", "time", "how", "maps"].forEach((k) => delete old[k]);
     Object.assign(old, clean(v), { book: v.book });
+    if (!v.book) old.done = false; // plus rien à réserver : plus « réservé » non plus
   } else {
     s.todos = [...(s.todos || []), { id: uid(), done: false, ...clean(v), book: v.book }];
   }

@@ -87,7 +87,7 @@ export function stopForm(it, isNew, { sejour = false } = {}) {
     </div>
     <div><button class="btn small" data-act="add-link" type="button">+ Ajouter un lien</button></div>
     ${sejour ? "" : `<div class="f-label">
-      À faire et à réserver (cochez ce qui est déjà réservé ou fait)
+      À faire et à réserver (cochez ce qui est déjà réservé)
       <div class="todos-edit" data-todos>${byDate(it.todos).map((t) => todoRow(t, it)).join("")}</div>
     </div>
     <div><button class="btn small" data-act="add-todo-row" type="button">+ Ajouter une activité</button></div>`}
@@ -111,7 +111,7 @@ export function linkRow(l) {
 export function todoRow(t, stop = {}) {
   const n = (t.tickets || []).length;
   return `<div class="todo-edit" data-todo-row="${esc(t.id)}">
-    <input type="checkbox" name="todoDone" id="td-done-${esc(t.id)}"${t.done ? " checked" : ""} aria-label="Déjà réservé ou fait">
+    <input type="checkbox" name="todoDone" id="td-done-${esc(t.id)}"${t.done ? " checked" : ""} aria-label="Déjà réservé">
     <input name="todoText" id="td-text-${esc(t.id)}" value="${esc(t.text)}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" aria-label="Activité">
     ${n ? `<span class="todo-tk" title="Billets gérés depuis la checklist de l'étape">${n} billet${n > 1 ? "s" : ""}</span>` : "<span></span>"}
     <button class="btn ghost small" data-act="rm-todo-row" type="button" aria-label="Retirer cette activité">✕</button>
@@ -149,8 +149,8 @@ export function readStopForm(f) {
     .map((r) => ({
       id: r.dataset.todoRow,
       text: r.querySelector('[name="todoText"]').value.trim(),
-      done: r.querySelector('[name="todoDone"]').checked,
       book: r.querySelector('[name="todoBook"]').checked,
+      done: r.querySelector('[name="todoBook"]').checked && r.querySelector('[name="todoDone"]').checked, // réservé : seulement si à réserver
       maps: safeUrl(r.querySelector('[name="todoMaps"]').value),
       date: dayOrEmpty(r.querySelector('[name="todoDate"]').value),
     }))

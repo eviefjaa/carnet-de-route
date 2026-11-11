@@ -87,9 +87,10 @@ assert.match(stopForm(withMaps, false), /name="todoMaps"[^>]*value="https:\/\/ma
   const cl = checklist(it);
   assert.match(cl, /<li class="is-free">[\s\S]*?Balade/);
   assert.match(cl, /<li class="">[\s\S]*?Resto/);
-  assert.match(cl, /<li class="done">[\s\S]*?Visite faite/);
+  assert.match(cl, /<li class="is-free">[\s\S]*?Visite faite/, "« réservé » n'a pas de sens sans réservation");
   assert.match(cl, /0\/2 réservé</, "seules les deux activités à réserver sont comptées");
-  assert.match(cl, /aria-label="Fait : Balade"/);
+  assert.match(cl, /<li class="is-free">\s*<label>\s*<span class="cl-dot"[^>]*><\/span>\s*<span>Balade/, "rien à réserver : un point, pas de case");
+  assert.doesNotMatch(cl, /id="todo-f"/);
   assert.match(cl, /aria-label="Réservé : Resto"/);
   assert.equal(tripPending({ items: [it] }), 2);
   assert.equal(checklist({ ...it, todos: [it.todos[1]] }).includes("cl-progress"), false, "rien à réserver : pas de compteur");

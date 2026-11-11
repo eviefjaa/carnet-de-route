@@ -26,7 +26,9 @@
 .cl-list li:not(.done) > label input[type="checkbox"] { accent-color: var(--danger); }
 /* Rien à réserver : couleur normale, la case sert juste à dire que c'est fait */
 .cl-list li.is-free > label span { color: var(--ink); font-weight: 500; }
-.cl-list li.is-free > label input[type="checkbox"] { accent-color: var(--accent); }
+/* Point à la place de la case, de la même largeur pour garder les textes alignés */
+.cl-dot { flex: none; width: 18px; height: 18px; display: grid; place-items: center; }
+.cl-dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
 .cl-del { flex: none; border: 0; background: none; color: var(--muted); padding: 4px 6px; border-radius: 6px; opacity: .5; }
 .cl-list li:hover .cl-del, .cl-del:focus-visible { opacity: 1; }
 .cl-del:hover { color: var(--danger); }
@@ -61,7 +63,8 @@
 .todo-date input { min-width: 0; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); font-size: 13px; color: var(--ink); }
 .cl-form .todo-date input { flex: none; border-color: var(--accent); }
 
-/* Case « À réserver » des formulaires d'activité */
+/* Case « À réserver » des formulaires d'activité ; décochée, la case « réservé » de la ligne s'efface */
+.todo-edit:has([name="todoBook"]:not(:checked)) [name="todoDone"] { visibility: hidden; }
 .todo-book { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; text-transform: none; letter-spacing: 0; }
 .todo-book input { width: 18px; height: 18px; margin: 0; accent-color: var(--danger); }
 .cl-form .todo-book { flex: none; padding: 0 4px; }

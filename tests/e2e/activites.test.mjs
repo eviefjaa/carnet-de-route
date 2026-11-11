@@ -73,16 +73,19 @@ todos = await stored();
 const byId = (id) => todos.find((x) => x.id === id);
 check("date ajoutée depuis le formulaire", byId("a").date === "2030-03-04" && todos.find((x) => x.text.startsWith("Bouchon")).date === "2030-03-03");
 // Ordre chronologique : le 3 mars, le 4 mars, puis l'activité sans date
-const order = await page.$$eval(".cl-list li span", (l) => l.map((e) => e.textContent.slice(0, 12)).join(" | "));
+const order = await page.$$eval(".cl-list li label > span:not(.cl-dot)", (l) => l.map((e) => e.textContent.slice(0, 12)).join(" | "));
 check("checklist dans l'ordre des dates, sans date à la fin", order === "Bouchon Dani | Musée des Co | Pentes de la");
 check("« À réserver » dans l'ordre, sans l'activité qui n'a rien à réserver", (await page.$eval(".to-book", (e) => e.textContent.trim())) === "À réserver : Bouchon Daniel et Denise, Musée des Confluences");
 check("activité sans réservation : pas en rouge", (await page.$$eval(".cl-list li", (l) => l.map((li) => li.className).join(","))) === ",,is-free"
   && (await page.$eval(".cl-list li.is-free span", (e) => getComputedStyle(e).color)) !== (await page.$eval(".cl-list li:not(.is-free) span", (e) => getComputedStyle(e).color)));
+check("rien à réserver : un point à la place de la case", !!(await page.$(".cl-list li.is-free .cl-dot")) && !(await page.$(".cl-list li.is-free input")));
 check("compteur sur les seules activités à réserver", (await page.$eval(".cl-progress", (e) => e.textContent)) === "0/2 réservé");
 check("nouvelle ligne du formulaire : rien à réserver", (await stored()).find((x) => x.text.startsWith("Pentes")).book === false);
 if (SHOTS) await (await page.$(".item.stop")).screenshot({ path: SHOTS + "/activites-ordre.png" });
 await page.click('[data-act="edit"][data-id="s1"]');
 await page.waitForSelector('form[data-form="stop"] [name="todoText"]');
+// Dans le formulaire, décocher « À réserver » efface la case « réservé » de la ligne
+check("formulaire : case « réservé » masquée sans réservation", (await page.$$eval('form[data-form="stop"] [name="todoDone"]', (l) => l.map((e) => getComputedStyle(e).visibility).join(","))) === "visible,visible,hidden");
 check("formulaire dans l'ordre des dates", (await page.$$eval('form[data-form="stop"] [name="todoText"]', (l) => l.map((e) => e.value.slice(0, 6)).join(","))) === "Boucho,Musée ,Pentes");
 
 console.log(`Dates des activités : ${ok} vérifications réussies, ${ko} échec(s).`);

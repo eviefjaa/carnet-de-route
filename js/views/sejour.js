@@ -9,7 +9,7 @@ import { state } from "../store.js";
 import { stopCard, stopForm, newStop } from "./stop.js";
 import { transportCard, transportForm } from "./transport.js";
 import { todoTickets, todoTicketButton } from "./tickets.js";
-import { dateRange, bookBox, doneLabel } from "./checklist.js";
+import { dateRange, bookBox, bookMark, markClass } from "./checklist.js";
 
 const MAX_DAYS = 60;
 
@@ -112,10 +112,10 @@ const moveRow = (x) => `<li class="sj-move"><time class="sj-time">${esc(fmtHour(
 
 function activity(stop, x) {
   const maps = safeUrl(x.maps);
-  return `<li class="sj-act${x.done ? " done" : needsBooking(x) ? "" : " is-free"}">
+  return `<li class="sj-act${markClass(x) ? " " + markClass(x) : ""}">
     <div class="sj-act-main">
       <label>
-        <input type="checkbox" data-todo="${esc(x.id)}" data-stop="${esc(stop.id)}" id="todo-${esc(x.id)}"${x.done ? " checked" : ""} aria-label="${doneLabel(x)} : ${esc(x.text)}">
+        ${bookMark(stop, x)}
         ${x.time ? `<time class="sj-time">${esc(fmtHour(x.time))}</time>` : ""}
         <span class="sj-text">${esc(x.text)}</span>
       </label>
