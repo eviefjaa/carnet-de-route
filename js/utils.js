@@ -52,7 +52,11 @@ const valid = (d) => d && !isNaN(d);
 export const dayOrEmpty = (s) => (typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && valid(toDate(s)) ? s : "");
 // Heure bien formée (HH:MM), sinon chaîne vide
 export const timeOrEmpty = (s) => (typeof s === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(s) ? s : "");
-export const fmtHour = (s) => s.replace(":", " h ");
+// Activités dans l'ordre chronologique : les datées d'abord (par jour, puis par heure),
+// celles sans date ensuite, dans l'ordre où elles ont été ajoutées
+export const byDate = (todos) =>
+  [...(todos || [])].sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999") || (a.time || "99").localeCompare(b.time || "99"));
+export const fmtHour =(s) => s.replace(":", " h ");
 
 export function fmtDay(s) {
   const d = toDate(s);

@@ -2,7 +2,7 @@
 // Chaque élément : { id, text, done, date, maps, tickets }. La date (AAAA-MM-JJ) est facultative. Coché = réservé / fait.
 // Une activité peut avoir ses billets (musée, excursion…) : voir views/tickets.js.
 
-import { esc, safeUrl, fmtDay } from "../utils.js";
+import { esc, safeUrl, fmtDay, byDate } from "../utils.js";
 import { state } from "../store.js";
 import { todoTickets, todoTicketButton } from "./tickets.js";
 
@@ -10,7 +10,7 @@ export const pending = (stop) => (stop.todos || []).filter((t) => !t.done).lengt
 export const tripPending = (trip) => trip.items.filter((i) => i.type === "stop").reduce((n, s) => n + pending(s), 0);
 
 export function checklist(stop) {
-  const todos = stop.todos || [];
+  const todos = byDate(stop.todos);
   const done = todos.length - pending(stop);
   const adding = state.todoAdding === stop.id;
 

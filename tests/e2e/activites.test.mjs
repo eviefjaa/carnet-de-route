@@ -51,7 +51,7 @@ check("activité sans date : pas de date inventée", !("date" in todos[0]));
 await page.click('[data-act="todo-close"]');
 await sleep(200);
 const shown = await page.$$eval(".cl-list li", (l) => l.map((li) => (li.querySelector(".cl-date") || {}).textContent || ""));
-check("date affichée à côté de l'activité, et seulement là", shown[0] === "" && /3 mars/.test(shown[1]));
+check("date affichée à côté de l'activité, et seulement là ; l'activité datée passe devant", /3 mars/.test(shown[0]) && shown[1] === "");
 if (SHOTS) await (await page.$(".item.stop")).screenshot({ path: SHOTS + "/activites-checklist.png" });
 
 // Formulaire de l'étape : on ajoute une date à l'activité qui n'en avait pas
@@ -63,11 +63,21 @@ await page.$eval('#td-date-a', (e) => { e.value = "2030-03-04"; });
 await page.click('[data-act="add-todo-row"]');
 const rowBounds = await page.$$eval('form[data-form="stop"] [name="todoDate"]', (l) => l[2].min + " " + l[2].max);
 check("nouvelle ligne bornée par l'étape", rowBounds === "2030-03-02 2030-03-05");
+await page.$$eval('form[data-form="stop"] [name="todoText"]', (l) => { l[2].value = "Pentes de la Croix-Rousse"; });
 if (SHOTS) await (await page.$('form[data-form="stop"] .todos-edit')).screenshot({ path: SHOTS + "/activites-formulaire.png" });
 await page.$eval('form[data-form="stop"]', (f) => f.requestSubmit());
 await sleep(300);
 todos = await stored();
-check("date ajoutée depuis le formulaire", todos[0].date === "2030-03-04" && todos[1].date === "2030-03-03");
+const byId = (id) => todos.find((x) => x.id === id);
+check("date ajoutée depuis le formulaire", byId("a").date === "2030-03-04" && todos.find((x) => x.text.startsWith("Bouchon")).date === "2030-03-03");
+// Ordre chronologique : le 3 mars, le 4 mars, puis l'activité sans date
+const order = await page.$$eval(".cl-list li span", (l) => l.map((e) => e.textContent.slice(0, 12)).join(" | "));
+check("checklist dans l'ordre des dates, sans date à la fin", order === "Bouchon Dani | Musée des Co | Pentes de la");
+check("« À réserver » dans le même ordre", (await page.$eval(".to-book", (e) => e.textContent)).startsWith("À réserver : Bouchon Daniel et Denise, Musée des Confluences, Pentes"));
+if (SHOTS) await (await page.$(".item.stop")).screenshot({ path: SHOTS + "/activites-ordre.png" });
+await page.click('[data-act="edit"][data-id="s1"]');
+await page.waitForSelector('form[data-form="stop"] [name="todoText"]');
+check("formulaire dans l'ordre des dates", (await page.$$eval('form[data-form="stop"] [name="todoText"]', (l) => l.map((e) => e.value.slice(0, 6)).join(","))) === "Boucho,Musée ,Pentes");
 
 console.log(`Dates des activités : ${ok} vérifications réussies, ${ko} échec(s).`);
 await browser.close();

@@ -8,7 +8,7 @@
 // kilomètres, qui mèneraient à l'adresse exacte de l'étape. Jamais publiés : prix, notes,
 // adresses, liens de réservation, billets, numéros de réservation, co-voyageurs.
 
-import { MODES, nights, duration } from "./utils.js";
+import { MODES, nights, duration, byDate } from "./utils.js";
 import { tripStart, tripEnd } from "./store.js";
 import { COUNTRIES } from "./data/countries.js";
 import { ROAD_MODES, routeKey, decodeLine, encodeLine } from "./routes.js";
@@ -68,7 +68,7 @@ export function publicCopy(trip) {
           day: day(it.arrive),
           nights: nights(it.arrive, it.depart),
           geo: roundGeo(it.geo),
-          todos: (it.todos || []).map((t) => String(t.text || "").slice(0, 120)).filter(Boolean).slice(0, 30),
+          todos: byDate(it.todos).map((t) => String(t.text || "").slice(0, 120)).filter(Boolean).slice(0, 30),
           ...(sejour ? { program: (it.todos || []).filter((t) => t.text).slice(0, 60).map((t) => ({
             text: String(t.text).slice(0, 120),
             day: day(t.date),

@@ -7,6 +7,7 @@ const { state } = await import(root + "/js/store.js");
 const { stopForm, newStop, stopCard } = await import(root + "/js/views/stop.js");
 const { transportForm, transportCard } = await import(root + "/js/views/transport.js");
 const { checklist } = await import(root + "/js/views/checklist.js");
+const { byDate } = await import(root + "/js/utils.js");
 
 // Étape : formulaire de création avec une checklist vide, puis de modification avec ses activités
 assert.match(stopForm(newStop("Lyon"), true), /data-act="add-todo-row"/);
@@ -68,5 +69,15 @@ assert.match(stopForm(withMaps, false), /name="todoMaps"[^>]*value="https:\/\/ma
   const sf = stopForm(it, false);
   assert.match(sf, /name="todoDate" id="td-date-d1" value="2030-03-03" min="2030-03-02" max="2030-03-05"/);
   assert.match(sf, /name="todoDate" id="td-date-d2" value=""/); }
+
+// Ordre chronologique : par date puis par heure, sans date à la fin dans l'ordre d'ajout ; la liste d'origine n'est pas modifiée
+{ const todos = [{ id: "x", text: "Sans date 1" }, { id: "b", text: "B", date: "2030-03-04" }, { id: "y", text: "Sans date 2", date: "" },
+    { id: "a2", text: "A soir", date: "2030-03-03", time: "20:00" }, { id: "a1", text: "A matin", date: "2030-03-03", time: "09:00" }, { id: "a3", text: "A", date: "2030-03-03" }];
+  assert.deepEqual(byDate(todos).map((t) => t.id), ["a1", "a2", "a3", "b", "x", "y"]);
+  assert.equal(todos[0].id, "x");
+  assert.deepEqual(byDate(undefined), []);
+  const it = { ...newStop("Lyon"), todos };
+  const cl = checklist(it);
+  assert.ok(cl.indexOf("A matin") < cl.indexOf(">B<") && cl.indexOf(">B<") < cl.indexOf("Sans date 1"), "checklist dans l'ordre des dates"); }
 
 console.log("Formulaires et checklist : tous les tests passent.");

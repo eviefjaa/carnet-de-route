@@ -1,6 +1,6 @@
 // Affichage et formulaire d'une étape (lieu, dates, hébergement, liens de réservation)
 
-import { esc, uid, safeUrl, dayOrEmpty, timeOrEmpty, fmtHour, source, fmtDay, nights, plural, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
+import { esc, uid, safeUrl, dayOrEmpty, timeOrEmpty, byDate, fmtHour, source, fmtDay, nights, plural, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
 import { state, tripStart } from "../store.js";
 import { itemActions } from "./actions.js";
 import { pickedPlace } from "../autocomplete.js";
@@ -21,7 +21,7 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
 
   // Carte repliée : l'essentiel, et ce qui reste à réserver en rouge. Un clic l'ouvre.
   const open = state.openItems.has(it.id);
-  const toBook = sejour ? [] : (it.todos || []).filter((t) => !t.done).map((t) => t.text);
+  const toBook = sejour ? [] : byDate(it.todos).filter((t) => !t.done).map((t) => t.text);
   const detailId = `stop-detail-${esc(it.id)}`;
 
   return `<article class="item stop${open ? " open" : ""}">
@@ -88,7 +88,7 @@ export function stopForm(it, isNew, { sejour = false } = {}) {
     <div><button class="btn small" data-act="add-link" type="button">+ Ajouter un lien</button></div>
     ${sejour ? "" : `<div class="f-label">
       À faire et à réserver (cochez ce qui est déjà réservé)
-      <div class="todos-edit" data-todos>${(it.todos || []).map((t) => todoRow(t, it)).join("")}</div>
+      <div class="todos-edit" data-todos>${byDate(it.todos).map((t) => todoRow(t, it)).join("")}</div>
     </div>
     <div><button class="btn small" data-act="add-todo-row" type="button">+ Ajouter une activité</button></div>`}
     <label class="f">Notes<textarea name="notes" id="f-notes-${esc(it.id)}" placeholder="Code d'accès, heure de check-in, idées de visites…">${esc(it.notes)}</textarea></label>
