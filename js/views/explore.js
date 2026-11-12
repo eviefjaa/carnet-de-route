@@ -116,6 +116,7 @@ export function countryView(code, postsSection = "") {
       <button class="btn primary" data-act="trip-from-country" data-code="${x.code}" type="button">Créer un voyage dans ce pays</button>
       ${favButton(x.code)}
     </div>
+    ${postsSection}
     <dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
     ${urgencesSection(x)}
     <div class="country-text">
@@ -132,7 +133,6 @@ export function countryView(code, postsSection = "") {
           : `<ul class="highlights">${x.highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>`}
       </section>
     </div>
-    ${postsSection}
     <p class="note"><a href="${wikiUrl(x)}" target="_blank" rel="noopener noreferrer">En savoir plus sur Wikipédia ↗</a></p>
   </section>`;
 }

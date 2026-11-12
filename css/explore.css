@@ -116,3 +116,9 @@
 .country-posts { display: flex; flex-direction: column; gap: 10px; }
 .country-posts h2 { font-size: 20px; font-weight: 700; }
 .country-posts > .note { margin: 0; }
+/* Idées de voyage, juste sous « Créer un voyage dans ce pays » : en rangée qui défile sur téléphone */
+@media (max-width: 640px) {
+  .country-posts .idea-row { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; margin: 0 -16px; padding: 2px 16px 8px; scroll-padding: 0 16px; }
+  .country-posts .idea-row > .post-card { flex: 0 0 82%; scroll-snap-align: start; }
+  .country-posts .idea-row > .post-card:only-child { flex-basis: 100%; }
+}

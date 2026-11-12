@@ -640,9 +640,9 @@ export function countryPostsSection(code) {
   const e = social.load("country-posts:" + code, () => social.topPostsIn(code));
   if (e.status !== "ok" || !e.data.length) return "";
   return `<section class="country-posts" aria-labelledby="country-posts-title">
-    <h2 id="country-posts-title">Idées d'itinéraires</h2>
-    <p class="note">Les itinéraires de voyageurs les plus mis en favori pour ce pays.</p>
-    ${postGrid(e.data, "")}
+    <h2 id="country-posts-title">Idées de voyage</h2>
+    <p class="note">Des itinéraires publiés par des voyageurs dans ce pays, les plus mis en favori d'abord.</p>
+    <div class="trip-grid idea-row">${e.data.map(postCard).join("")}</div>
     <p class="note"><a href="#decouvrir">Voir tous les itinéraires dans Découvrir</a></p>
   </section>`;
 }

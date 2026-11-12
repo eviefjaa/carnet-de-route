@@ -422,6 +422,10 @@ await sleep(3000);
 await anon.goto(SITE + "#destination-JP");
 await anon.waitForSelector(".country-posts .post-card", { timeout: 15000 }).catch(() => {});
 check("sans compte : la fiche Japon montre l'itinéraire publié", (await anon.$$eval(".country-posts .post-card h2", (l) => l.map((h) => h.textContent.trim()))).includes("Japon"));
+check("idées de voyage en haut de la fiche, juste après « Créer un voyage dans ce pays »", await anon.evaluate(() => {
+  const ideas = document.querySelector(".country-posts");
+  return !!ideas && ideas.previousElementSibling?.classList.contains("country-actions") && ideas.nextElementSibling?.matches("dl.facts");
+}));
 await anon.goto(SITE + "#destination-FR");
 await sleep(4000);
 check("pas de section vide sur une fiche sans itinéraire", !(await anon.$(".country-posts")));
