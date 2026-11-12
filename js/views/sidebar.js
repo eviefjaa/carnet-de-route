@@ -52,7 +52,10 @@ export function renderSidebar() {
 
   el.innerHTML = `
     <div class="side-head">
-      <span class="side-brand">Carnet de route</span>
+      <div class="side-id">
+        <span class="side-brand">Croquila</span>
+        <span class="side-tagline">Tout grand voyage commence par un croquis</span>
+      </div>
       <button class="btn ghost small side-close" data-act="close-menu" type="button" aria-label="Fermer le menu">✕</button>
     </div>
     <nav class="side-nav" aria-label="Pages">${links}</nav>

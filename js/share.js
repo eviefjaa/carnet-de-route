@@ -49,7 +49,7 @@ function openInviteMail(email, t, id) {
   const body = [
     "Bonjour,",
     "",
-    `${who} vous invite à préparer le voyage « ${name} » sur Carnet de route.`,
+    `${who} vous invite à préparer le voyage « ${name} » sur Croquila.`,
     "",
     "Pour le rejoindre :",
     `1. Ouvrez ce lien : ${link}`,

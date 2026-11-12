@@ -1,5 +1,5 @@
 {
-  "name": "carnet-de-route-rappels",
+  "name": "croquila-rappels",
   "private": true,
   "type": "module",
   "description": "Rappels par e-mail des choses à réserver avant chaque étape",

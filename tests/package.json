@@ -1,5 +1,5 @@
 {
-  "name": "carnet-de-route-tests",
+  "name": "croquila-tests",
   "private": true,
   "type": "module",
   "description": "Tests du site : unitaires, règles Firestore (émulateur) et parcours complet dans Chrome",

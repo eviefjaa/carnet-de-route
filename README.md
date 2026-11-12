@@ -1,4 +1,8 @@
-# Carnet de route
+# Croquila
+
+*Tout grand voyage commence par un croquis.*
+
+L'application s'appelait « Carnet de route ». Certains éléments gardent volontairement l'ancien nom : les clés de stockage du navigateur (`carnet-route-trips`, `carnet-route-current`, `carnet-route-prefs`, les changer ferait perdre leurs voyages aux personnes sans compte), l'identifiant du projet Firebase (`carnet-de-route-23ffc`) et l'adresse du site (`/carnet-de-route/`).
 
 Petit site pour planifier un road trip : étapes, hébergements (liens Airbnb, Booking…), trajets avec horaires, carte du voyage et budget. Un menu donne accès aux idées de destinations (fiches pays), aux favoris, au profil et aux paramètres.
 

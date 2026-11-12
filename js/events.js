@@ -470,7 +470,7 @@ function exportTrips() {
   const url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
   const a = document.createElement("a");
   a.href = url;
-  a.download = `carnet-de-route-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `croquila-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();

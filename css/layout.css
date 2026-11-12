@@ -20,8 +20,11 @@
   display: flex; flex-direction: column; gap: 18px;
 }
 
-.side-head { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; }
+.side-head { display: flex; align-items: flex-start; gap: 8px; justify-content: space-between; padding: 0 8px; }
 .side-brand { font-family: var(--display); font-weight: 700; font-size: 18px; }
+/* Nom et accroche, l'un sous l'autre */
+.side-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.side-tagline { font-size: 12px; line-height: 1.3; color: var(--muted); text-wrap: balance; }
 .side-close { display: none; }
 
 .side-nav { display: flex; flex-direction: column; gap: 2px; }

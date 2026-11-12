@@ -397,11 +397,11 @@ export function socialTitle() {
   if (state.view === "person") {
     const e = social.peek("person:" + state.personId);
     const p = e.status === "ok" && e.data && e.data.profile;
-    return p ? [`${p.name} (@${p.handle})`, p.bio || `Les itinéraires de ${p.name} sur Carnet de route.`] : ["Profil", "Profil d'un voyageur sur Carnet de route."];
+    return p ? [`${p.name} (@${p.handle})`, p.bio || `Les itinéraires de ${p.name} sur Croquila.`] : ["Profil", "Profil d'un voyageur sur Croquila."];
   }
   const e = social.peek("post:" + state.postId);
   const p = e.status === "ok" && e.data;
-  return p ? [p.title, `Itinéraire publié par ${p.ownerName} sur Carnet de route.`] : ["Itinéraire", "Itinéraire publié sur Carnet de route."];
+  return p ? [p.title, `Itinéraire publié par ${p.ownerName} sur Croquila.`] : ["Itinéraire", "Itinéraire publié sur Croquila."];
 }
 
 // ---------- Recommandations ----------
