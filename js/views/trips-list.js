@@ -79,6 +79,9 @@ function summary(id, trip) {
   };
 }
 
+// Une carte seule (pour remplacer une confirmation annulée sans réafficher la liste, voir js/swipe.js)
+export const tripCard = (id) => (state.trips[id] ? card(summary(id, state.trips[id])) : "");
+
 function card(s) {
   const { id, trip } = s;
   const owner = isOwner(trip);

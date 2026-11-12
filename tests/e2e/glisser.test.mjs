@@ -70,6 +70,100 @@ await sleep(300);
 await page.click('[data-act="swipe-delete-yes"]');
 await sleep(600);
 check("Supprimer efface le voyage", !(await names()).includes("Lyon") && !(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem("carnet-route-trips"))))).includes("v-a"));
+// ---------- Deux cartes : une seule ouverte, sans saut ni va-et-vient ----------
+const lefts = () => page.$$eval(".swipe", (l) => l.map((b) => Math.round(b.scrollLeft)));
+const openCount = () => page.$$eval(".swipe", (l) => l.filter((b) => b.scrollLeft > 44).length);
+const closeAll = async () => { await page.$$eval(".swipe", (l) => l.forEach((b) => b.scrollTo({ left: 0 }))); await sleep(400); };
+const centerOf = (i) => page.$$eval(".swipe > .trip-card", (l, i) => { const r = l[i].getBoundingClientRect(); return { x: r.x + r.width * 0.7, y: r.y + r.height / 2 }; }, i);
+
+await swipe(0, -150);
+await swipe(1, -150);
+{ const l = await lefts();
+  check("ouvrir A puis balayer B : B ouverte, A fermée", l[0] === 0 && l[1] > 44); }
+await sleep(1000);
+{ const l = await lefts();
+  check("B ne se referme pas après l'animation", l[0] === 0 && l[1] > 44); }
+
+// Deux doigts presque en même temps. Chrome (émulation) ne fait défiler que la première carte,
+// le second doigt comptant comme un pincement : on vérifie qu'il n'en reste qu'une, immobile.
+await closeAll();
+{ const a = await centerOf(0), b = await centerOf(1);
+  const fa = await page.touchscreen.touchStart(a.x, a.y);
+  await sleep(30);
+  const fb = await page.touchscreen.touchStart(b.x, b.y);
+  for (let k = 1; k <= 8; k++) {
+    await fa.move(a.x - (150 * k) / 8, a.y + 2);
+    await fb.move(b.x - (150 * k) / 8, b.y + 2);
+    await sleep(15);
+  }
+  await fa.end();
+  await fb.end();
+  await sleep(1000);
+  const l1 = await lefts();
+  await sleep(1000);
+  const l2 = await lefts();
+  check("deux doigts : une seule carte ouverte", l2.filter((x) => x > 44).length === 1);
+  check("deux doigts : plus aucun mouvement après 1 s", JSON.stringify(l1) === JSON.stringify(l2)); }
+
+// Sur un vrai téléphone, les deux cartes peuvent défiler ensemble : doigts posés sur A puis B,
+// et les deux bandeaux défilent en même temps (comme le défilement natif, événement par événement)
+await closeAll();
+{ const a = await centerOf(0), b = await centerOf(1);
+  const fa = await page.touchscreen.touchStart(a.x, a.y);
+  await sleep(30);
+  const fb = await page.touchscreen.touchStart(b.x, b.y);
+  await page.$$eval(".swipe", (l) => l.forEach((x) => (x.style.scrollSnapType = "none")));
+  for (let k = 1; k <= 11; k++) {
+    await page.$$eval(".swipe", (l, k) => { l[0].scrollLeft = k * 8; l[1].scrollLeft = k * 8; }, k);
+    await sleep(20);
+  }
+  await page.$$eval(".swipe", (l) => l.forEach((x) => (x.style.scrollSnapType = "")));
+  const during = await lefts();
+  await fa.end();
+  await fb.end();
+  await sleep(1000);
+  const l1 = await lefts();
+  await sleep(1000);
+  const l2 = await lefts();
+  check("deux cartes qui défilent ensemble : aucune refermée sous le doigt", during[0] > 44 && during[1] > 44);
+  check("doigts levés : seule la dernière touchée (B) reste ouverte", l2[0] === 0 && l2[1] > 44);
+  check("aucune oscillation après 1 s", JSON.stringify(l1) === JSON.stringify(l2)); }
+
+// Confirmation sur A, balayage de B : la confirmation est annulée, rien n'est supprimé
+await closeAll();
+await swipe(0, -150);
+await page.click(".swipe.open .swipe-action");
+await sleep(400);
+check("confirmation affichée sur A", !!(await page.$(".swipe-confirm")));
+const before = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem("carnet-route-trips"))).length);
+await swipe(1, -150);
+await sleep(500);
+check("balayer B annule la confirmation", !(await page.$(".swipe-confirm")) && (await page.$$(".swipe")).length === 2);
+check("aucun voyage supprimé", (await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem("carnet-route-trips"))).length)) === before);
+check("B reste ouverte, A fermée", JSON.stringify((await lefts()).map((x) => x > 44)) === "[false,true]");
+await closeAll();
+
+// À la souris : glisser A puis B, seule B reste ouverte
+async function drag(i) {
+  const c = await centerOf(i);
+  await page.mouse.move(c.x, c.y);
+  await page.mouse.down();
+  for (let k = 1; k <= 8; k++) { await page.mouse.move(c.x - (120 * k) / 8, c.y); await sleep(15); }
+  await page.mouse.up();
+  await sleep(900);
+}
+// (écran d'ordinateur, sans tactile : en émulation téléphone la souris devient un doigt)
+await page.setViewport({ width: 375, height: 760 });
+await sleep(500);
+await drag(0);
+check("souris : la carte glissée reste ouverte", JSON.stringify((await lefts()).map((x) => x > 44)) === "[true,false]");
+await drag(1);
+await sleep(1000);
+check("souris : B ouverte, A refermée", JSON.stringify((await lefts()).map((x) => x > 44)) === "[false,true]");
+await closeAll();
+await page.setViewport({ width: 375, height: 760, isMobile: true, hasTouch: true });
+await sleep(500);
+
 await page.tap(".swipe > .trip-card .tc-link");
 await sleep(600);
 check("un simple toucher ouvre toujours le voyage", (await page.evaluate(() => location.hash)).startsWith("#voyage-v-"));
