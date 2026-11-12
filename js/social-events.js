@@ -1,7 +1,9 @@
 // Réactions aux clics et formulaires des pages sociales (profil public, abonnements, publications)
 
-import { state, currentTrip } from "./store.js";
-import { toggleFavoritePost, forgetFavoritePosts } from "./prefs.js";
+import { state, currentTrip, createTrip } from "./store.js";
+import { prefs, toggleFavoritePost, forgetFavoritePosts } from "./prefs.js";
+import { tripFromPost } from "./fork.js";
+import { countryByCode } from "./data/countries.js";
 import { render } from "./views/trip.js";
 import { peopleList, recoRow } from "./views/social.js";
 import * as social from "./social.js";
@@ -25,6 +27,15 @@ export function onSocialClick(act, b) {
   switch (act) {
     case "open-publish":
       state.publishOpen = true;
+      render();
+      return true;
+    case "fork-open":
+      state.forkOpen = b.dataset.post;
+      render();
+      document.querySelector("form[data-fork-form] input")?.focus();
+      return true;
+    case "fork-close":
+      state.forkOpen = false;
       render();
       return true;
     case "close-publish":
@@ -142,8 +153,38 @@ export function onSocialClick(act, b) {
   return false;
 }
 
+// Voyage créé à partir d'un itinéraire publié. La publication est relue juste avant :
+// supprimée ou devenue invisible entre-temps, aucun voyage n'est créé.
+let forking = false; // un double clic ne crée qu'un voyage
+async function forkPost(f) {
+  if (forking) return;
+  forking = true;
+  f.querySelector("button[type=submit]").disabled = true;
+  try {
+    let post = null;
+    try { post = await social.getPost(f.dataset.forkForm); } catch {}
+    if (!post || !(post.trip && (post.trip.items || []).some((i) => i.type === "stop"))) {
+      state.forkOpen = false;
+      render();
+      return toast("Cet itinéraire n'est plus disponible : aucun voyage n'a été créé.");
+    }
+    const t = tripFromPost(post, { name: f.elements.name.value.trim(), start: f.elements.start.value }, social.RECO_KINDS);
+    const c = countryByCode(t.country);
+    const id = createTrip({ ...t, currency: (c && c.currency) || prefs.currency || "EUR" });
+    toast(`Voyage créé à partir de l'itinéraire de @${post.ownerHandle} : à vous de l'adapter`);
+    go("voyage-" + id);
+  } finally {
+    forking = false;
+  }
+}
+
 export function onSocialSubmit(e) {
   const f = e.target;
+  if (f.matches("[data-fork-form]")) {
+    e.preventDefault();
+    forkPost(f);
+    return true;
+  }
   if (f.matches("[data-publish-form]")) {
     e.preventDefault();
     const t = currentTrip();

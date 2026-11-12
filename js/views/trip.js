@@ -188,6 +188,7 @@ function hero(t) {
   return `<section class="hero">
     <a class="trip-back" href="#voyages">← Mes voyages</a>
     <h1><input id="tripName" value="${esc(t.name)}" maxlength="200" aria-label="Nom du voyage"></h1>
+    ${t.source ? `<p class="trip-source">Inspiré de l'itinéraire de <a href="#publication-${esc(t.source.postId)}">@${esc(t.source.ownerHandle)}</a></p>` : ""}
     <div class="stats">
       ${start ? `<span><b>${esc(fmtDay(start))}</b> → <b>${esc(fmtDay(end))}</b></span>` : ""}
       ${t.kind === "sejour" ? sejourHeroStats(t, totalNights) : `<span><b>${stops.length}</b> étape${stops.length > 1 ? "s" : ""}</span>

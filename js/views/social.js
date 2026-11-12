@@ -212,8 +212,10 @@ export function postView(id) {
         </div>` : ""}
       <div class="row-btns post-actions">
         ${postFavButton(p)}
+        ${stops.length && state.forkOpen !== p.id ? `<button class="btn small" data-act="fork-open" data-post="${esc(p.id)}" type="button">Créer mon voyage à partir de cet itinéraire</button>` : ""}
         ${p.visibility === "public" ? `<button class="btn small" data-act="copy-link" type="button">Copier le lien de partage</button>` : ""}
       </div>
+      ${stops.length && state.forkOpen === p.id ? forkForm(p) : ""}
     </header>
     ${stops.some((s) => s.geo) ? `<section class="map-box" aria-label="Carte de l'itinéraire"><div id="mapSlot"></div></section>` : ""}
     <section class="route" aria-label="Itinéraire">${items.map((it, i) => readOnlyItem(it, stopRecos(p, i))).join("")}</section>
@@ -221,6 +223,23 @@ export function postView(id) {
     ${recosSection(p)}
     ${commentsSection(p)}
   </section>`;
+}
+
+// Créer son voyage à partir de l'itinéraire : nom et date de départ, rien d'autre à remplir
+function forkForm(p) {
+  return `<form class="fork panel" data-fork-form="${esc(p.id)}">
+    <h2>Créer mon voyage</h2>
+    <p class="note">Une copie de l'itinéraire, à modifier comme vous voulez. La publication de @${esc(p.ownerHandle)} ne change pas.${state.user ? "" : " Sans compte, le voyage est enregistré dans ce navigateur."}</p>
+    <div class="grid">
+      <label class="f">Nom du voyage<input name="name" value="${esc(p.title)}" maxlength="200" required></label>
+      <label class="f">Date de départ (facultatif)<input type="date" name="start"></label>
+    </div>
+    <p class="note">Avec une date de départ, « Jour 1, Jour 2… » deviennent des dates.</p>
+    <div class="row-btns">
+      <button class="btn primary" type="submit">Créer le voyage</button>
+      <button class="btn" data-act="fork-close" type="button">Annuler</button>
+    </div>
+  </form>`;
 }
 
 // Élément de l'itinéraire, en lecture seule

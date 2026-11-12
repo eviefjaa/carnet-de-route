@@ -110,3 +110,9 @@ button.comment-like:hover, .comment-like.is-on { color: var(--danger); }
 /* Case « Montrer le budget » du panneau de publication */
 .publish-budget { align-items: flex-start; font-weight: 500; }
 .publish-budget input { flex: none; margin: 2px 0 0; }
+
+/* Créer son voyage à partir d'un itinéraire publié */
+.fork { display: flex; flex-direction: column; gap: 10px; }
+.fork h2 { font-size: 18px; }
+.fork .note { margin: 0; }
+.trip-source { margin: 0; font-size: 14px; color: var(--muted); }

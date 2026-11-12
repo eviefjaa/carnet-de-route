@@ -35,6 +35,7 @@ export const state = {
   notifs: null,     // notifications { list, at } (voir social.js)
   invitations: [],  // invitations à des voyages en attente de réponse [{ id, name, from }]
   publishOpen: false, // panneau « Publier l'itinéraire » ouvert
+  forkOpen: false,  // formulaire « Créer mon voyage à partir de cet itinéraire » ouvert
   inviteOpen: false,  // champ « Inviter une personne » ouvert
   openItems: new Set(), // étapes et trajets dépliés (le détail s'affiche au clic sur leur carte)
   selecting: false, // « Mes voyages » en mode sélection (pour supprimer plusieurs voyages)
@@ -233,6 +234,7 @@ export function resetUi() {
   if (state.deleteAccount !== "busy") state.deleteAccount = null;
   state.formTickets = { pending: [], removed: [] };
   state.publishOpen = false;
+  state.forkOpen = false;
   state.inviteOpen = false;
   state.openItems = new Set();
   state.selecting = false;
@@ -246,9 +248,10 @@ export function selectTrip(id) {
 }
 
 // kind : "sejour" (un seul lieu, programme jour par jour) ; road trip sinon
-export function createTrip({ name = "Nouveau voyage", currency = prefs.currency || "EUR", country = "", kind = "" } = {}) {
+// items et source : voyage créé à partir d'un itinéraire publié (fork.js)
+export function createTrip({ name = "Nouveau voyage", currency = prefs.currency || "EUR", country = "", kind = "", items = [], source = null } = {}) {
   const id = "v-" + uid();
-  state.trips[id] = { name, currency, country, createdAt: Date.now(), items: [], ...(kind === "sejour" ? { kind } : {}) };
+  state.trips[id] = { name, currency, country, createdAt: Date.now(), items, ...(kind === "sejour" ? { kind } : {}), ...(source ? { source } : {}) };
   selectTrip(id);
   save();
   return id;

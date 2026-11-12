@@ -60,7 +60,7 @@ export function transportForm(it, isNew) {
       <label class="f">Compagnie<input name="company" id="t-comp-${esc(it.id)}" value="${esc(it.company)}" placeholder="Ex. 1001, LATAM"></label>
       <label class="f">Lieu de départ<span class="ac"><input name="from" id="t-from-${esc(it.id)}" value="${esc(it.from)}" placeholder="Ville, gare, aéroport…" required data-place="any" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
       <label class="f">Lieu d'arrivée<span class="ac"><input name="to" id="t-to-${esc(it.id)}" value="${esc(it.to)}" placeholder="Ville, gare, aéroport…" required data-place="any" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
-      <label class="f">Départ (date et heure)<input type="datetime-local" name="dep" id="t-dep-${esc(it.id)}" value="${esc(it.dep)}"></label>
+      <label class="f">Départ (date et heure)<input type="datetime-local" name="dep" id="t-dep-${esc(it.id)}" value="${esc(it.dep)}"${/^\d{4}-\d{2}-\d{2}$/.test(it.dep || "") ? ` data-day="${esc(it.dep)}"` : ""}></label>
       <label class="f">Arrivée (date et heure)<input type="datetime-local" name="arr" id="t-arr-${esc(it.id)}" value="${esc(it.arr)}" min="${esc(it.dep)}"></label>
       <div class="computed full" data-duration></div>
       <label class="f">Prix<input name="price" id="t-price-${esc(it.id)}" value="${esc(priceInput(it.price))}" inputmode="decimal" placeholder="Ex. 80"></label>
@@ -79,6 +79,8 @@ export function transportForm(it, isNew) {
 export function readTransportForm(f) {
   const o = { id: f.dataset.id, type: "transport" };
   ["mode", "from", "to", "dep", "arr", "company", "ref", "url", "notes"].forEach((k) => (o[k] = f[k].value.trim()));
+  // Date sans heure (voyage tiré d'un itinéraire publié) : le champ l'affiche vide, on la garde si on n'en tape pas d'autre
+  if (!o.dep && f.dep.dataset.day) o.dep = f.dep.dataset.day;
   o.price = parsePrice(f.price.value);
   // Lieux choisis dans les suggestions : leur position sert à la carte quand il n'y a pas d'étape de ce côté
   for (const k of ["from", "to"]) {

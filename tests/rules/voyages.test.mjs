@@ -121,6 +121,10 @@ await shared("v21");
 await t("carla quitte en effaçant la date de bob", updateDoc(T(carla, "trips/v21"), { members: arrayRemove("carla"), "emails.carla": deleteField(), "joined.bob": deleteField() }), false);
 await t("carla quitte avec sa date d'arrivée", updateDoc(T(carla, "trips/v21"), { members: arrayRemove("carla"), "emails.carla": deleteField(), "joined.carla": deleteField() }), true);
 
+// ---------- Voyage tiré d'un itinéraire publié ----------
+await t("voyage avec son origine (publication et pseudo)", setDoc(T(alice, "trips/v30"), trip({ source: { postId: "post123", ownerHandle: "dan.voyage" } })), true);
+await t("l'origine se modifie comme le reste", updateDoc(T(alice, "trips/v30"), { "source.ownerHandle": "dan.v" }), true);
+
 // ---------- Données personnelles ----------
 await t("ses préférences", setDoc(T(alice, "users/alice/meta/prefs"), { theme: "dark" }), true);
 await t("préférences d'un autre (écrire)", setDoc(T(eve, "users/alice/meta/prefs"), { theme: "dark" }), false);

@@ -128,6 +128,8 @@ function normalize(t) {
   if (typeof t.name !== "string") t.name = "Sans titre";
   if (typeof t.currency !== "string") t.currency = "EUR";
   if ("kind" in t && t.kind !== "sejour") delete t.kind; // road trip par défaut
+  // Itinéraire publié dont le voyage est tiré : id de la publication et pseudo de l'auteur
+  if ("source" in t && !(isObj(t.source) && /^[A-Za-z0-9_-]{1,64}$/.test(t.source.postId) && typeof t.source.ownerHandle === "string")) delete t.source;
   t.items = (Array.isArray(t.items) ? t.items : []).filter((i) => isObj(i) && typeof i.id === "string" && (i.type === "stop" || i.type === "transport"));
   t.items.forEach((i) => {
     STR.forEach((k) => { if (k in i) i[k] = str(i[k]); });
