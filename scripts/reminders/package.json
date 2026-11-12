@@ -1,5 +1,5 @@
 {
-  "name": "croquila-rappels",
+  "name": "croquilo-rappels",
   "private": true,
   "type": "module",
   "description": "Rappels par e-mail des choses à réserver avant chaque étape",

@@ -141,7 +141,7 @@ async function remindAccount(uid, label) {
   }
 
   try {
-    await mailer.sendMail({ from: `Croquila <${process.env.GMAIL_USER}>`, to: email, subject, text, html });
+    await mailer.sendMail({ from: `Croquilo <${process.env.GMAIL_USER}>`, to: email, subject, text, html });
     await sentRef.set(Object.fromEntries(due.map((r) => [r.key, today])), { merge: true });
     sentCount++;
     console.log(`${label} : e-mail envoyé`);

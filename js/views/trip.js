@@ -31,7 +31,7 @@ const PAGE_META = {
   profile: ["Mon profil", "Votre profil, vos abonnés et vos itinéraires publiés."],
   settings: ["Paramètres", "Thème, devise par défaut, rappels par e-mail et export de vos voyages."],
   feed: ["Fil d'actualité", "Les derniers itinéraires des voyageurs que vous suivez."],
-  discover: ["Découvrir", "Les derniers itinéraires publiés par la communauté Croquila."],
+  discover: ["Découvrir", "Les derniers itinéraires publiés par la communauté Croquilo."],
   publications: ["Mes publications", "Vos itinéraires publiés et leur visibilité."],
   notifications: ["Notifications", "Commentaires, abonnements et voyageurs qui rejoignent vos voyages."],
 };
@@ -47,7 +47,7 @@ function setMeta() {
     : ["person", "post"].includes(state.view) ? socialTitle()
     : state.view === "network" ? [NETWORK_PAGES[state.networkTab] || "Mon profil", PAGE_META.profile[1]]
     : PAGE_META[state.view] || PAGE_META.trips;
-  document.title = `${title} · Croquila`;
+  document.title = `${title} · Croquilo`;
   document.querySelector('meta[name="description"]')?.setAttribute("content", description);
 }
 

@@ -1,4 +1,4 @@
-# Croquila
+# Croquilo
 
 *Tout grand voyage commence par un croquis.*
 

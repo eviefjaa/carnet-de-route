@@ -87,7 +87,7 @@ export function buildEmail(reminders, siteUrl) {
   const text = [
     "Bonjour,",
     "",
-    "Certaines choses ne sont pas encore cochées pour votre voyage sur Croquila :",
+    "Certaines choses ne sont pas encore cochées pour votre voyage sur Croquilo :",
     "",
     ...reminders.flatMap((r) => [
       `${r.place} (${r.tripName}) : ${when(r.inDays)}, ${fmtDate(r.date)}`,
@@ -97,13 +97,13 @@ export function buildEmail(reminders, siteUrl) {
     ]),
     "Une fois réservées, cochez-les dans le site pour ne plus recevoir ce rappel.",
     "",
-    "Croquila",
+    "Croquilo",
     "Pour ne plus recevoir ces e-mails : Paramètres → Rappels par e-mail.",
   ].join("\n");
 
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#12302b;max-width:560px">
     <p>Bonjour,</p>
-    <p>Certaines choses ne sont pas encore cochées pour votre voyage sur Croquila :</p>
+    <p>Certaines choses ne sont pas encore cochées pour votre voyage sur Croquilo :</p>
     ${reminders.map((r) => `
       <div style="border:1px solid #d3dfdb;border-radius:10px;padding:14px 16px;margin:12px 0">
         <div style="font-size:18px;font-weight:bold">${esc(r.place)}</div>
@@ -112,7 +112,7 @@ export function buildEmail(reminders, siteUrl) {
         <a href="${esc(siteUrl)}#voyage-${esc(r.tripId)}" style="display:inline-block;background:#0f6b5c;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:14px">Ouvrir le voyage</a>
       </div>`).join("")}
     <p>Une fois réservées, cochez-les dans le site pour ne plus recevoir ce rappel.</p>
-    <p style="color:#5d716c;font-size:12px">Croquila · Pour ne plus recevoir ces e-mails : Paramètres → Rappels par e-mail.</p>
+    <p style="color:#5d716c;font-size:12px">Croquilo · Pour ne plus recevoir ces e-mails : Paramètres → Rappels par e-mail.</p>
   </div>`;
 
   return { subject, text, html };
