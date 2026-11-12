@@ -1,6 +1,8 @@
-# Croquilo
+# Hippalos
 
-*Tout grand voyage commence par un croquis.*
+*Prenez le bon vent.*
+
+Hippalos est le navigateur grec qui a découvert comment utiliser les vents de mousson pour traverser l'océan Indien.
 
 L'application s'appelait « Carnet de route ». Certains éléments gardent volontairement l'ancien nom : les clés de stockage du navigateur (`carnet-route-trips`, `carnet-route-current`, `carnet-route-prefs`, les changer ferait perdre leurs voyages aux personnes sans compte), l'identifiant du projet Firebase (`carnet-de-route-23ffc`) et l'adresse du site (`/carnet-de-route/`).
 

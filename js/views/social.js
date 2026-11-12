@@ -416,11 +416,11 @@ export function socialTitle() {
   if (state.view === "person") {
     const e = social.peek("person:" + state.personId);
     const p = e.status === "ok" && e.data && e.data.profile;
-    return p ? [`${p.name} (@${p.handle})`, p.bio || `Les itinéraires de ${p.name} sur Croquilo.`] : ["Profil", "Profil d'un voyageur sur Croquilo."];
+    return p ? [`${p.name} (@${p.handle})`, p.bio || `Les itinéraires de ${p.name} sur Hippalos.`] : ["Profil", "Profil d'un voyageur sur Hippalos."];
   }
   const e = social.peek("post:" + state.postId);
   const p = e.status === "ok" && e.data;
-  return p ? [p.title, `Itinéraire publié par ${p.ownerName} sur Croquilo.`] : ["Itinéraire", "Itinéraire publié sur Croquilo."];
+  return p ? [p.title, `Itinéraire publié par ${p.ownerName} sur Hippalos.`] : ["Itinéraire", "Itinéraire publié sur Hippalos."];
 }
 
 // ---------- Recommandations ----------
