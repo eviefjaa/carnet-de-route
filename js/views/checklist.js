@@ -10,9 +10,9 @@ import { todoTickets, todoTicketButton } from "./tickets.js";
 export const pending = (stop) => (stop.todos || []).filter((t) => needsBooking(t) && !t.done).length;
 export const tripPending = (trip) => trip.items.filter((i) => i.type === "stop").reduce((n, s) => n + pending(s), 0);
 
-// Case « à réserver » des formulaires d'activité (décochée par défaut)
+// « À réserver » des formulaires d'activité : une case, affichée comme une pastille à côté de la date (désactivée par défaut)
 export const bookBox = (name, id, on) =>
-  `<label class="todo-book"><input type="checkbox" name="${name}" id="${esc(id)}"${on ? " checked" : ""}>À réserver</label>`;
+  `<label class="todo-book"><input type="checkbox" name="${name}" id="${esc(id)}"${on ? " checked" : ""}><span>À réserver</span></label>`;
 
 // Devant une activité : la case « réservé » si elle est à réserver, sinon un simple point
 export const bookMark = (stop, t) => needsBooking(t)
@@ -48,8 +48,8 @@ export function checklist(stop) {
     ${adding ? `<form class="cl-form" data-todo-form="${esc(stop.id)}">
       <input name="text" id="todo-new-${esc(stop.id)}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" required>
       <label class="todo-date">Date<input type="date" name="date" id="todo-date-${esc(stop.id)}"${dateRange(stop)}></label>
-      <input name="maps" id="todo-maps-${esc(stop.id)}" placeholder="Lien Google Maps du lieu (facultatif)" inputmode="url" autocomplete="off" aria-label="Lien Google Maps du lieu">
       ${bookBox("book", "todo-book-" + stop.id, false)}
+      <input name="maps" id="todo-maps-${esc(stop.id)}" placeholder="Lien Google Maps du lieu (facultatif)" inputmode="url" autocomplete="off" aria-label="Lien Google Maps du lieu">
       <button class="btn primary small" type="submit">Ajouter</button>
       <button class="btn ghost small" data-act="todo-close" type="button">Fermer</button>
     </form>` : ""}

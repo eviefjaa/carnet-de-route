@@ -65,7 +65,11 @@
 
 /* Case « À réserver » des formulaires d'activité ; décochée, la case « réservé » de la ligne s'efface */
 .todo-edit:has([name="todoBook"]:not(:checked)) [name="todoDone"] { visibility: hidden; }
-.todo-book { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; text-transform: none; letter-spacing: 0; }
-.todo-book input { width: 18px; height: 18px; margin: 0; accent-color: var(--danger); }
-.cl-form .todo-book { flex: none; padding: 0 4px; }
-.cl-form .todo-book input { flex: none; padding: 0; }
+/* Pastille : grise si rien à réserver, rouge avec une coche si c'est à réserver (comme dans la liste) */
+.todo-book { position: relative; display: inline-flex; align-items: center; gap: 6px; flex: none; width: fit-content; padding: 5px 12px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg); font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; text-transform: none; letter-spacing: 0; user-select: none; }
+.todo-book::before { content: ""; width: 12px; height: 12px; border: 1.5px solid currentColor; border-radius: 50%; box-sizing: border-box; }
+.todo-book:hover { border-color: var(--muted); }
+.todo-book input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.todo-book:has(input:checked) { border-color: var(--danger); color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+.todo-book:has(input:checked)::before { content: "✓"; border: 0; width: auto; height: auto; font-size: 13px; line-height: 1; }
+.todo-book:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }

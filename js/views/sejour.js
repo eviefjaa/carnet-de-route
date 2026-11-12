@@ -136,9 +136,9 @@ function activityForm(stop, x) {
     <label class="f full">Activité<input name="text" id="act-text-${esc(id)}" value="${esc(x.text || "")}" placeholder="Ex. Musée du Louvre, dîner chez Chartier…" maxlength="120" autocomplete="off" required></label>
     <label class="f">Jour<input type="date" name="date" id="act-date-${esc(id)}" value="${esc(x.date || "")}"${dateRange(stop)}></label>
     <label class="f">Heure<input type="time" name="time" id="act-time-${esc(id)}" value="${esc(x.time || "")}"></label>
+    <div class="full">${bookBox("book", "act-book-" + id, x.id ? needsBooking(x) : false)}</div>
     <label class="f full">Comment y aller<input name="how" id="act-how-${esc(id)}" value="${esc(x.how || "")}" placeholder="Ex. Métro 1, arrêt Palais-Royal, puis 5 min à pied" maxlength="200" autocomplete="off"></label>
     <label class="f full">Lien Google Maps<input name="maps" id="act-maps-${esc(id)}" value="${esc(x.maps || "")}" placeholder="Facultatif" inputmode="url" autocomplete="off"></label>
-    <div class="f full">${bookBox("book", "act-book-" + id, x.id ? needsBooking(x) : false)}</div>
     <div class="form-actions">
       <button class="btn" data-act="act-cancel" type="button">Annuler</button>
       <button class="btn primary" type="submit">${x.id ? "Enregistrer" : "Ajouter"}</button>

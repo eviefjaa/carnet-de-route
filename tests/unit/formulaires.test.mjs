@@ -101,7 +101,7 @@ assert.match(stopForm(withMaps, false), /name="todoMaps"[^>]*value="https:\/\/ma
   assert.match(sf, /name="todoBook" id="td-book-f">/);
   assert.match(sf, /name="todoBook" id="td-book-o" checked/);
   state.todoAdding = it.id;
-  assert.match(checklist(it), /name="book" id="todo-book-[^"]+">À réserver/, "case décochée à l'ajout");
+  assert.match(checklist(it), /name="book" id="todo-book-[^"]+"><span>À réserver<\/span>/, "case décochée à l'ajout");
   state.todoAdding = null; }
 
 console.log("Formulaires et checklist : tous les tests passent.");
