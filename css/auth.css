@@ -26,6 +26,6 @@
 .sync-badge { white-space: nowrap; font-family: var(--body); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; border: 1px solid transparent; background: var(--accent-soft); color: var(--accent); }
 .sync-badge.is-pending { background: var(--ticket); color: var(--ink); }
 .sync-badge.is-error { background: transparent; border-color: var(--danger); color: var(--danger); cursor: pointer; }
-.sync-badge.is-error:hover { background: var(--danger); color: #fff; }
+@media (hover: hover) { .sync-badge.is-error:hover { background: var(--danger); color: #fff; } }
 .sync-note.is-error { color: var(--danger); font-weight: 600; }
 @media (max-width: 560px) { .account-email { display: none; } }

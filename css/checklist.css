@@ -8,14 +8,14 @@
   border-radius: 50%; border: 1px solid var(--accent); background: transparent; color: var(--accent);
   font-size: 18px; line-height: 1; font-weight: 600;
 }
-.cl-add:hover { background: var(--accent); color: var(--accent-ink); }
+@media (hover: hover) { .cl-add:hover { background: var(--accent); color: var(--accent-ink); } }
 
 /* Point à la place de la case, de la même largeur pour garder les textes alignés */
 .cl-dot { flex: none; width: 18px; height: 18px; display: grid; place-items: center; }
 .cl-dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
 .cl-del { flex: none; border: 0; background: none; color: var(--muted); padding: 4px 6px; border-radius: 6px; opacity: .5; }
 .cl-del:focus-visible { opacity: 1; }
-.cl-del:hover { color: var(--danger); }
+@media (hover: hover) { .cl-del:hover { color: var(--danger); } }
 @media (hover: none) { .cl-del { opacity: .8; } }
 
 .cl-form { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -33,7 +33,7 @@
 
 /* Lien Google Maps d'une activité */
 .cl-map { display: inline-flex; align-items: center; gap: 3px; flex: none; font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; padding: 2px 6px; border-radius: 6px; }
-.cl-map:hover { background: var(--accent-soft); }
+@media (hover: hover) { .cl-map:hover { background: var(--accent-soft); } }
 
 /* Activité dans le formulaire : le lien Google Maps en seconde ligne */
 .todo-edit { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 6px 8px; }
@@ -52,7 +52,7 @@
 /* Pastille : grise si rien à réserver, rouge avec une coche si c'est à réserver (comme dans la liste) */
 .todo-book { position: relative; display: inline-flex; align-items: center; gap: 6px; flex: none; width: fit-content; padding: 5px 12px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg); font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; text-transform: none; letter-spacing: 0; user-select: none; }
 .todo-book::before { content: ""; width: 12px; height: 12px; border: 1.5px solid currentColor; border-radius: 50%; box-sizing: border-box; }
-.todo-book:hover { border-color: var(--muted); }
+@media (hover: hover) { .todo-book:hover { border-color: var(--muted); } }
 .todo-book input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .todo-book:has(input:checked) { border-color: var(--danger); color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
 .todo-book:has(input:checked)::before { content: "✓"; border: 0; width: auto; height: auto; font-size: 13px; line-height: 1; }
@@ -63,11 +63,12 @@
 .pg-head { display: flex; align-items: center; gap: 8px; }
 .pg-toggle { flex: 1; min-width: 0; display: block; padding: 6px 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
 .pg-toggle b { color: var(--ink); font-weight: 600; }
-.pg-toggle:hover b { text-decoration: underline; }
-.pg-arrow { display: inline-block; width: 1em; color: var(--ink); font-size: 16px; transition: transform .15s; }
+@media (hover: hover) { .pg-toggle:hover b { text-decoration: underline; } }
+.pg-arrow { display: inline-block; vertical-align: -3px; color: var(--ink); transition: transform .15s; }
 .program.open .pg-arrow { transform: rotate(90deg); }
 .pg-pending { color: var(--danger); font-weight: 600; white-space: nowrap; }
 .pg-days { display: flex; flex-direction: column; gap: 8px; }
 .program .sj-day { margin: 0; padding: 10px 12px; background: var(--bg); }
-.program .sj-day::before { display: none; } /* pas de point sur la ligne du trajet : on est dans la carte de l'étape */
+.program .sj-day::before { display: none; }
+.program .sj-time { background: var(--surface); } /* pas de point sur la ligne du trajet : on est dans la carte de l'étape */
 @media (prefers-reduced-motion: reduce) { .pg-arrow { transition: none; } }

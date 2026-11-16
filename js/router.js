@@ -69,18 +69,27 @@ export function bindRouter(render) {
     render();
     window.scrollTo(0, 0);
   });
+  // Rotation d'une tablette ou fenêtre redimensionnée : en changeant de mode (tiroir ↔ menu fixe),
+  // un menu tiroir resté ouvert et son voile bloqueraient la page
+  window.matchMedia(MENU_DRAWER).addEventListener("change", closeMenu);
 }
 
 export const go = (hash) => (location.hash = hash);
 
-// ---------- Menu sur téléphone ----------
+// ---------- Menu sur téléphone et tablette à la verticale ----------
+// En dessous de cette largeur, le menu est un tiroir ouvert par ☰ ; au-dessus, il est fixe à gauche.
+// Même seuil que dans css/layout.css (@media (max-width: 899px)).
+export const MENU_DRAWER = "(max-width: 899px)";
+
 export function openMenu() {
+  document.body.classList.add("menu-open"); // la page derrière ne défile plus
   document.getElementById("sidebar").classList.add("open");
   document.getElementById("scrim").hidden = false;
   document.getElementById("menuBtn").setAttribute("aria-expanded", "true");
 }
 
 export function closeMenu() {
+  document.body.classList.remove("menu-open");
   document.getElementById("sidebar").classList.remove("open");
   document.getElementById("scrim").hidden = true;
   document.getElementById("menuBtn").setAttribute("aria-expanded", "false");

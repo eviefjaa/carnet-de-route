@@ -6,11 +6,11 @@
 
 /* Boutons */
 .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; font-weight: 500; font-size: 14px; }
-.btn:hover { border-color: var(--accent); }
+@media (hover: hover) { .btn:hover { border-color: var(--accent); } }
 a.btn { display: inline-block; text-decoration: none; color: var(--ink); }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 6px 8px; }
-.btn.ghost:hover { color: var(--ink); border-color: var(--line); }
+@media (hover: hover) { .btn.ghost:hover { color: var(--ink); border-color: var(--line); } }
 .btn.danger { color: var(--danger); }
 .btn.small { padding: 4px 9px; font-size: 13px; }
 
@@ -18,10 +18,13 @@ a.btn { display: inline-block; text-decoration: none; color: var(--ink); }
 .hero { display: flex; flex-direction: column; gap: 10px; }
 .hero h1 { font-size: clamp(28px, 6vw, 42px); font-weight: 700; }
 .hero h1 input { font: inherit; border: 0; background: transparent; width: 100%; padding: 0; border-bottom: 2px dashed transparent; }
-.hero h1 input:hover, .hero h1 input:focus { border-bottom-color: var(--line); outline: none; }
+.hero h1 input:focus { border-bottom-color: var(--line); outline: none; }
+@media (hover: hover) { .hero h1 input:hover { border-bottom-color: var(--line); outline: none; } }
 .stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--body); font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .stats b { color: var(--ink); font-weight: 600; }
 .hero-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.hero > p { margin: 0; }
+.hero > .hero-actions .btn.ghost { padding-inline: 0; } /* aligné sur le titre, sans retrait */
 
 /* Formulaires */
 .form { background: var(--surface); border: 2px solid var(--accent); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 10px 0; }
@@ -62,6 +65,7 @@ label.f input::-webkit-datetime-edit { padding: 0; }
 
 /* État vide */
 .empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 28px; text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.empty .row-btns { justify-content: center; } /* boutons centrés comme le texte */
 
 /* Message temporaire */
 .toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 4000; } /* au-dessus de la carte en plein écran */

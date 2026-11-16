@@ -216,7 +216,7 @@ export function newTripView(code) {
       ${choice("road", "Road trip", "Plusieurs étapes reliées par des trajets, placées sur une carte, avec le budget de chaque étape.",
         `<path d="M8 22 C20 6, 30 28, 44 12 S58 14, 58 14" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 4"/><circle cx="8" cy="22" r="4"/><circle cx="31" cy="17" r="4"/><circle cx="56" cy="12" r="4"/>`)}
       ${choice("sejour", "Séjour", "Un seul lieu : l'aller, l'hébergement, puis vos activités jour par jour avec l'heure, les billets et comment y aller.",
-        `<path d="M32 4a9 9 0 0 1 9 9c0 7-9 15-9 15s-9-8-9-15a9 9 0 0 1 9-9z" fill="currentColor"/><circle cx="32" cy="13" r="3" fill="var(--surface)"/>`)}
+        `<path d="M13 4a9 9 0 0 1 9 9c0 7-9 15-9 15s-9-8-9-15a9 9 0 0 1 9-9z" fill="currentColor"/><circle cx="13" cy="13" r="3" fill="var(--surface)"/>`)}
     </div>
     <p class="note">Vous pourrez changer plus tard tant que le voyage n'a qu'une étape.</p>
   </section>`;

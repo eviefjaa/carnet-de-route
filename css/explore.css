@@ -6,14 +6,14 @@
 .lead { margin: 0; color: var(--muted); font-size: 16px; max-width: 65ch; }
 .section-title { font-size: 20px; font-weight: 700; }
 .back { font-size: 14px; text-decoration: none; }
-.back:hover { text-decoration: underline; }
+@media (hover: hover) { .back:hover { text-decoration: underline; } }
 
 /* ---------- Recherche et filtres ---------- */
 .explore-tools { display: flex; flex-direction: column; gap: 10px; }
 .search { width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 15px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 5px 12px; font-size: 13px; font-weight: 500; }
-.chip:hover { border-color: var(--accent); }
+@media (hover: hover) { .chip:hover { border-color: var(--accent); } }
 .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 
 /* ---------- Cartes pays ---------- */
@@ -23,7 +23,7 @@
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px;
   transition: border-color .15s;
 }
-.country-card:hover { border-color: var(--accent); }
+@media (hover: hover) { .country-card:hover { border-color: var(--accent); } }
 /* Code du pays (FR, JP…), en texte plutôt qu'en drapeau emoji */
 .cc-code { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 1.5px solid var(--ink); border-radius: 6px; font-family: var(--body); font-size: 15px; font-weight: 600; letter-spacing: .04em; color: var(--ink); }
 .cc-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
@@ -42,7 +42,7 @@
 .fav.on svg { fill: currentColor; }
 .fav.small { position: absolute; top: 10px; right: 10px; z-index: 1; border: 0; background: transparent; padding: 6px; color: var(--muted); }
 .fav.small.on { color: var(--heart); }
-.fav.small:hover { color: var(--heart); }
+@media (hover: hover) { .fav.small:hover { color: var(--heart); } }
 
 /* ---------- Fiche pays ---------- */
 .country-head { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
@@ -72,6 +72,7 @@
 .tl-body h3 { font-family: var(--body); font-size: 15px; font-weight: 600; margin: 0 0 2px; }
 .tl-body p { color: var(--ink); font-size: 14px; }
 @media (max-width: 480px) {
+  .timeline { padding-left: 7px; } /* les ronds de la frise restent dans la marge */
   .timeline li { grid-template-columns: 1fr; }
   .tl-period { text-align: left; padding: 0 0 2px 18px; border-left: 2px solid var(--line); }
 }

@@ -22,7 +22,7 @@
 
 .links { display: flex; flex-direction: column; gap: 6px; }
 .link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; color: var(--ink); min-width: 0; }
-.link:hover { border-color: var(--accent); }
+@media (hover: hover) { .link:hover { border-color: var(--accent); } }
 .link .src { font-family: var(--body); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); flex: none; min-width: 64px; }
 .link .lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .link .go { margin-left: auto; color: var(--muted); flex: none; }
@@ -44,12 +44,13 @@
 
 /* Boutons d'insertion entre les éléments */
 .insert { display: flex; gap: 6px; padding: 6px 0; opacity: .55; transition: opacity .15s; }
-.insert:hover, .insert:focus-within { opacity: 1; }
+.insert:focus-within { opacity: 1; }
+@media (hover: hover) { .insert:hover { opacity: 1; } }
 .insert .btn { font-size: 12px; padding: 3px 9px; border-style: dashed; background: transparent; }
 /* Voyage encore vide : les deux boutons en grand */
 .insert.is-big { opacity: 1; gap: 12px; padding: 12px 0 6px; flex-wrap: wrap; }
 .insert.is-big .btn { flex: 1 1 140px; font-size: 17px; font-weight: 600; padding: 16px 20px; border: 2px dashed var(--accent); background: var(--surface); color: var(--accent); border-radius: 12px; }
-.insert.is-big .btn:hover { background: var(--accent-soft); }
+@media (hover: hover) { .insert.is-big .btn:hover { background: var(--accent-soft); } }
 @media (hover: none) { .insert { opacity: 1; } }
 
 /* Étape repliée : un clic n'importe où sur le résumé l'ouvre ou la referme */
@@ -61,7 +62,7 @@
 /* La flèche laisse passer le toucher vers la carte (sinon on ne pouvait pas refermer en la touchant) */
 .stop-chevron { margin-left: auto; align-self: center; color: var(--muted); transition: transform .15s; pointer-events: none; }
 .stop.open .stop-chevron { transform: rotate(180deg); }
-.stop:not(.open):hover { border-color: var(--accent); }
+@media (hover: hover) { .stop:not(.open):hover { border-color: var(--accent); } }
 .stop-detail { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
 /* Ce qui reste à réserver, visible même carte repliée */
 .to-book { margin: 0; font-size: 14px; font-weight: 600; color: var(--danger); overflow-wrap: anywhere; }
@@ -74,7 +75,7 @@
 .leg-places .stop-toggle { min-width: 0; overflow-wrap: anywhere; }
 .leg-places .stop-chevron { flex: none; }
 .transport.open .stop-chevron { transform: rotate(180deg); }
-.transport:not(.open):hover { border-style: solid; }
+@media (hover: hover) { .transport:not(.open):hover { border-style: solid; } }
 .leg-tickets { color: var(--accent); font-weight: 600; }
 .leg-detail { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--route); padding-top: 10px; }
 .leg-detail .tickets { border-top: 0; padding-top: 0; }

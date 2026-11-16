@@ -12,7 +12,7 @@
   padding: 18px; min-width: 0;
   transition: border-color .15s;
 }
-.trip-card:hover { border-color: var(--accent); }
+@media (hover: hover) { .trip-card:hover { border-color: var(--accent); } }
 
 .tc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tc-status {
@@ -63,7 +63,7 @@
 
 /* Lien de retour en haut d'un voyage */
 .trip-back { font-size: 14px; text-decoration: none; }
-.trip-back:hover { text-decoration: underline; }
+@media (hover: hover) { .trip-back:hover { text-decoration: underline; } }
 
 /* Premier écran d'un nouveau visiteur */
 .welcome { max-width: 640px; padding-top: clamp(16px, 6vh, 64px); gap: 18px; }

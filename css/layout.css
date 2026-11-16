@@ -1,7 +1,8 @@
 /* Mise en page : menu à gauche + contenu
    Sur ordinateur, le menu est toujours visible ; sur téléphone, il s'ouvre avec le bouton ☰. */
 
-.layout { display: flex; min-height: 100vh; }
+/* 100dvh : hauteur réellement visible (sur Safari, 100vh compte aussi la zone sous la barre d'outils) */
+.layout { display: flex; min-height: 100vh; min-height: 100dvh; }
 
 .main {
   flex: 1;
@@ -14,9 +15,10 @@
 /* ---------- Menu ---------- */
 .sidebar {
   width: 248px; flex: none;
-  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  position: sticky; top: 0; height: 100vh; height: 100dvh; overflow-y: auto; overscroll-behavior: contain;
   background: var(--surface); border-right: 1px solid var(--line);
-  padding: 20px 12px;
+  /* Zones de sécurité (encoche, coins arrondis, barre d'accueil de l'iPad), le site étant en viewport-fit=cover */
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 12px calc(20px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
   display: flex; flex-direction: column; gap: 18px;
 }
 
@@ -33,14 +35,14 @@
   padding: 10px 12px; border-radius: 10px;
   color: var(--ink); text-decoration: none; font-weight: 500;
 }
-.nav-link:hover { background: var(--bg); }
+@media (hover: hover) { .nav-link:hover { background: var(--bg); } }
 .nav-link.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .nav-link .icon { flex: none; }
 .nav-count { margin-left: auto; font-family: var(--body); font-size: 12px; color: var(--muted); }
 
 .side-foot { margin-top: auto; }
 .side-user { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; text-decoration: none; color: var(--ink); min-width: 0; }
-.side-user:hover { background: var(--bg); }
+@media (hover: hover) { .side-user:hover { background: var(--bg); } }
 .side-user-text { display: flex; flex-direction: column; min-width: 0; font-size: 13px; }
 .side-user-text span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -54,7 +56,8 @@
 
 .scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); z-index: 2999; }
 
-/* ---------- Téléphone et petite tablette ---------- */
+/* ---------- Téléphone et tablette à la verticale ----------
+   Même seuil que MENU_DRAWER dans js/router.js */
 @media (max-width: 899px) {
   .sidebar {
     position: fixed; left: 0; top: 0; bottom: 0; z-index: 3000; height: auto;
@@ -66,6 +69,8 @@
     box-shadow: 0 0 40px rgba(0, 0, 0, .25);
   }
   .sidebar.open { transform: none; }
+  /* Menu ouvert : la page derrière ne défile pas (le menu garde son propre défilement) */
+  body.menu-open { overflow: hidden; }
   .side-close { display: inline-flex; }
   .menu-btn { display: inline-flex; }
   .top .brand { display: inline; }

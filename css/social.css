@@ -3,14 +3,14 @@
 .handle { color: var(--muted); font-weight: 400; }
 .post-author { display: inline-flex; align-items: center; gap: 8px; min-width: 0; text-decoration: none; color: var(--ink); font-size: 14px; font-weight: 600; }
 .post-author .avatar { width: 28px; height: 28px; font-size: 13px; }
-.post-author:hover .handle { text-decoration: underline; }
+@media (hover: hover) { .post-author:hover .handle { text-decoration: underline; } }
 .vis-badge { display: inline-block; width: fit-content; font-family: var(--body); font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--ticket); color: var(--ink); }
 
 /* Recherche de personnes et listes d'abonnés */
 .people-results:empty { display: none; }
 .people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .people li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 6px 4px; border-radius: 8px; }
-.people li:hover { background: var(--bg); }
+@media (hover: hover) { .people li:hover { background: var(--bg); } }
 .person { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; color: var(--ink); }
 .person span { min-width: 0; overflow-wrap: anywhere; }
 .follow-state { font-size: 13px; font-weight: 600; color: var(--accent); align-self: center; }
@@ -59,7 +59,7 @@
 /* Notifications */
 .notifs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .notif a { display: flex; align-items: flex-start; gap: 12px; padding: 12px 10px; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; }
-.notif a:hover { background: var(--surface); }
+@media (hover: hover) { .notif a:hover { background: var(--surface); } }
 .notif.is-new a { background: var(--accent-soft); }
 .notif-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
 .notif-quote { color: var(--muted); }
@@ -72,8 +72,8 @@
 .list-links { list-style: none; margin: 0; padding: 4px 0; gap: 0; }
 .list-links li + li { border-top: 1px solid var(--line); }
 .list-link { display: flex; align-items: center; gap: 10px; padding: 14px 18px; color: var(--ink); text-decoration: none; font-family: var(--display); font-size: 18px; font-weight: 700; }
-.list-link:hover { background: var(--bg); }
-.list-link:hover .link-chevron { color: var(--ink); }
+@media (hover: hover) { .list-link:hover { background: var(--bg); } }
+@media (hover: hover) { .list-link:hover .link-chevron { color: var(--ink); } }
 .link-chevron { margin-left: auto; color: var(--muted); }
 .fold-count { font-family: var(--body); font-size: 13px; font-weight: 600; padding: 1px 9px; border-radius: 99px; background: var(--bg); color: var(--ink); }
 .fold-count.is-urgent { background: var(--danger); color: #fff; }
@@ -101,7 +101,8 @@
 .comment-actions:empty { display: none; }
 .comment-actions .confirm { flex-basis: 100%; }
 .comment-like { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: 4px 0; font-size: 13px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
-button.comment-like:hover, .comment-like.is-on { color: var(--danger); }
+.comment-like.is-on { color: var(--danger); }
+@media (hover: hover) { button.comment-like:hover { color: var(--danger); } }
 .comment-replies { list-style: none; margin: 4px 0 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: flex; flex-direction: column; }
 .comment.is-reply { padding: 8px 0; }
 .comment.is-reply:first-child { border-top: 0; }

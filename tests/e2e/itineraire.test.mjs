@@ -85,12 +85,21 @@ await tap(eve, '.ms-stop[data-n="2"]');
 await sleep(1800);
 check("publication : toucher une étape ouvre sa popup", ((await eve.$eval(".leaflet-popup-content", (e) => e.textContent).catch(() => "")) || "").includes("Porto"));
 await eve.keyboard.press("Escape");
+await eve.waitForFunction(() => history.state === null, { timeout: 5000 }).catch(() => {}); // retour dans l'historique terminé
 await sleep(400);
 check("publication : Échap ferme le plein écran", !(await eve.$(".map-wrap.is-full")));
 await eve.waitForSelector(".comments", { timeout: 10000 }).catch(() => {});
 await sleep(500);
 if (process.env.SHOTS) await (await eve.$(".post .hero")).screenshot({ path: process.env.SHOTS + "/creer-voyage-bouton.png" });
+await eve.evaluate(() => { window.__clicks = []; document.addEventListener("click", (e) => window.__clicks.push((e.target.dataset && e.target.dataset.act) || e.target.tagName + "." + e.defaultPrevented), true); });
+const diag = async (when) => console.log("RELEVÉ", when, JSON.stringify(await eve.evaluate(async () => {
+  const s = (await import("/js/store.js")).state;
+  return { forkOpen: s.forkOpen, view: s.view, hash: location.hash, hist: history.length, histState: history.state, mapFull: s.mapFull, btn: !!document.querySelector('[data-act="fork-open"]'),
+    body: document.body.className, clicks: window.__clicks, active: document.activeElement && document.activeElement.className };
+})));
 await tap(eve, '[data-act="fork-open"]');
+// Échec intermittent constaté ici (2 fois sur 6 dans la suite complète, jamais seul) : relevé de l'état s'il se reproduit
+await eve.waitForSelector("form[data-fork-form]", { timeout: 5000 }).catch(() => diag("formulaire absent 5 s après le clic"));
 await eve.waitForSelector("form[data-fork-form]");
 check("nom prérempli avec le titre", (await eve.$eval('form[data-fork-form] [name="name"]', (i) => i.value)) === "Portugal en train");
 check("explique où le voyage est enregistré", (await eve.$eval("form[data-fork-form]", (f) => f.innerText)).includes("dans ce navigateur"));

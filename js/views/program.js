@@ -91,7 +91,7 @@ export function stopProgram(stop, opts) {
   return `<section class="program${open ? " open" : ""}" aria-label="Programme de ${esc(stop.place || "l'étape")}">
     <div class="pg-head">
       <button class="pg-toggle" data-act="program-toggle" data-stop="${esc(stop.id)}" type="button" aria-expanded="${open}" aria-controls="${id}">
-        <span class="pg-arrow" aria-hidden="true">▸</span> <b>Programme</b> · ${programSummary(stop)}
+        <svg class="pg-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg> <b>Programme</b> · ${programSummary(stop)}
       </button>
       ${empty && !open ? `<button class="cl-add" data-act="act-add" data-stop="${esc(stop.id)}" data-date="${esc(stop.arrive || "")}" type="button" aria-label="Ajouter une activité" title="Ajouter une activité">+</button>` : ""}
     </div>

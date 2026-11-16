@@ -1,6 +1,7 @@
 /* Carte du voyage */
 
 .map-box { display: flex; flex-direction: column; gap: 8px; }
+#geoNote:empty { display: none; }
 #map { height: 360px; max-height: 60vh; border-radius: 12px; border: 1px solid var(--line); isolation: isolate; z-index: 0; background: var(--surface); }
 
 /* Conteneur de la carte : bouton plein écran, et en plein écran le bandeau des étapes (js/map.js) */
@@ -11,7 +12,7 @@
   border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink);
   box-shadow: 0 1px 4px rgba(0, 0, 0, .25); cursor: pointer;
 }
-.map-btn:hover { background: var(--bg); }
+@media (hover: hover) { .map-btn:hover { background: var(--bg); } }
 .map-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .map-full-btn { top: 10px; right: 10px; }
 .map-strip-btn, .map-strip-box { display: none; }
@@ -44,7 +45,7 @@ body.map-full-open { overflow: hidden; }
   width: 100%; height: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; text-align: left;
   border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer;
 }
-.ms-stop:hover:not(:disabled) { border-color: var(--route); }
+@media (hover: hover) { .ms-stop:hover:not(:disabled) { border-color: var(--route); } }
 .ms-stop:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
 .ms-stop.is-active { border-color: var(--route); box-shadow: 0 0 0 2px var(--route); }
 .ms-stop:disabled { opacity: .5; cursor: default; }

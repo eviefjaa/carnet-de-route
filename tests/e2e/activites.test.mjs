@@ -40,7 +40,7 @@ await page.waitForSelector('[data-act="program-toggle"][data-stop="s1"]');
 const toggle = '[data-act="program-toggle"][data-stop="s1"]';
 const summary = () => page.$eval(toggle, (e) => e.textContent.replace(/\s+/g, " ").trim());
 check("replié par défaut, résumé sur une ligne", (await page.$eval(toggle, (e) => e.getAttribute("aria-expanded"))) === "false"
-  && (await summary()) === "▸ Programme · 1 activité sur 4 jours · 1 à réserver" && !(await page.$(".pg-days .sj-day")));
+  && (await summary()) === "Programme · 1 activité sur 4 jours · 1 à réserver" && !(await page.$(".pg-days .sj-day")));
 check("« à réserver » en rouge", (await page.$eval(".pg-pending", (e) => getComputedStyle(e).color)) === (await page.$eval(".to-book", (e) => getComputedStyle(e).color)));
 if (SHOTS) await (await page.$(".item.stop")).screenshot({ path: SHOTS + "/programme-replie.png" });
 await page.click(toggle);
@@ -78,7 +78,7 @@ await page.focus(toggle);
 await page.keyboard.press("Enter");
 await sleep(200);
 check("replier au clavier", (await page.$eval(toggle, (e) => e.getAttribute("aria-expanded"))) === "false" && !(await page.$(".pg-days .sj-day"))
-  && (await summary()) === "▸ Programme · 2 activités sur 4 jours · 1 à réserver");
+  && (await summary()) === "Programme · 2 activités sur 4 jours · 1 à réserver");
 await page.focus(toggle);
 await page.keyboard.press("Enter");
 await sleep(200);
