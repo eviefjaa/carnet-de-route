@@ -62,6 +62,9 @@ await t("publication avec fausse date", setDoc(doc(bob, `posts/${pid()}`), post(
 await t("publication : séjour", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { kind: "sejour", items: [] } })), true);
 const B = { currency: "EUR", lodging: 999, transport: 120.5, missing: 1, rows: [{ place: "Kyoto", lodging: 999, transport: 120.5 }] };
 await t("publication avec budget", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: B } })), true);
+await t("budget avec les activités", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: { ...B, activities: 67.5 } } })), true);
+await t("budget : activités négatives", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: { ...B, activities: -1 } } })), false);
+await t("budget : activités en texte", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: { ...B, activities: "12" } } })), false);
 await t("budget : montant négatif", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: { ...B, lodging: -5 } } })), false);
 await t("budget : montant en texte", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: { ...B, transport: "<b>" } } })), false);
 await t("budget : devise inconnue", setDoc(doc(bob, `posts/${pid()}`), post({ trip: { items: [], budget: { ...B, currency: "euro" } } })), false);

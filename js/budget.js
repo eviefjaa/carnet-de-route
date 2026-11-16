@@ -3,12 +3,14 @@
 // Règle : un trajet est compté dans la destination vers laquelle il mène
 // (la prochaine étape dans l'itinéraire). Un trajet sans étape après lui
 // est compté dans « Autres trajets ».
+// Activités : la somme des prix des activités de l'étape. Une activité sans prix est gratuite
+// ou pas encore chiffrée : elle n'est pas comptée dans les prix manquants.
 
 import { hasPrice } from "./utils.js";
 
 export function computeBudget(trip) {
   const rows = [];
-  const others = { place: "Autres trajets", lodging: 0, transport: 0, missing: 0, legs: 0 };
+  const others = { place: "Autres trajets", lodging: 0, transport: 0, activities: 0, missing: 0, legs: 0 };
   let pendingLegs = [];
 
   trip.items.forEach((it) => {
@@ -16,7 +18,8 @@ export function computeBudget(trip) {
       pendingLegs.push(it);
       return;
     }
-    const row = { id: it.id, place: it.place || "Étape sans nom", lodging: 0, transport: 0, missing: 0, legs: pendingLegs.length };
+    const row = { id: it.id, place: it.place || "Étape sans nom", lodging: 0, transport: 0, missing: 0, legs: pendingLegs.length,
+      activities: (it.todos || []).reduce((s, t) => s + (hasPrice(t.price) ? t.price : 0), 0) };
     if (hasPrice(it.price)) row.lodging = it.price;
     else row.missing++;
     pendingLegs.forEach((leg) => {
@@ -34,12 +37,13 @@ export function computeBudget(trip) {
   });
   if (others.legs) rows.push(others);
 
-  rows.forEach((r) => (r.total = r.lodging + r.transport));
+  rows.forEach((r) => (r.total = r.lodging + r.transport + r.activities));
   const total = {
     lodging: rows.reduce((s, r) => s + r.lodging, 0),
     transport: rows.reduce((s, r) => s + r.transport, 0),
+    activities: rows.reduce((s, r) => s + r.activities, 0),
     missing: rows.reduce((s, r) => s + r.missing, 0),
   };
-  total.total = total.lodging + total.transport;
+  total.total = total.lodging + total.transport + total.activities;
   return { rows, total };
 }

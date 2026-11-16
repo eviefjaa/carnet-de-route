@@ -171,9 +171,10 @@ const amount = (n) => (typeof n === "number" && Number.isFinite(n) && n >= 0 && 
 function normalizeBudget(b) {
   if (!isObj(b) || !/^[A-Z]{3}$/.test(b.currency)) return null;
   return {
-    currency: b.currency, lodging: amount(b.lodging), transport: amount(b.transport),
+    // Activités : absentes des anciennes publications (0)
+    currency: b.currency, lodging: amount(b.lodging), transport: amount(b.transport), activities: amount(b.activities),
     missing: Number.isInteger(b.missing) && b.missing > 0 ? b.missing : 0,
-    rows: (Array.isArray(b.rows) ? b.rows : []).filter(isObj).slice(0, 60).map((r) => ({ place: text(r.place, 120), lodging: amount(r.lodging), transport: amount(r.transport) })),
+    rows: (Array.isArray(b.rows) ? b.rows : []).filter(isObj).slice(0, 60).map((r) => ({ place: text(r.place, 120), lodging: amount(r.lodging), transport: amount(r.transport), activities: amount(r.activities) })),
   };
 }
 

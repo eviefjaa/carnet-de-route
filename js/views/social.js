@@ -64,7 +64,8 @@ export function postCard(p) {
 // Total du budget publié, formaté (vide s'il n'est pas montré ou nul)
 const budgetTotal = (trip) => {
   const b = trip.budget;
-  return b && b.lodging + b.transport ? fmtMoney(b.lodging + b.transport, b.currency) : "";
+  const sum = b ? b.lodging + b.transport + (b.activities || 0) : 0;
+  return sum ? fmtMoney(sum, b.currency) : "";
 };
 
 // Ma publication en mode sélection : toucher la carte la coche, sans l'ouvrir
@@ -288,25 +289,27 @@ function programSection(program) {
 // Budget publié, en lecture seule : total, puis coût par destination
 function publicBudgetSection(b) {
   const m = (n) => esc(fmtMoney(n, b.currency));
-  const rows = b.rows.filter((r) => r.lodging + r.transport);
+  const sum = (r) => r.lodging + r.transport + r.activities;
+  const rows = b.rows.filter(sum);
   return `<section class="budget" aria-label="Budget">
     <div class="budget-head"><h2>Budget</h2></div>
     <div class="budget-total">
-      <span class="b-big">${m(b.lodging + b.transport)}</span>
-      <span class="note">dont ${m(b.lodging)} d'hébergement et ${m(b.transport)} de transport</span>
+      <span class="b-big">${m(sum(b))}</span>
+      <span class="note">dont ${m(b.lodging)} d'hébergement, ${m(b.transport)} de transport et ${m(b.activities)} d'activités</span>
     </div>
     ${rows.length ? `<div class="table-scroll">
       <table class="budget-table">
-        <thead><tr><th scope="col">Destination</th><th scope="col">Hébergement</th><th scope="col">Transport</th><th scope="col">Total</th></tr></thead>
+        <thead><tr><th scope="col">Destination</th><th scope="col">Hébergement</th><th scope="col">Transport</th><th scope="col">Activités</th><th scope="col">Total</th></tr></thead>
         <tbody>${rows.map((r) => `<tr>
           <th scope="row">${esc(r.place)}</th>
           <td>${r.lodging ? m(r.lodging) : "–"}</td>
           <td>${r.transport ? m(r.transport) : "–"}</td>
-          <td class="b-total">${m(r.lodging + r.transport)}</td>
+          <td>${r.activities ? m(r.activities) : "–"}</td>
+          <td class="b-total">${m(sum(r))}</td>
         </tr>`).join("")}</tbody>
       </table>
     </div>` : ""}
-    <p class="note">Hébergement et transport seulement, d'après les prix notés par l'auteur.${b.missing ? ` ${+b.missing} prix n'${b.missing > 1 ? "étaient" : "était"} pas encore renseigné${b.missing > 1 ? "s" : ""}.` : ""}</p>
+    <p class="note">Hébergement, transport et activités, d'après les prix notés par l'auteur.${b.missing ? ` ${+b.missing} prix n'${b.missing > 1 ? "étaient" : "était"} pas encore renseigné${b.missing > 1 ? "s" : ""}.` : ""}</p>
   </section>`;
 }
 
@@ -323,7 +326,7 @@ function budgetChoice(t) {
   if (!total.total) return "";
   const cur = /^[A-Z]{3}$/.test(t.currency || "") ? t.currency : "EUR";
   return `<label class="radio publish-budget"><input type="checkbox" name="budget">
-    <span>Montrer le budget : ${esc(fmtMoney(total.total, cur))}, avec le coût de chaque destination (hébergement et transport)</span></label>`;
+    <span>Montrer le budget : ${esc(fmtMoney(total.total, cur))}, avec le coût de chaque destination (hébergement, transport et activités)</span></label>`;
 }
 
 export function publishPanel(t) {

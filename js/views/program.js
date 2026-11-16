@@ -4,12 +4,15 @@
 // Un bloc par jour, de l'arrivée au départ ; les activités sans date, ou hors des dates, dans
 // « Pas encore de jour » ; une étape sans dates n'a qu'un bloc « Activités ».
 
-import { esc, safeUrl, fmtDay, fmtHour, toDate, needsBooking, plural } from "../utils.js";
-import { state } from "../store.js";
+import { esc, safeUrl, fmtDay, fmtHour, toDate, needsBooking, plural, parsePrice, priceInput, hasPrice, fmtMoney } from "../utils.js";
+import { state, currentTrip } from "../store.js";
 import { todoTickets, todoTicketButton } from "./tickets.js";
 import { dateRange, bookBox, bookMark, markClass, pending } from "./checklist.js";
 
 const MAX_DAYS = 60;
+// Prix des activités : dans la devise du voyage affiché
+const money = (n) => fmtMoney(n, (currentTrip() || {}).currency || "EUR");
+const activitiesTotal = (stop) => (stop.todos || []).reduce((s, x) => s + (hasPrice(x.price) ? x.price : 0), 0);
 
 // Jours d'un lieu, de l'arrivée au départ (AAAA-MM-JJ) ; un seul pour un arrêt sans nuit
 export function stopDays(stop) {
@@ -70,13 +73,14 @@ export function sejourProgram(stop) {
     ${daysHtml(stop, { moves: { arrive: { date: days[0], time: stop.arriveTime }, depart: { date: stop.depart, time: stop.departTime } } })}`;
 }
 
-// Résumé du programme replié : « 5 activités sur 3 jours · 2 à réserver »
+// Résumé du programme replié : « 5 activités sur 3 jours · 2 à réserver · 85 € »
 export function programSummary(stop) {
   const n = (stop.todos || []).length;
   if (!n) return "rien de prévu";
   const days = stopDays(stop).length;
   const left = pending(stop);
-  return `${plural(n, "activité")}${days ? ` sur ${plural(days, "jour")}` : ""}${left ? ` · <span class="pg-pending">${left} à réserver</span>` : ""}`;
+  const cost = activitiesTotal(stop);
+  return `${plural(n, "activité")}${days ? ` sur ${plural(days, "jour")}` : ""}${left ? ` · <span class="pg-pending">${left} à réserver</span>` : ""}${cost ? ` · ${esc(money(cost))}` : ""}`;
 }
 
 // Étape d'un road trip : repliée par défaut (ouverte ou fermée pour la session, state.programOpen)
@@ -123,6 +127,7 @@ function activity(stop, x) {
         ${bookMark(stop, x)}
         ${x.time ? `<time class="sj-time">${esc(fmtHour(x.time))}</time>` : ""}
         <span class="sj-text">${esc(x.text)}</span>
+        ${hasPrice(x.price) ? `<span class="price sj-price">${esc(money(x.price))}</span>` : ""}
       </label>
       <button class="cl-del" data-act="act-edit" data-stop="${esc(stop.id)}" data-todo="${esc(x.id)}" type="button" aria-label="Modifier « ${esc(x.text)} »" title="Modifier">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
@@ -141,7 +146,8 @@ function activityForm(stop, x) {
     <label class="f full">Activité<input name="text" id="act-text-${esc(id)}" value="${esc(x.text || "")}" placeholder="Ex. Musée du Louvre, dîner chez Chartier…" maxlength="120" autocomplete="off" required></label>
     <label class="f">Jour<input type="date" name="date" id="act-date-${esc(id)}" value="${esc(x.date || "")}"${dateRange(stop)}></label>
     <label class="f">Heure<input type="time" name="time" id="act-time-${esc(id)}" value="${esc(x.time || "")}"></label>
-    <div class="full">${bookBox("book", "act-book-" + id, x.id ? needsBooking(x) : false)}</div>
+    <div class="f sj-book">${bookBox("book", "act-book-" + id, x.id ? needsBooking(x) : false)}</div>
+    <label class="f">Prix (facultatif)<input name="price" id="act-price-${esc(id)}" value="${esc(priceInput(x.price))}" inputmode="decimal" placeholder="Ex. 25" autocomplete="off"></label>
     <label class="f full">Comment y aller<input name="how" id="act-how-${esc(id)}" value="${esc(x.how || "")}" placeholder="Ex. Métro 1, arrêt Palais-Royal, puis 5 min à pied" maxlength="200" autocomplete="off"></label>
     <label class="f full">Lien Google Maps<input name="maps" id="act-maps-${esc(id)}" value="${esc(x.maps || "")}" placeholder="Facultatif" inputmode="url" autocomplete="off"></label>
     <div class="form-actions">
@@ -161,5 +167,6 @@ export function readActivityForm(f) {
     how: f.how.value.trim().slice(0, 200),
     maps: safeUrl(f.maps.value.trim()),
     book: f.book.checked,
+    price: parsePrice(f.price.value),
   };
 }

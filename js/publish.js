@@ -55,7 +55,8 @@ function publicLine(leg, [from, to]) {
 
 const withLine = (line, route) => (line ? { line, km: Number.isFinite(+route.km) ? Math.round(+route.km) : null } : {});
 
-// Budget publié, seulement si on le choisit : totaux et coût par destination, sans le détail des prix
+// Budget publié, seulement si on le choisit : totaux et coût par destination (hébergement, transport,
+// activités), sans le détail des prix ni le prix d'une activité
 const cents = (n) => Math.round(n * 100) / 100;
 export function publicBudget(trip) {
   const { rows, total } = computeBudget(trip);
@@ -63,8 +64,9 @@ export function publicBudget(trip) {
     currency: /^[A-Z]{3}$/.test(trip.currency || "") ? trip.currency : "EUR",
     lodging: cents(total.lodging),
     transport: cents(total.transport),
+    activities: cents(total.activities),
     missing: total.missing,
-    rows: rows.slice(0, 60).map((r) => ({ place: String(r.place).slice(0, 120), lodging: cents(r.lodging), transport: cents(r.transport) })),
+    rows: rows.slice(0, 60).map((r) => ({ place: String(r.place).slice(0, 120), lodging: cents(r.lodging), transport: cents(r.transport), activities: cents(r.activities) })),
   };
 }
 

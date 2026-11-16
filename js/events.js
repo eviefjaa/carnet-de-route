@@ -27,7 +27,7 @@ export function bindEvents() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeMenu();
     // Entrée dans une activité du formulaire d'étape : nouvelle activité plutôt qu'enregistrer
-    if (e.key === "Enter" && ["todoText", "todoMaps", "todoDate", "todoTime"].includes(e.target.name)) {
+    if (e.key === "Enter" && ["todoText", "todoMaps", "todoDate", "todoTime", "todoPrice"].includes(e.target.name)) {
       e.preventDefault();
       addTodoRow(e.target.closest("[data-todo-row]"));
     }
@@ -250,7 +250,7 @@ function saveActivity(f) {
   const old = f.dataset.todo && (s.todos || []).find((x) => x.id === f.dataset.todo);
   // book reste enregistré même à false : sans lui, l'activité serait comptée comme à réserver
   if (old) {
-    ["date", "time", "how", "maps"].forEach((k) => delete old[k]);
+    ["date", "time", "how", "maps", "price"].forEach((k) => delete old[k]);
     Object.assign(old, clean(v), { book: v.book });
     if (!v.book) old.done = false; // plus rien à réserver : plus « réservé » non plus
   } else {

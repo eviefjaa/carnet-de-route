@@ -57,3 +57,7 @@
 .sj-act.is-public .sj-act-main { gap: 10px; padding: 4px 0; }
 .sj-act.is-public .sj-text { color: var(--ink); }
 .sj-act.is-public .sj-how { margin-left: 0; }
+
+/* Prix d'une activité, à droite du texte ; dans son formulaire, à côté de « À réserver » */
+.sj-price { flex: none; margin-left: auto; }
+.sj-book { align-self: end; padding-bottom: 6px; }

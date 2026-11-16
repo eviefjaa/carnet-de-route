@@ -112,6 +112,34 @@ await page.waitForSelector('form[data-form="stop"] [name="todoText"]');
 check("formulaire : case « réservé » masquée sans réservation", (await page.$$eval('form[data-form="stop"] [name="todoDone"]', (l) => l.map((e) => getComputedStyle(e).visibility).join(","))) === "visible,visible,hidden");
 check("formulaire dans l'ordre des dates", (await page.$$eval('form[data-form="stop"] [name="todoText"]', (l) => l.map((e) => e.value.slice(0, 6)).join(","))) === "Boucho,Musée ,Pentes");
 
+// Prix d'une activité : dans le programme et dans la colonne « Activités » du budget
+await page.click('form[data-form="stop"] [data-act="cancel"]');
+await sleep(200);
+if (!(await page.$('.pg-days [data-act="act-add"][data-date="2030-03-02"]'))) await page.click(toggle);
+await page.click('.pg-days [data-act="act-add"][data-date="2030-03-02"]');
+await page.waitForSelector("form[data-act-form] input[name=price]");
+check("champ prix : clavier décimal, exemple", (await page.$eval("form[data-act-form] input[name=price]", (e) => e.inputMode + " " + e.placeholder)) === "decimal Ex. 25");
+await page.type("form[data-act-form] input[name=text]", "Croisière sur la Saône");
+await page.type("form[data-act-form] input[name=price]", "25");
+if (SHOTS) await (await page.$("form[data-act-form]")).screenshot({ path: SHOTS + "/prix-formulaire.png" });
+await page.$eval("form[data-act-form]", (f) => f.requestSubmit());
+await sleep(300);
+const priced = () => stored().then((l) => l.find((x) => x.text.startsWith("Croisière")));
+check("prix enregistré", (await priced()).price === 25);
+const nb = (s) => s.replace(/\s/g, " ");
+check("prix affiché dans le programme", nb(await page.$$eval(".pg-days .sj-act", (l) => (l.find((li) => li.innerText.includes("Croisière")).querySelector(".sj-price") || {}).textContent || "")) === "25 €");
+check("total dans le résumé du programme", nb(await summary()).endsWith("· 25 €"));
+const budgetRow = () => page.$$eval(".budget-table tbody tr", (l) => l.map((tr) => [...tr.children].map((c) => c.textContent.trim())));
+const row = (await budgetRow())[0];
+check("colonne « Activités » du budget", JSON.stringify((await page.$$eval(".budget-table thead th", (l) => l.map((e) => e.textContent)))) === JSON.stringify(["Destination", "Hébergement", "Transport", "Activités", "Total"])
+  && nb(row[3]) === "25 €" && nb(row[4]) === "25 €");
+if (SHOTS) await (await page.$(".budget")).screenshot({ path: SHOTS + "/prix-budget.png" });
+await page.click('[data-act="edit"][data-id="s1"]');
+await page.waitForSelector('form[data-form="stop"] [name="todoPrice"]');
+await page.$eval('form[data-form="stop"]', (f) => f.requestSubmit());
+await sleep(300);
+check("modifier l'étape ne perd pas le prix", (await priced()).price === 25 && nb((await budgetRow())[0][3]) === "25 €");
+
 console.log(`Programme des étapes : ${ok} vérifications réussies, ${ko} échec(s).`);
 await browser.close();
 server.close();

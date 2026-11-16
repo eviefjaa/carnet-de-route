@@ -32,8 +32,8 @@ for (const x of COUNTRIES) {
     { id: "b", type: "stop", place: "Osaka" }] };
   assert.equal("budget" in publicCopy(t), false, "pas de budget par défaut");
   const b = publicCopy(t, { budget: true }).budget;
-  assert.deepEqual(b, { currency: "JPY", lodging: 999, transport: 120.46, missing: 1,
-    rows: [{ place: "Kyoto", lodging: 999, transport: 120.46 }, { place: "Osaka", lodging: 0, transport: 0 }] });
+  assert.deepEqual(b, { currency: "JPY", lodging: 999, transport: 120.46, activities: 0, missing: 1,
+    rows: [{ place: "Kyoto", lodging: 999, transport: 120.46, activities: 0 }, { place: "Osaka", lodging: 0, transport: 0, activities: 0 }] });
   assert.ok(!JSON.stringify(b).includes("4321")); }
 // Un numéro qui sert à tout n'est affiché qu'une fois
 assert.equal(ex.countryView("US").match(/>911</g).length, 1, "911 une seule fois");

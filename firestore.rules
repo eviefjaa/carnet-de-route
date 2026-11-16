@@ -201,9 +201,11 @@ service cloud.firestore {
       }
       function profile() { return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data; }
       function validBudget(b) {
-        return b is map && b.keys().hasOnly(["currency", "lodging", "transport", "missing", "rows"])
+        return b is map && b.keys().hasOnly(["currency", "lodging", "transport", "activities", "missing", "rows"])
           && b.currency is string && b.currency.matches('^[A-Z]{3}$')
           && b.lodging is number && b.lodging >= 0 && b.transport is number && b.transport >= 0
+          // Total des activités : absent des anciennes publications
+          && (!("activities" in b) || (b.activities is number && b.activities >= 0))
           && b.missing is int && b.missing >= 0
           && b.rows is list && b.rows.size() <= 60;
       }

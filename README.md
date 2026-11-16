@@ -54,7 +54,7 @@ js/
   routes.js           Tracé des routes pour les trajets en voiture ou en bus (OSRM d'OpenStreetMap)
   places.js           Recherche de lieux dans le monde (Photon / OpenStreetMap)
   autocomplete.js     Suggestions de lieux pendant la saisie
-  budget.js           Calcul des totaux par destination et par voyage
+  budget.js           Calcul des totaux par destination et par voyage (hébergement, transport, activités)
   firebase-config.js  Configuration Firebase (null = sans compte)
   cloud.js            Firebase : comptes et enregistrement des voyages
   account.js          Connexion, déconnexion, import des voyages de l'appareil

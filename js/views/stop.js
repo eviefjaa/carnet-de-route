@@ -119,6 +119,7 @@ export function todoRow(t, stop = {}) {
     <div class="todo-extra">
       <label class="todo-date">Date<input type="date" name="todoDate" id="td-date-${esc(t.id)}" value="${esc(t.date || "")}"${dateRange(stop)}></label>
       <label class="todo-date">Heure<input type="time" name="todoTime" id="td-time-${esc(t.id)}" value="${esc(t.time || "")}"></label>
+      <label class="todo-date">Prix<input name="todoPrice" id="td-price-${esc(t.id)}" value="${esc(priceInput(t.price))}" inputmode="decimal" placeholder="Ex. 25" autocomplete="off"></label>
       ${bookBox("todoBook", "td-book-" + t.id, needsBooking(t))}
       <input name="todoMaps" id="td-maps-${esc(t.id)}" value="${esc(t.maps || "")}" placeholder="Lien Google Maps du lieu (facultatif)" inputmode="url" autocomplete="off" aria-label="Lien Google Maps du lieu">
     </div>
@@ -156,6 +157,7 @@ export function readStopForm(f) {
       maps: safeUrl(r.querySelector('[name="todoMaps"]').value),
       date: dayOrEmpty(r.querySelector('[name="todoDate"]').value),
       time: timeOrEmpty(r.querySelector('[name="todoTime"]').value),
+      price: parsePrice(r.querySelector('[name="todoPrice"]').value),
     }))
     .filter((t) => t.text);
   return o;
