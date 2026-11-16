@@ -7,7 +7,7 @@ globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} }
 globalThis.document = { getElementById: () => null, documentElement: { dataset: {} } };
 
 const { state } = await import(root + "/js/store.js");
-const { stopDays, programDays, stopMoves, programSummary, stopProgram } = await import(root + "/js/views/program.js");
+const { stopDays, programDays, stopMoves, programPill, programPanel } = await import(root + "/js/views/program.js");
 const { stopCard, newStop } = await import(root + "/js/views/stop.js");
 
 // Jours : de l'arrivée au départ ; un seul pour un arrêt ; aucun sans dates
@@ -43,19 +43,22 @@ assert.deepEqual(programDays({ ...stop, depart: "2030-03-12" }).map((d) => d.tit
   assert.deepEqual(stopMoves({ items: [{ type: "stop" }, stop] }, 1), { arrive: {}, depart: {} }, "pas de trajet voisin");
   assert.equal(stopMoves({ items: [{ type: "transport", arr: "2030-03-12" }, stop] }, 1).arrive.time, "", "trajet sans heure : pas de ligne"); }
 
-// Replié par défaut : une ligne, avec le nombre d'activités, de jours et ce qui reste à réserver
-assert.equal(programSummary(stop), `5 activités sur 3 jours · <span class="pg-pending">1 à réserver</span>`);
-assert.equal(programSummary({ ...stop, todos: [stop.todos[1]] }), "1 activité sur 3 jours", "rien à réserver : rien d'affiché");
-assert.equal(programSummary({ ...stop, todos: [] }), "rien de prévu");
+// Pastille du résumé : « Programme · 5 activités · 1 à réserver », sans les jours ni les prix
+const text = (html) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 state.programOpen = new Set();
-{ const html = stopProgram(stop);
-  assert.match(html, /<button class="pg-toggle" data-act="program-toggle" data-stop="s" type="button" aria-expanded="false" aria-controls="pg-s">/);
-  assert.match(html, /<div class="pg-days" id="pg-s" hidden><\/div>/, "replié : jours pas affichés");
-  assert.doesNotMatch(html, /data-act="act-add"/, "le « + » est dans les jours");
-  assert.match(stopProgram({ ...stop, todos: [] }), /Programme<\/b> · rien de prévu[\s\S]*data-act="act-add" data-stop="s" data-date="2030-03-12"/, "étape vide : bouton + (premier jour)"); }
+{ const pill = programPill(stop);
+  assert.match(pill, /<button class="pg-pill" data-act="program-toggle" data-stop="s" type="button" aria-expanded="false" aria-controls="pg-s" aria-label="Programme de Porto : 5 activités, 1 à réserver">/);
+  assert.equal(text(pill), "Programme · 5 activités · 1 à réserver");
+  assert.match(pill, /<span class="pg-pending">· 1 à réserver<\/span>/, "à réserver en rouge");
+  assert.equal(text(programPill({ ...stop, todos: [stop.todos[1]] })), "Programme · 1 activité", "rien à réserver : rien d'affiché");
+  const empty = programPill({ ...stop, todos: [] });
+  assert.match(empty, /class="pg-pill is-empty" data-act="act-add" data-stop="s" data-date="2030-03-12"/, "étape vide : « + Programme » ajoute au premier jour");
+  assert.equal(text(empty), "+ Programme");
+  assert.equal(programPanel(stop), `<section class="program" id="pg-s" hidden></section>`, "replié : rien d'affiché"); }
 state.programOpen.add("s");
-{ const html = stopProgram(stop, { firstDay: 3 });
-  assert.match(html, /aria-expanded="true"/);
+{ const html = programPanel(stop, { firstDay: 3 });
+  assert.match(programPill(stop), /aria-expanded="true"/);
+  assert.match(html, /<p class="pg-meta">Sur 3 jours<\/p>/, "jours en haut du programme (pas de prix ici)");
   assert.match(html, /aria-label="Jour 3 [^"]*12 mars"/);
   assert.equal((html.match(/data-act="act-add"/g) || []).length, 4, "un + par jour, et dans « Pas encore de jour »");
   assert.match(html, /data-act="act-add" data-stop="s" data-date="2030-03-13"/, "le + d'un jour préremplit sa date"); }

@@ -58,17 +58,34 @@
 .todo-book:has(input:checked)::before { content: "✓"; border: 0; width: auto; height: auto; font-size: 13px; line-height: 1; }
 .todo-book:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-/* Programme d'une étape de road trip : replié en une ligne, déplié jour par jour (views/program.js) */
-.program { border-top: 1px dashed var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 8px; }
-.pg-head { display: flex; align-items: center; gap: 8px; }
-.pg-toggle { flex: 1; min-width: 0; display: block; padding: 6px 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
-.pg-toggle b { color: var(--ink); font-weight: 600; }
-@media (hover: hover) { .pg-toggle:hover b { text-decoration: underline; } }
-.pg-arrow { display: inline-block; vertical-align: -3px; color: var(--ink); transition: transform .15s; }
-.program.open .pg-arrow { transform: rotate(90deg); }
+/* Programme d'une étape de road trip (views/program.js) : une pastille dans le résumé de l'étape,
+   toujours visible, ouvre le programme sous le résumé */
+.pg-pill-row { display: flex; position: relative; z-index: 2; } /* au-dessus de la zone qui ouvre l'étape */
+.pg-pill {
+  position: relative; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 5px; max-width: 100%;
+  /* Arrondi de 18 px : une pastille sur une ligne (36 px de haut), un rectangle arrondi propre si elle passe à la ligne */
+  min-height: 36px; padding: 6px 11px; border: 0; border-radius: 18px;
+  background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13px; line-height: 1.3; text-align: left; cursor: pointer;
+}
+.pg-pill b { font-weight: 600; }
+.pg-pill:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.pg-pill.is-empty { background: transparent; color: var(--muted); padding-inline: 4px; }
+.pg-icon { flex: none; }
+.pg-end { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; } /* la flèche ne part jamais seule à la ligne */
+@media (max-width: 400px) { .pg-icon { display: none; } } /* petit téléphone : la place pour tenir sur une ligne */
+.pg-arrow { flex: none; transition: transform .15s; }
+.pg-pill[aria-expanded="true"] .pg-arrow { transform: rotate(90deg); }
 .pg-pending { color: var(--danger); font-weight: 600; white-space: nowrap; }
-.pg-days { display: flex; flex-direction: column; gap: 8px; }
-.program .sj-day { margin: 0; padding: 10px 12px; background: var(--bg); }
-.program .sj-day::before { display: none; }
-.program .sj-time { background: var(--surface); } /* pas de point sur la ligne du trajet : on est dans la carte de l'étape */
+@media (hover: hover) {
+  .pg-pill:hover { background: color-mix(in srgb, var(--accent-soft) 70%, var(--accent) 30%); }
+  .pg-pill.is-empty:hover { background: var(--accent-soft); color: var(--accent); }
+}
+/* Écran tactile : 44 px de zone à toucher, avec le même aspect (zone invisible autour de la pastille) */
+@media (pointer: coarse) { .pg-pill::before { content: ""; position: absolute; inset: -4px 0; } }
 @media (prefers-reduced-motion: reduce) { .pg-arrow { transition: none; } }
+
+.program { display: flex; flex-direction: column; gap: 8px; }
+.pg-meta { margin: 0; font-size: 13px; color: var(--muted); }
+.program .sj-day { margin: 0; padding: 10px 12px; background: var(--bg); }
+.program .sj-day::before { display: none; } /* pas de point sur la ligne du trajet : on est dans la carte de l'étape */
+.program .sj-time { background: var(--surface); }

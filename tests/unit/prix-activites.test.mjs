@@ -11,7 +11,7 @@ const { normalizeTrip } = await import(root + "/js/cloud.js");
 const { publicBudget } = await import(root + "/js/publish.js");
 const { normalizePost } = await import(root + "/js/social.js");
 const { budgetSection } = await import(root + "/js/views/budget.js");
-const { readActivityForm, stopProgram, programSummary } = await import(root + "/js/views/program.js");
+const { readActivityForm, programPanel, programPill } = await import(root + "/js/views/program.js");
 const { readStopForm, todoRow } = await import(root + "/js/views/stop.js");
 const { state } = await import(root + "/js/store.js");
 
@@ -39,11 +39,13 @@ const trip = { currency: "EUR", items: [
 // Programme : prix à droite du texte, total dans le résumé replié
 state.currentId = "v"; state.trips = { v: trip };
 state.programOpen = new Set(["a"]);
-{ const html = stopProgram(trip.items[0]);
+{ const html = programPanel(trip.items[0]);
   assert.match(html, /<span class="sj-text">Musée<\/span>\s*<span class="price sj-price">12,50\s€<\/span>/);
   assert.doesNotMatch(html.slice(html.indexOf("Balade")), /^Balade<\/span>\s*<span class="price/, "sans prix : rien");
-  assert.match(programSummary(trip.items[0]), /^3 activités · <span class="pg-pending">3 à réserver<\/span> · 52,50\s€$/);
-  assert.equal(programSummary({ ...trip.items[0], todos: [{ id: "z", text: "Gratuit", book: false }] }), "1 activité", "sans prix : pas de total"); }
+  assert.match(html, /<p class="pg-meta">52,50\s€ d'activités<\/p>/, "total des prix en haut du programme (étape sans dates)");
+  assert.doesNotMatch(programPill(trip.items[0]), /€/, "pas de prix dans la pastille");
+  state.programOpen.add("z");
+  assert.doesNotMatch(programPanel({ ...trip.items[0], id: "z", todos: [{ id: "z", text: "Gratuit", book: false }] }), /pg-meta/, "sans prix ni dates : pas de ligne"); }
 
 // Formulaires : le prix est lu dans le formulaire d'activité et dans celui de l'étape
 const field = (value) => ({ value, checked: false });

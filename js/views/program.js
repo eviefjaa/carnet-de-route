@@ -73,29 +73,37 @@ export function sejourProgram(stop) {
     ${daysHtml(stop, { moves: { arrive: { date: days[0], time: stop.arriveTime }, depart: { date: stop.depart, time: stop.departTime } } })}`;
 }
 
-// Résumé du programme replié : « 5 activités sur 3 jours · 2 à réserver · 85 € »
-export function programSummary(stop) {
+// Étape d'un road trip : une pastille dans le résumé (toujours visible) ouvre le programme
+// sous le résumé, indépendamment des infos de l'étape. Ouvert ou fermé pour la session (state.programOpen).
+const CALENDAR = `<svg class="pg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>`;
+const ARROW = `<svg class="pg-arrow" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`;
+
+export function programPill(stop) {
   const n = (stop.todos || []).length;
-  if (!n) return "rien de prévu";
-  const days = stopDays(stop).length;
+  const open = state.programOpen.has(stop.id);
+  const place = esc(stop.place || "l'étape");
+  // Rien de prévu : « + Programme » ouvre directement l'ajout d'une activité, au premier jour
+  if (!n && !open) {
+    return `<button class="pg-pill is-empty" data-act="act-add" data-stop="${esc(stop.id)}" data-date="${esc(stop.arrive || "")}" type="button" aria-label="Ajouter une activité au programme de ${place}">
+      <span aria-hidden="true">+</span> <b>Programme</b></button>`;
+  }
   const left = pending(stop);
-  const cost = activitiesTotal(stop);
-  return `${plural(n, "activité")}${days ? ` sur ${plural(days, "jour")}` : ""}${left ? ` · <span class="pg-pending">${left} à réserver</span>` : ""}${cost ? ` · ${esc(money(cost))}` : ""}`;
+  const label = `Programme de ${place} : ${n ? plural(n, "activité") : "rien de prévu"}${left ? `, ${left} à réserver` : ""}`;
+  return `<button class="pg-pill" data-act="program-toggle" data-stop="${esc(stop.id)}" type="button" aria-expanded="${open}" aria-controls="pg-${esc(stop.id)}" aria-label="${label}">
+      ${CALENDAR} <b>Programme</b>${n ? ` <span>· ${plural(n, "activité")}</span>` : ""}
+      <span class="pg-end">${left ? `<span class="pg-pending">· ${left} à réserver</span> ` : ""}${ARROW}</span></button>`;
 }
 
-// Étape d'un road trip : repliée par défaut (ouverte ou fermée pour la session, state.programOpen)
-export function stopProgram(stop, opts) {
-  const open = state.programOpen.has(stop.id);
+// Programme déplié, sous le résumé de l'étape : jours et prix en une ligne discrète, puis les jours
+export function programPanel(stop, opts) {
   const id = `pg-${esc(stop.id)}`;
-  const empty = !(stop.todos || []).length;
-  return `<section class="program${open ? " open" : ""}" aria-label="Programme de ${esc(stop.place || "l'étape")}">
-    <div class="pg-head">
-      <button class="pg-toggle" data-act="program-toggle" data-stop="${esc(stop.id)}" type="button" aria-expanded="${open}" aria-controls="${id}">
-        <svg class="pg-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg> <b>Programme</b> · ${programSummary(stop)}
-      </button>
-      ${empty && !open ? `<button class="cl-add" data-act="act-add" data-stop="${esc(stop.id)}" data-date="${esc(stop.arrive || "")}" type="button" aria-label="Ajouter une activité" title="Ajouter une activité">+</button>` : ""}
-    </div>
-    <div class="pg-days" id="${id}"${open ? "" : " hidden"}>${open ? daysHtml(stop, opts) : ""}</div>
+  if (!state.programOpen.has(stop.id)) return `<section class="program" id="${id}" hidden></section>`;
+  const days = stopDays(stop).length;
+  const cost = activitiesTotal(stop);
+  const meta = [days ? `Sur ${plural(days, "jour")}` : "", cost ? `${esc(money(cost))} d'activités` : ""].filter(Boolean).join(" · ");
+  return `<section class="program" id="${id}" aria-label="Programme de ${esc(stop.place || "l'étape")}">
+    ${meta ? `<p class="pg-meta">${meta}</p>` : ""}
+    ${daysHtml(stop, opts)}
   </section>`;
 }
 

@@ -5,7 +5,7 @@ import { state, tripStart } from "../store.js";
 import { itemActions } from "./actions.js";
 import { pickedPlace } from "../autocomplete.js";
 import { dateRange, bookBox } from "./checklist.js";
-import { stopProgram, stopMoves } from "./program.js";
+import { programPill, programPanel, stopMoves } from "./program.js";
 
 // sejour : lieu d'un séjour, sans numéro de jour ni programme (affiché à part, toujours déplié)
 export function stopCard(it, trip, idx, { sejour = false } = {}) {
@@ -20,9 +20,9 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
     ? `<div><span class="price">${esc(fmtMoney(it.price, cur))}</span>${n ? ` <span class="price-sub">soit ${esc(fmtMoney(Math.round((it.price / n) * 100) / 100, cur))} / nuit</span>` : ""}</div>`
     : "";
 
-  // Carte repliée : l'essentiel, et ce qui reste à réserver en rouge. Un clic l'ouvre.
+  // Carte repliée : l'essentiel, et la pastille du programme (avec ce qui reste à réserver).
+  // Le nom ouvre les infos de l'étape ; la pastille, le programme. Les deux sont indépendants.
   const open = state.openItems.has(it.id);
-  const toBook = sejour ? [] : byDate(it.todos).filter((t) => needsBooking(t) && !t.done).map((t) => t.text);
   const detailId = `stop-detail-${esc(it.id)}`;
 
   return `<article class="item stop${open ? " open" : ""}">
@@ -37,15 +37,15 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
         ${datesLine(it)}
         ${n === 0 ? `<span class="nights is-halt">Arrêt</span>` : n ? `<span class="nights">${plural(n, "nuit")}</span>` : ""}
       </div>
-      ${toBook.length ? `<p class="to-book">À réserver : ${toBook.slice(0, 3).map(esc).join(", ")}${toBook.length > 3 ? ` et ${toBook.length - 3} autre${toBook.length > 4 ? "s" : ""}` : ""}</p>` : ""}
+      ${sejour ? "" : `<div class="pg-pill-row">${programPill(it)}</div>`}
     </div>
+    ${sejour ? "" : programPanel(it, { firstDay: dayN || 1, moves: stopMoves(trip, idx) })}
     ${open ? `<div class="stop-detail" id="${detailId}">
     ${price}
     ${it.address ? `<div class="addr">${esc(it.address)}</div>` : ""}
     ${links.length ? `<div class="links">${links.map(linkCard).join("")}</div>` : ""}
     ${it.notes ? `<div class="notes">${esc(it.notes)}</div>` : ""}
     ${maps ? `<div class="leg-extra"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Ouvrir dans Google Maps ↗</a></div>` : ""}
-    ${sejour ? "" : stopProgram(it, { firstDay: dayN || 1, moves: stopMoves(trip, idx) })}
     ${itemActions(it, idx, trip)}
     </div>` : ""}
   </article>`;

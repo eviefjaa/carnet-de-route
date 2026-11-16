@@ -6,9 +6,9 @@ const root = fileURLToPath(new URL("../..", import.meta.url));
 const { state } = await import(root + "/js/store.js");
 const { stopForm, newStop, stopCard } = await import(root + "/js/views/stop.js");
 const { transportForm, transportCard } = await import(root + "/js/views/transport.js");
-const { stopProgram } = await import(root + "/js/views/program.js");
+const { programPill, programPanel } = await import(root + "/js/views/program.js");
 // Programme d'une étape de road trip, déplié
-const checklist = (it) => { state.programOpen.add(it.id); return stopProgram(it); };
+const checklist = (it) => { state.programOpen.add(it.id); return programPill(it) + programPanel(it); };
 const { byDate } = await import(root + "/js/utils.js");
 
 // Étape : formulaire de création avec une checklist vide, puis de modification avec ses activités
@@ -89,14 +89,15 @@ assert.match(stopForm(withMaps, false), /name="todoMaps"[^>]*value="https:\/\/ma
   assert.match(cl, /<li class="sj-act is-free">[\s\S]*?Balade/);
   assert.match(cl, /<li class="sj-act">[\s\S]*?Resto/);
   assert.match(cl, /<li class="sj-act is-free">[\s\S]*?Visite faite/, "« réservé » n'a pas de sens sans réservation");
-  assert.match(cl, /<span class="pg-pending">2 à réserver<\/span>/, "seules les deux activités à réserver sont comptées");
+  assert.match(cl, /<span class="pg-pending">· 2 à réserver<\/span>/, "seules les deux activités à réserver sont comptées");
   assert.match(cl, /<li class="sj-act is-free">\s*<div class="sj-act-main">\s*<label>\s*<span class="cl-dot"[^>]*><\/span>\s*<span class="sj-text">Balade/, "rien à réserver : un point, pas de case");
   assert.doesNotMatch(cl, /id="todo-f"/);
   assert.match(cl, /aria-label="Réservé : Resto"/);
   assert.equal(tripPending({ items: [it] }), 2);
   assert.equal(checklist({ ...it, todos: [it.todos[1]] }).includes("pg-pending"), false, "rien à réserver : pas de compteur");
   const card = stopCard({ ...it, id: "s" }, { currency: "EUR", items: [it] }, 0);
-  assert.match(card, /À réserver : Resto, Ancienne</);
+  assert.match(card, /<span class="pg-pending">· 2 à réserver<\/span>/, "carte repliée : à réserver dans la pastille");
+  assert.doesNotMatch(card, /class="to-book"/, "plus de ligne « À réserver : … »");
   const sf = stopForm(it, false);
   assert.match(sf, /name="todoBook" id="td-book-r" checked/);
   assert.match(sf, /name="todoBook" id="td-book-f">/);
