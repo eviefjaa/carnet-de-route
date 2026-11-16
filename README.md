@@ -97,9 +97,11 @@ Les fichiers JavaScript sont des modules : le site doit être ouvert via une adr
 
 Sur la page d'un voyage, la section « Voyageurs » permet d'inviter quelqu'un par son adresse e-mail. L'invitation est enregistrée dans le voyage, puis la messagerie de l'utilisateur s'ouvre avec un e-mail prêt à envoyer (lien vers le voyage). La personne invitée crée un compte ou se connecte avec cette adresse et la confirme. L'invitation s'affiche alors en haut de « Mes voyages » et dans « Notifications » : elle choisit « Rejoindre » ou « Refuser ». Rien n'est rejoint sans son accord.
 
+On peut aussi inviter une personne de son réseau (quelqu'un qu'on suit ou qui nous suit, abonnement accepté) sans connaître son adresse : dans le même champ, on tape son nom ou son @pseudo et on la choisit dans les suggestions (accents et majuscules ignorés). Aucun e-mail n'est envoyé : l'invitation vise son compte, et elle la voit dans « Mes voyages » et « Notifications », sans avoir besoin d'une adresse confirmée. Il faut un profil public pour avoir un réseau. Les règles Firestore vérifient l'abonnement au moment de l'invitation, une personne à la fois.
+
 Tous les voyageurs peuvent modifier le voyage et inviter d'autres personnes. Seul le créateur peut supprimer le voyage, annuler une invitation ou retirer quelqu'un ; les autres peuvent quitter le voyage.
 
-Les voyages sont dans `trips/{id}` (avec `owner`, `members`, `invites`, `emails`). Les anciens voyages, rangés dans `users/{uid}/trips`, sont déplacés automatiquement à la connexion suivante.
+Les voyages sont dans `trips/{id}` (avec `owner`, `members`, `invites` pour les adresses invitées, `inviteUids` pour les comptes invités par nom ou pseudo, `emails`). Les anciens voyages, rangés dans `users/{uid}/trips`, sont déplacés automatiquement à la connexion suivante.
 
 Après toute modification de `firestore.rules`, copiez son contenu dans la console Firebase (Firestore Database → Règles → Publier).
 

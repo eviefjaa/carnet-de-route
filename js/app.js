@@ -7,6 +7,7 @@ import { render, renderSync } from "./views/trip.js";
 import { startAccounts } from "./account.js";
 import { bindAutocomplete } from "./autocomplete.js";
 import { bindSwipe } from "./swipe.js";
+import { bindInviteSuggest } from "./share.js";
 import { readHash, bindRouter } from "./router.js";
 import { onSocialLoaded, resetSocial, refreshNotifications } from "./social.js";
 import { renderSidebar } from "./views/sidebar.js";
@@ -18,6 +19,7 @@ readHash();
 bindEvents();
 bindAutocomplete();
 bindSwipe();
+bindInviteSuggest();
 // Profils, fils et commentaires rechargés à chaque page : on voit les nouveautés des autres
 window.addEventListener("hashchange", resetSocial);
 bindRouter(render);
@@ -26,10 +28,14 @@ onSyncChange(renderSync);
 // Données sociales arrivées : on réaffiche, sauf pendant une saisie (elle serait effacée)
 const typing = () => {
   const el = document.activeElement;
-  return !!el && !!el.closest("#app form") && !!el.value;
+  if (!el) return false;
+  // Page d'un voyage (noms des personnes invitées) : pas de réaffichage dès qu'un champ a le focus
+  // (nom du voyage compris, qui n'est pas dans un formulaire)
+  if (state.view === "trip") return !!el.closest("#app") && el.matches("input, textarea, select");
+  return !!el.closest("#app form") && !!el.value;
 };
 onSocialLoaded(() => {
-  if (["feed", "discover", "person", "post", "profile", "notifications", "network", "favorites", "publications", "country"].includes(state.view) && !state.authOpen && !typing()) render();
+  if (["trip", "feed", "discover", "person", "post", "profile", "notifications", "network", "favorites", "publications", "country"].includes(state.view) && !state.authOpen && !typing()) render();
   else renderSidebar(); // nombre de notifications dans le menu
 });
 // Nouvelles notifications : toutes les 3 minutes, et au retour sur l'onglet

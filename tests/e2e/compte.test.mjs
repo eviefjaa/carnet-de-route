@@ -94,9 +94,19 @@ await run(dan, async (camPost, postId) => {
   await s.addComment(postId, "Merci Camille", { id: c.id, author: c.author });
   await s.follow({ uid: c.author, visibility: "public" });
 }, camPost, postId);
+// Dan (qui suit Camille) l'invite à un voyage par son compte
+const danTrip = await run(dan, async (camUid) => {
+  const store = await import("/js/store.js");
+  const cloud = await import("/js/cloud.js");
+  const id = store.createTrip({ name: "Highlands" });
+  await store.flush();
+  await cloud.inviteUid(id, camUid);
+  return id;
+}, camUid);
 await sleep(1500);
 
 const has = (docs) => JSON.stringify(docs).includes(camUid);
+check("avant : Camille invitée par son compte", JSON.stringify((await raw("trips/" + danTrip)).fields.inviteUids).includes(camUid));
 check("avant : Camille a un voyage", has(await list("trips")));
 check("avant : profil, pseudo, préférences", !!(await raw(`profiles/${camUid}`)) && !!(await raw("handles/camille.v")) && !!(await raw(`users/${camUid}/meta/prefs`)));
 check("avant : abonnements dans les deux sens", (await list("follows")).filter((d) => has(d)).length === 2);
@@ -134,6 +144,7 @@ const danComments = await list(`posts/${postId}/comments`);
 check("son commentaire chez Dan est supprimé", !danComments.some((d) => d.fields.author.stringValue === camUid));
 check("la réponse de Dan reste", danComments.some((d) => d.fields.text.stringValue === "Merci Camille"));
 check("son favori est retiré et décompté", !(await raw(`posts/${postId}/likes/${camUid}`)) && (await raw(`posts/${postId}`)).fields.favCount.integerValue === "0");
+check("son invitation par compte est refusée", !JSON.stringify((await raw("trips/" + danTrip)).fields.inviteUids || {}).includes(camUid));
 check("la publication de Dan est intacte", (await raw(`posts/${postId}`)).fields.title.stringValue === "Écosse");
 
 // Le compte de connexion n'existe plus

@@ -27,3 +27,11 @@
 .invitations { border-color: var(--accent); }
 .invitations h2 { font-size: 18px; }
 .invite-text { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+
+/* Inviter par nom ou pseudo : champ et suggestions (styles de base dans autocomplete.css) */
+.cl-form .sh-ac { flex: 1 1 220px; min-width: 0; }
+.cl-form .sh-ac input { width: 100%; }
+.sh-suggest .avatar { width: 30px; height: 30px; font-size: 13px; }
+.sh-suggest li.is-invited { cursor: default; opacity: .55; }
+.sh-suggest li.is-invited:hover { background: none; }
+.sh-who .handle { font-size: 13px; }

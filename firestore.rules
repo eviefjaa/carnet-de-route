@@ -26,6 +26,30 @@ service cloud.firestore {
       // Invité(e) : seulement avec une adresse confirmée, sinon n'importe qui
       // pourrait créer un compte avec l'adresse invitée
       function isInvited() { return request.auth.token.email_verified == true && email() in resource.data.invites; }
+      // Invité(e) par son compte (nom ou pseudo) : pas besoin d'adresse confirmée, l'invitation vise le compte
+      function isInvitedUid() { return uid() in resource.data.get("inviteUids", []); }
+      function oldUids() { return resource.data.get("inviteUids", []); }
+      function newUids() { return request.resource.data.get("inviteUids", []); }
+      // Abonnement accepté entre moi et cette personne, dans un sens ou dans l'autre
+      function inMyNetwork(u) {
+        let a = /databases/$(database)/documents/follows/$(uid() + "_" + u);
+        let b = /databases/$(database)/documents/follows/$(u + "_" + uid());
+        return (exists(a) && get(a).data.status == "accepted") || (exists(b) && get(b).data.status == "accepted");
+      }
+      // Invitations par compte ajoutées : une personne à la fois, par un voyageur, de son réseau,
+      // pas déjà dans le voyage. Vérifié pour toutes les écritures (le créateur compris).
+      // L'abonnement n'est vérifié qu'ici : supprimé ensuite, il ne change rien à l'invitation.
+      function uidsAddedOk() {
+        let added = newUids().removeAll(oldUids());
+        return added.size() == 0
+          || (added.size() == 1 && isMember() && !(added[0] in resource.data.members) && inMyNetwork(added[0]));
+      }
+      // Je retire mes propres invitations (refuser ou rejoindre) : mon adresse si elle y est
+      // (adresse confirmée), mon compte ; rien d'autre
+      function myInvitesRemoved() {
+        return newData().invites == (isInvited() ? resource.data.invites.removeAll([email()]) : resource.data.invites)
+          && newUids() == oldUids().removeAll([uid()]);
+      }
       function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
       function newData() { return request.resource.data; }
       // Je me retire de « joined » (date d'arrivée) sans toucher à celles des autres
@@ -41,12 +65,13 @@ service cloud.firestore {
           && (!("currency" in newData()) || (newData().currency is string && newData().currency.size() <= 3));
       }
 
-      allow read: if signedIn() && (isMember() || isInvited());
+      allow read: if signedIn() && (isMember() || isInvited() || isInvitedUid());
 
       allow create: if signedIn() && validTrip()
         && newData().owner == uid()
         && newData().members == [uid()]
         && newData().invites == []
+        && newData().get("inviteUids", []) == []
         && newData().emails.keys().hasOnly([uid()])
         && newData().emails[uid()] == request.auth.token.email
         && !("joined" in newData());
@@ -54,7 +79,8 @@ service cloud.firestore {
       // Seul le créateur supprime le voyage
       allow delete: if signedIn() && isOwner();
 
-      allow update: if signedIn() && validTrip() && newData().invites is list && newData().invites.size() <= 30 && (
+      allow update: if signedIn() && validTrip() && newData().invites is list && newUids() is list
+        && newData().invites.size() + newUids().size() <= 30 && uidsAddedOk() && (
         // Le créateur change tout, sauf le créateur, et reste dans le voyage.
         // Il peut retirer des voyageurs mais pas en ajouter : on n'entre que sur invitation
         (isOwner() && newData().owner == resource.data.owner && uid() in newData().members
@@ -65,7 +91,7 @@ service cloud.firestore {
             && !changed().hasAny(["joined"]))
         // Un voyageur modifie le contenu ou invite quelqu'un (sans retirer d'invitation)
         || (isMember() && !changed().hasAny(["owner", "members", "emails", "joined"])
-            && newData().invites.hasAll(resource.data.invites))
+            && newData().invites.hasAll(resource.data.invites) && newUids().hasAll(oldUids()))
         // Un voyageur quitte le voyage
         || (isMember() && !isOwner() && changed().hasOnly(["members", "emails", "joined"])
             && newData().members == resource.data.members.removeAll([uid()])
@@ -76,13 +102,13 @@ service cloud.firestore {
             && newData().members == resource.data.members.removeAll([uid()])
             && newData().emails.diff(resource.data.emails).affectedKeys().hasOnly([uid()])
             && !(uid() in newData().emails) && leftJoined())
-        // Une personne invitée refuse : elle retire seulement sa propre adresse des invitations
-        || (isInvited() && !isMember() && changed().hasOnly(["invites"])
-            && newData().invites == resource.data.invites.removeAll([email()]))
+        // Une personne invitée refuse : elle retire seulement sa propre invitation (adresse, compte)
+        || ((isInvited() || isInvitedUid()) && !isMember() && changed().hasOnly(["invites", "inviteUids"])
+            && myInvitesRemoved())
         // Une personne invitée rejoint le voyage (après avoir cliqué sur « Rejoindre »)
-        || (isInvited() && !isMember() && changed().hasOnly(["members", "invites", "emails", "joined"])
+        || ((isInvited() || isInvitedUid()) && !isMember() && changed().hasOnly(["members", "invites", "inviteUids", "emails", "joined"])
             && newData().members == resource.data.members.concat([uid()])
-            && newData().invites == resource.data.invites.removeAll([email()])
+            && myInvitesRemoved()
             && newData().emails.diff(resource.data.emails).affectedKeys().hasOnly([uid()])
             // Son adresse affichée aux autres : la vraie, celle du compte
             && newData().emails[uid()] == request.auth.token.email

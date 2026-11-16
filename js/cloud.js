@@ -111,9 +111,10 @@ export function errorMessage(e) {
 //   owner    uid du créateur
 //   members  uid des voyageurs (le créateur compris)
 //   invites  adresses e-mail invitées qui n'ont pas encore rejoint (en minuscules)
+//   inviteUids  comptes invités par leur nom ou pseudo (personnes de mon réseau), pas encore là
 //   emails   { uid: adresse e-mail } des voyageurs, pour les afficher
 //   joined   { uid: date à laquelle la personne a rejoint le voyage }, pour les notifications
-export const SHARING = ["owner", "members", "invites", "emails", "joined"];
+export const SHARING = ["owner", "members", "invites", "inviteUids", "emails", "joined"];
 
 const tripDoc = (id) => fb.doc(db, "trips", id);
 const myTrips = (uid) => fb.query(fb.collection(db, "trips"), fb.where("members", "array-contains", uid));
@@ -128,6 +129,7 @@ function normalize(t) {
   if (typeof t.name !== "string") t.name = "Sans titre";
   if (typeof t.currency !== "string") t.currency = "EUR";
   if ("kind" in t && t.kind !== "sejour") delete t.kind; // road trip par défaut
+  if ("inviteUids" in t) t.inviteUids = (Array.isArray(t.inviteUids) ? t.inviteUids : []).filter((u) => typeof u === "string");
   // Itinéraire publié dont le voyage est tiré : id de la publication et pseudo de l'auteur
   if ("source" in t && !(isObj(t.source) && /^[A-Za-z0-9_-]{1,64}$/.test(t.source.postId) && typeof t.source.ownerHandle === "string")) delete t.source;
   t.items = (Array.isArray(t.items) ? t.items : []).filter((i) => isObj(i) && typeof i.id === "string" && (i.type === "stop" || i.type === "transport"));
@@ -174,7 +176,7 @@ function content(trip) {
 }
 
 // Nouveau voyage : on en est le créateur et le seul voyageur
-export const newTripSharing = () => ({ owner: me.uid, members: [me.uid], invites: [], emails: { [me.uid]: me.email } });
+export const newTripSharing = () => ({ owner: me.uid, members: [me.uid], invites: [], inviteUids: [], emails: { [me.uid]: me.email } });
 
 // Enregistre un voyage. Un voyage existant est relu sur le serveur dans une transaction, puis fusionné
 // avec ma version (merge.js) : les modifications faites au même moment par les autres voyageurs
@@ -213,29 +215,53 @@ export const deleteFile = (tripId, fileId) => fb.deleteDoc(fileDoc(tripId, fileI
 // ---------- Voyageurs ----------
 export const invite = (id, email) => fb.updateDoc(tripDoc(id), { invites: fb.arrayUnion(email) });
 export const cancelInvite = (id, email) => fb.updateDoc(tripDoc(id), { invites: fb.arrayRemove(email) });
+// Invitation d'un compte de mon réseau (abonnement accepté, vérifié par les règles)
+export const inviteUid = (id, uid) => fb.updateDoc(tripDoc(id), { inviteUids: fb.arrayUnion(uid) });
+export const cancelInviteUid = (id, uid) => fb.updateDoc(tripDoc(id), { inviteUids: fb.arrayRemove(uid) });
 
 // Retirer un voyageur (le créateur), ou se retirer soi-même (quitter le voyage)
 export const removeMember = (id, uid) =>
   fb.updateDoc(tripDoc(id), { members: fb.arrayRemove(uid), [`emails.${uid}`]: fb.deleteField() });
 
-// Invitations en attente pour mon adresse (adresse confirmée obligatoire) : rien n'est rejoint
-// sans mon accord, on choisit « Rejoindre » ou « Refuser »
-export async function listInvitations() {
-  const email = me.email.toLowerCase();
-  const snap = await fb.getDocs(fb.query(fb.collection(db, "trips"), fb.where("invites", "array-contains", email)));
-  return snap.docs.map((d) => {
-    const t = d.data();
-    const from = t.emails && typeof t.emails[t.owner] === "string" ? t.emails[t.owner] : "";
-    return { id: d.id, name: typeof t.name === "string" && t.name ? t.name.slice(0, 200) : "Sans titre", from };
-  });
+// Invitations en attente : rien n'est rejoint sans mon accord, on choisit « Rejoindre » ou « Refuser ».
+// Deux sortes : par mon adresse (adresse confirmée obligatoire) et par mon compte (inviteUids).
+// Un même voyage peut m'inviter des deux façons : il n'apparaît qu'une fois.
+export function mergeInvitations(byEmail, byUid) {
+  const out = new Map();
+  for (const [list, key] of [[byEmail, "byEmail"], [byUid, "byUid"]]) {
+    for (const i of list) out.set(i.id, { ...(out.get(i.id) || { byEmail: false, byUid: false }), ...i, [key]: true });
+  }
+  return [...out.values()];
 }
 
-export const joinTrip = (id) => fb.updateDoc(tripDoc(id), {
-  members: fb.arrayUnion(me.uid), invites: fb.arrayRemove(me.email.toLowerCase()),
+const invitation = (d) => {
+  const t = d.data();
+  const from = t.emails && typeof t.emails[t.owner] === "string" ? t.emails[t.owner] : "";
+  return { id: d.id, name: typeof t.name === "string" && t.name ? t.name.slice(0, 200) : "Sans titre", from };
+};
+
+export async function listInvitations() {
+  const trips = fb.collection(db, "trips");
+  const [byEmail, byUid] = await Promise.all([
+    me.emailVerified ? fb.getDocs(fb.query(trips, fb.where("invites", "array-contains", me.email.toLowerCase()))) : null,
+    fb.getDocs(fb.query(trips, fb.where("inviteUids", "array-contains", me.uid))),
+  ]);
+  return mergeInvitations(byEmail ? byEmail.docs.map(invitation) : [], byUid.docs.map(invitation));
+}
+
+// Mes invitations retirées du voyage : seulement celles qui existent (un champ absent ne doit pas apparaître)
+const myInvites = (inv) => ({
+  ...(inv.byEmail ? { invites: fb.arrayRemove(me.email.toLowerCase()) } : {}),
+  ...(inv.byUid ? { inviteUids: fb.arrayRemove(me.uid) } : {}),
+});
+
+// inv : l'invitation telle que listInvitations la renvoie
+export const joinTrip = (id, inv = { byEmail: true }) => fb.updateDoc(tripDoc(id), {
+  members: fb.arrayUnion(me.uid), ...myInvites(inv),
   [`emails.${me.uid}`]: me.email, [`joined.${me.uid}`]: fb.serverTimestamp(),
 });
 
-export const declineInvite = (id) => fb.updateDoc(tripDoc(id), { invites: fb.arrayRemove(me.email.toLowerCase()) });
+export const declineInvite = (id, inv = { byEmail: true }) => fb.updateDoc(tripDoc(id), myInvites(inv));
 
 // Avant le partage, les voyages étaient dans users/{uid}/trips : on les déplace dans trips
 export async function moveOldTrips(uid) {
@@ -278,12 +304,9 @@ export async function releaseMyTrips() {
     else if (others.length) await fb.updateDoc(d.ref, { ...out, owner: others[0] });
     else await deleteTrip(d.id);
   }
-  // Invitations reçues : refusées, pour que mon adresse disparaisse des voyages des autres
-  // (lisibles seulement avec une adresse confirmée)
-  if (auth.currentUser.emailVerified) {
-    const inv = await listInvitations();
-    for (const i of inv) await declineInvite(i.id);
-  }
+  // Invitations reçues (par adresse confirmée ou par compte) : refusées, pour que mon adresse
+  // et mon compte disparaissent des voyages des autres
+  for (const i of await listInvitations()) await declineInvite(i.id, i);
 }
 
 // Préférences, rappels déjà envoyés et anciens voyages (users/{uid}/…)

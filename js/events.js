@@ -15,7 +15,7 @@ import { openMenu, closeMenu, go } from "./router.js";
 import { favButton, filterCountries } from "./views/explore.js";
 import { renderSidebar } from "./views/sidebar.js";
 import { countryByCode } from "./data/countries.js";
-import { inviteFromForm, resendInvite, cancelInvite, removeMember, leaveTrip, answerInvitation } from "./share.js";
+import { inviteFromForm, resendInvite, cancelInvite, cancelInviteUid, removeMember, leaveTrip, answerInvitation } from "./share.js";
 import { onSocialClick, onSocialSubmit, onSocialChange, onSocialInput } from "./social-events.js";
 import { addTickets, openTicket, deleteTicket, deleteTicketFiles, allTickets, resetFormTickets, pickFormTickets, removeFormTicket, commitFormTickets } from "./tickets.js";
 
@@ -405,6 +405,9 @@ function onPageClick(act, b) {
       return true;
     case "resend-invite":
       resendInvite(b.dataset.email);
+      return true;
+    case "cancel-invite-uid":
+      cancelInviteUid(b.dataset.uid);
       return true;
     case "cancel-invite":
       cancelInvite(b.dataset.email);

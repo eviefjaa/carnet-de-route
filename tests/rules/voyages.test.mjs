@@ -125,6 +125,68 @@ await t("carla quitte avec sa date d'arrivée", updateDoc(T(carla, "trips/v21"),
 await t("voyage avec son origine (publication et pseudo)", setDoc(T(alice, "trips/v30"), trip({ source: { postId: "post123", ownerHandle: "dan.voyage" } })), true);
 await t("l'origine se modifie comme le reste", updateDoc(T(alice, "trips/v30"), { "source.ownerHandle": "dan.v" }), true);
 
+// ---------- Invitation par compte (nom ou pseudo), dans son réseau ----------
+// Abonnements : alice suit bob ; dan suit alice ; fanny attend qu'alice accepte sa demande
+const seed = (path, data) => env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), path), data));
+await seed("follows/alice_bob", { follower: "alice", followed: "bob", status: "accepted", createdAt: 1 });
+await seed("follows/dan_alice", { follower: "dan", followed: "alice", status: "accepted", createdAt: 1 });
+await seed("follows/fanny_alice", { follower: "fanny", followed: "alice", status: "pending", createdAt: 1 });
+await seed("follows/carla_bob", { follower: "carla", followed: "bob", status: "accepted", createdAt: 1 });
+const dan = as("dan", "dan@x.fr", false), fanny = as("fanny", "fanny@x.fr");
+await seed("trips/v40", trip({ members: ["alice", "carla"], emails: { alice: "alice@x.fr", carla: "carla@x.fr" }, inviteUids: [] }));
+await t("créer avec des invitations par compte", setDoc(T(alice, "trips/v41"), trip({ inviteUids: ["bob"] })), false);
+await t("créer avec une liste vide d'invitations par compte", setDoc(T(alice, "trips/v42"), trip({ inviteUids: [] })), true);
+await t("inviter une personne que je suis", updateDoc(T(alice, "trips/v40"), { inviteUids: arrayUnion("bob") }), true);
+await t("la même personne une 2e fois (rien ne change)", updateDoc(T(alice, "trips/v40"), { inviteUids: arrayUnion("bob") }), true);
+await t("inviter une personne qui me suit", updateDoc(T(alice, "trips/v40"), { inviteUids: arrayUnion("dan") }), true);
+await t("inviter sans abonnement", updateDoc(T(alice, "trips/v40"), { inviteUids: arrayUnion("eve") }), false);
+await t("inviter avec une demande en attente", updateDoc(T(alice, "trips/v40"), { inviteUids: arrayUnion("fanny") }), false);
+await seed("trips/v47", trip({ inviteUids: [] }));
+await t("inviter deux personnes de son réseau d'un coup", updateDoc(T(alice, "trips/v47"), { inviteUids: ["bob", "dan"] }), false);
+await seed("follows/gus_carla", { follower: "gus", followed: "carla", status: "accepted", createdAt: 1 });
+await t("un voyageur invite une personne du réseau d'un autre", updateDoc(T(carla, "trips/v40"), { inviteUids: arrayUnion("fanny") }), false);
+await t("un voyageur (pas le créateur) invite une personne de son réseau", updateDoc(T(carla, "trips/v40"), { inviteUids: arrayUnion("gus") }), true);
+await seed("follows/alice_carla", { follower: "alice", followed: "carla", status: "accepted", createdAt: 1 });
+await t("inviter une personne déjà dans le voyage (abonnée)", updateDoc(T(alice, "trips/v40"), { inviteUids: arrayUnion("carla") }), false);
+await t("un inconnu n'invite pas (même de son réseau)", updateDoc(T(fanny, "trips/v40"), { inviteUids: arrayUnion("alice") }), false);
+await t("une personne invitée par compte lit le voyage", getDoc(T(bob, "trips/v40")), true);
+await t("requête « mes invitations par compte »", getDocs(query(collection(dan, "trips"), where("inviteUids", "array-contains", "dan"))), true);
+await t("une personne non invitée ne lit pas", getDoc(T(eve, "trips/v40")), false);
+await t("une personne non invitée ne rejoint pas", updateDoc(T(eve, "trips/v40"), { members: arrayUnion("eve"), "emails.eve": "eve@x.fr" }), false);
+await t("un voyageur (pas le créateur) n'annule pas une invitation", updateDoc(T(carla, "trips/v40"), { inviteUids: arrayRemove("dan") }), false);
+await t("une personne invitée n'annule pas celle d'une autre", updateDoc(T(bob, "trips/v40"), { inviteUids: arrayRemove("dan") }), false);
+await t("une personne invitée ne modifie pas le voyage", updateDoc(T(bob, "trips/v40"), { name: "x" }), false);
+await t("rejoindre en se mettant créateur", updateDoc(T(bob, "trips/v40"), { members: arrayUnion("bob"), inviteUids: arrayRemove("bob"), "emails.bob": "bob@x.fr", owner: "bob" }), false);
+await t("rejoindre en restant invité(e)", updateDoc(T(bob, "trips/v40"), { members: arrayUnion("bob"), "emails.bob": "bob@x.fr" }), false);
+await t("rejoindre avec une fausse adresse", updateDoc(T(bob, "trips/v40"), { members: arrayUnion("bob"), inviteUids: arrayRemove("bob"), "emails.bob": "x@x.fr" }), false);
+await t("rejoindre par compte, adresse non confirmée", updateDoc(T(dan, "trips/v40"),
+  { members: arrayUnion("dan"), inviteUids: arrayRemove("dan"), "emails.dan": "dan@x.fr", "joined.dan": serverTimestamp() }), true);
+await t("la personne qui a rejoint lit le voyage", getDoc(T(dan, "trips/v40")), true);
+await t("refuser une invitation par compte", updateDoc(T(bob, "trips/v40"), { inviteUids: arrayRemove("bob") }), true);
+await t("après le refus, plus de lecture", getDoc(T(bob, "trips/v40")), false);
+await t("inviter de nouveau bob", updateDoc(T(alice, "trips/v40"), { inviteUids: arrayUnion("bob") }), true);
+await t("le créateur annule l'invitation", updateDoc(T(alice, "trips/v40"), { inviteUids: arrayRemove("bob") }), true);
+// Invité(e) des deux façons : refuser retire l'adresse et le compte d'un coup
+await seed("trips/v43", trip({ invites: ["bob@x.fr"], inviteUids: ["bob"] }));
+await t("refus par compte qui laisse l'adresse (non confirmée)", updateDoc(T(bobUnverified, "trips/v43"), { inviteUids: arrayRemove("bob"), invites: arrayRemove("bob@x.fr") }), false);
+await t("refuser les deux invitations", updateDoc(T(bob, "trips/v43"), { inviteUids: arrayRemove("bob"), invites: arrayRemove("bob@x.fr") }), true);
+// L'abonnement n'est vérifié qu'à l'invitation : supprimé ensuite, l'invitation reste valable
+await seed("trips/v44", trip({ inviteUids: [] }));
+await t("inviter bob", updateDoc(T(alice, "trips/v44"), { inviteUids: arrayUnion("bob") }), true);
+await env.withSecurityRulesDisabled((c) => deleteDoc(doc(c.firestore(), "follows/alice_bob")));
+await t("abonnement supprimé : le créateur modifie encore le voyage", updateDoc(T(alice, "trips/v44"), { name: "Brésil 2" }), true);
+await t("abonnement supprimé : bob rejoint quand même", updateDoc(T(bob, "trips/v44"),
+  { members: arrayUnion("bob"), inviteUids: arrayRemove("bob"), "emails.bob": "bob@x.fr" }), true);
+// 30 invitations au plus, adresses et comptes ensemble
+await seed("follows/alice_zoe", { follower: "alice", followed: "zoe", status: "accepted", createdAt: 1 });
+await seed("trips/v45", trip({ invites: Array.from({ length: 30 }, (_, i) => `p${i}@x.fr`), inviteUids: [] }));
+await t("31e invitation refusée", updateDoc(T(alice, "trips/v45"), { inviteUids: arrayUnion("zoe") }), false);
+// Ancien voyage sans le champ : on peut inviter, refuser l'invitation par adresse comme avant
+await seed("trips/v46", trip({ invites: ["eve@x.fr"] }));
+await t("ancien voyage : refuser par adresse", updateDoc(T(eve, "trips/v46"), { invites: arrayRemove("eve@x.fr") }), true);
+await seed("follows/alice_eve", { follower: "alice", followed: "eve", status: "accepted", createdAt: 1 });
+await t("ancien voyage : inviter par compte", updateDoc(T(alice, "trips/v46"), { inviteUids: arrayUnion("eve") }), true);
+
 // ---------- Données personnelles ----------
 await t("ses préférences", setDoc(T(alice, "users/alice/meta/prefs"), { theme: "dark" }), true);
 await t("préférences d'un autre (écrire)", setDoc(T(eve, "users/alice/meta/prefs"), { theme: "dark" }), false);

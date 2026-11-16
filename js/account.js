@@ -52,8 +52,8 @@ async function onUserChange(user) {
     user.emailVerified = await cloud.refreshEmailVerified().catch(() => user.emailVerified);
     cloud.useAccount(user);
     await cloud.moveOldTrips(user.uid);
-    // Invitations en attente (adresse confirmée obligatoire) : affichées, jamais acceptées d'office
-    state.invitations = user.emailVerified ? await cloud.listInvitations().catch(() => []) : [];
+    // Invitations en attente (par adresse confirmée ou par compte) : affichées, jamais acceptées d'office
+    state.invitations = await cloud.listInvitations().catch(() => []);
     const remote = await cloud.loadTrips(user.uid);
 
     // Les voyages créés sans compte sur cet appareil sont ajoutés au compte
