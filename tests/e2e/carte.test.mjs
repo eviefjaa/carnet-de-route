@@ -29,8 +29,10 @@ const asked = [];
 await page.setRequestInterception(true);
 page.on("request", (req) => {
   if (req.url().startsWith("https://nominatim.openstreetmap.org/")) {
-    asked.push(new URL(req.url()).searchParams.get("q"));
-    return req.respond({ status: 200, contentType: "application/json", headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify([{ lat: "50.0755", lon: "14.4378" }]) });
+    const q = new URL(req.url()).searchParams.get("q");
+    asked.push(q);
+    // « Village perdu » : introuvable (étape sans position, grisée dans le bandeau)
+    return req.respond({ status: 200, contentType: "application/json", headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(q.includes("Village") ? [] : [{ lat: "50.0755", lon: "14.4378" }]) });
   }
   // Suggestions de lieux simulées : rien qui ressemble à « foz de iguazu », Paraty pour « paraty »
   if (req.url().startsWith("https://photon.komoot.io/")) {
@@ -97,6 +99,144 @@ await page.$eval('form[data-form="transport"]', (f) => f.requestSubmit());
 await sleep(400);
 const leg = await page.evaluate(() => JSON.parse(localStorage.getItem("carnet-route-trips"))["v-br"].items.find((i) => i.from === "São Paulo (GRU)"));
 check("trajet enregistré avec la position de l'aéroport", leg && leg.fromGeo && Math.abs(leg.fromGeo.lat + 23.43) < 0.01);
+
+// ---------- Plein écran et bandeau des étapes ----------
+const SHOTS = process.env.SHOTS;
+await page.evaluate(() => {
+  const all = JSON.parse(localStorage.getItem("carnet-route-trips"));
+  const stop = (id, place, arrive, depart, lat, lng) => ({ id, type: "stop", place, arrive, depart, ...(lat ? { geo: { q: place, lat, lng } } : {}), todos: [] });
+  const leg = (id, from, to, dep) => ({ id, type: "transport", mode: "train", from, to, dep, arr: "" });
+  all["v-pt"] = { name: "Portugal", currency: "EUR", createdAt: 3, items: [
+    stop("a", "Lisbonne", "2030-06-01", "2030-06-03", 38.72, -9.14), leg("l1", "Lisbonne", "Sintra", "2030-06-03T09:00"),
+    stop("b", "Sintra", "2030-06-03", "2030-06-03", 38.80, -9.38), leg("l2", "Sintra", "Coimbra", "2030-06-03T15:00"),
+    stop("c", "Coimbra", "2030-06-03", "2030-06-04", 40.21, -8.43), leg("l3", "Coimbra", "Porto", "2030-06-04T10:00"),
+    stop("d", "Porto", "2030-06-04", "2030-06-07", 41.15, -8.61), stop("e", "Village perdu", "", ""),
+    stop("f", "Braga", "2030-06-07", "2030-06-08", 41.55, -8.42)] };
+  all["v-sj"] = { name: "Rome", kind: "sejour", currency: "EUR", createdAt: 4, items: [stop("r", "Rome", "2030-07-01", "2030-07-04", 41.9, 12.5)] };
+  localStorage.setItem("carnet-route-trips", JSON.stringify(all));
+});
+await page.goto(`http://localhost:${PORT}/index.html#voyage-v-pt`, { waitUntil: "networkidle0" });
+await page.reload({ waitUntil: "networkidle0" });
+await sleep(800);
+const full = () => page.evaluate(() => !!document.querySelector(".map-wrap.is-full"));
+const openFull = async () => { await page.click(".map-full-btn"); await sleep(600); };
+await page.evaluate(() => window.scrollTo(0, 150));
+await sleep(200);
+const y0 = await page.evaluate(() => window.scrollY);
+const hash0 = await page.evaluate(() => location.hash);
+check("bouton plein écran sur la carte", (await page.$eval(".map-full-btn", (b) => b.getAttribute("aria-label"))) === "Afficher la carte en plein écran");
+check("pas de bandeau hors plein écran", !(await page.$eval(".map-strip-box", (b) => b.offsetHeight)));
+await openFull();
+{ const r = await page.$eval(".map-stage", (e) => { const b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; });
+  check("plein écran : la carte fait la taille de la fenêtre", JSON.stringify(r) === JSON.stringify([0, 0, 375, 760]));
+  check("plein écran : fenêtre modale, focus sur ✕", (await page.$eval(".map-stage", (e) => e.getAttribute("role") + e.getAttribute("aria-modal"))) === "dialogtrue"
+    && (await page.evaluate(() => document.activeElement.getAttribute("aria-label"))) === "Quitter le plein écran");
+  check("plein écran : étapes, tracés et bandeau", (await page.$$(".leaflet-marker-icon.pin")).length === 5 && (await page.$$(".leaflet-overlay-pane path")).length >= 3
+    && (await page.$$(".map-strip .ms-stop")).length === 6);
+  check("bandeau : nom et « Jour · nuits », étape sans position grisée", JSON.stringify(await page.$$eval(".ms-stop", (l) => l.map((b) => b.innerText.replace(/\s+/g, " ").trim())))
+    === JSON.stringify(["1 Lisbonne Jour 1 · 2 nuits", "2 Sintra Jour 3 · arrêt", "3 Coimbra Jour 3 · 1 nuit", "4 Porto Jour 4 · 3 nuits", "5 Village perdu", "6 Braga Jour 7 · 1 nuit"])
+    && (await page.$eval('.ms-stop[data-n="5"]', (b) => b.disabled)));
+  // Molette : la distance entre deux points change (zoom), ce qui n'arrive pas hors plein écran
+  const gap = () => page.$$eval(".leaflet-marker-icon.pin", (l) => { const [a, b] = [l[0], l[3]].map((e) => e.getBoundingClientRect()); return Math.round(Math.hypot(a.left - b.left, a.top - b.top)); });
+  const g0 = await gap();
+  await page.mouse.move(187, 300);
+  await page.mouse.wheel({ deltaY: -300 });
+  await sleep(700);
+  check("zoom à la molette activé", (await gap()) > g0);
+  check("page derrière bloquée", await page.evaluate(() => getComputedStyle(document.body).overflow === "hidden"));
+  // Page bloquée au doigt : un glissement vertical déplace la carte, pas la page
+  await page.touchscreen.touchStart(180, 300); await page.touchscreen.touchMove(180, 200); await page.touchscreen.touchEnd();
+  await sleep(300);
+  check("glisser sur la carte ne fait pas défiler la page", (await page.evaluate(() => window.scrollY)) === y0);
+  // Bandeau défilable au doigt
+  const before = await page.$eval(".map-strip", (s) => s.scrollLeft);
+  const sb = await page.$eval(".map-strip", (s) => { const r = s.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await page.touchscreen.touchStart(sb.x + 100, sb.y);
+  for (let k = 1; k <= 8; k++) { await page.touchscreen.touchMove(sb.x + 100 - k * 30, sb.y); await sleep(15); }
+  await page.touchscreen.touchEnd();
+  await sleep(800);
+  check("bandeau défilable au doigt", (await page.$eval(".map-strip", (s) => s.scrollLeft)) > before);
+  if (SHOTS) await page.screenshot({ path: SHOTS + "/carte-plein-ecran.png" }); }
+
+// Fermer : ✕, Échap, Retour ; même défilement, même adresse
+await page.click(".map-full-btn");
+await sleep(400);
+check("✕ : fermé, même défilement, même adresse", !(await full()) && (await page.evaluate(() => window.scrollY)) === y0 && (await page.evaluate(() => location.hash)) === hash0
+  && (await page.evaluate(() => getComputedStyle(document.body).overflow)) !== "hidden");
+check("✕ : focus rendu au bouton plein écran", (await page.evaluate(() => document.activeElement.getAttribute("aria-label"))) === "Afficher la carte en plein écran");
+check("✕ : pas d'entrée en trop dans l'historique", (await page.evaluate(() => history.state)) === null);
+await openFull();
+await page.keyboard.press("Escape");
+await sleep(400);
+check("Échap ferme le plein écran", !(await full()) && (await page.evaluate(() => location.hash)) === hash0);
+await openFull();
+await page.goBack();
+await sleep(600);
+check("Retour ferme le plein écran, même page, même défilement", !(await full()) && (await page.evaluate(() => location.hash)) === hash0 && (await page.evaluate(() => window.scrollY)) === y0);
+
+// Carte → bandeau : toucher un point au doigt (vue d'ensemble, juste après l'ouverture) met son étape en surbrillance
+await openFull();
+const pt = await page.$$eval(".leaflet-marker-icon.pin", (l) => {
+  const e = l.find((m) => m.textContent.trim() === "3");
+  const r = e.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+});
+await page.touchscreen.tap(pt.x, pt.y);
+await sleep(800);
+check("toucher un point : son étape en surbrillance dans le bandeau", (await page.$$eval('.ms-stop[aria-current="true"]', (l) => l.map((b) => b.dataset.n).join(","))) === "3");
+// Bandeau → carte : la carte se centre sur l'étape et ouvre sa popup
+await page.click('.ms-stop[data-n="4"]');
+await sleep(1800);
+{ const c = await page.evaluate(async () => { const s = (await import("/js/store.js")).state; return [s.mapActiveStop, document.querySelector(".leaflet-popup-content")?.textContent || ""]; });
+  check("toucher une étape du bandeau : popup ouverte, étape en surbrillance", c[0] === 4 && c[1].includes("Porto")
+    && (await page.$eval('.ms-stop[data-n="4"]', (b) => b.getAttribute("aria-current"))) === "true");
+  const center = await page.evaluate(() => { const p = document.querySelector(".leaflet-popup"); const r = p.getBoundingClientRect(); return r.left + r.width / 2; });
+  check("la carte se centre dessus", Math.abs(center - 187) < 40); }
+// Redessin pendant le plein écran (modification d'une étape) : rien ne bouge
+await page.evaluate(async () => {
+  const store = await import("/js/store.js");
+  store.state.trips["v-pt"].items[2].place = "Sintra (Pena)";
+  store.save();
+  (await import("/js/views/trip.js")).render();
+});
+await sleep(600);
+check("redessin : plein écran, bandeau et surbrillance en place", (await full()) && (await page.$$eval(".ms-stop", (l) => l[1].innerText)).includes("Sintra (Pena)")
+  && (await page.$$eval('.ms-stop[aria-current="true"]', (l) => l.map((b) => b.dataset.n).join(","))) === "4" && !!(await page.$(".leaflet-popup")));
+// Fermer la popup retire la surbrillance
+await page.click(".leaflet-popup-close-button");
+await sleep(300);
+check("fermer la popup retire la surbrillance", !(await page.$('.ms-stop[aria-current="true"]')));
+// Masquer puis afficher le bandeau
+await page.click(".map-strip-btn");
+await sleep(300);
+check("masquer les étapes", (await page.$eval(".map-strip-box", (b) => b.hidden)) && (await page.$eval(".map-strip-btn", (b) => b.getAttribute("aria-expanded") + b.getAttribute("aria-label"))) === "falseAfficher les étapes");
+if (SHOTS) await page.screenshot({ path: SHOTS + "/carte-sans-bandeau.png" });
+await page.click(".map-strip-btn");
+await sleep(300);
+check("afficher les étapes", !(await page.$eval(".map-strip-box", (b) => b.hidden)) && (await page.$eval(".map-strip-btn", (b) => b.getAttribute("aria-expanded"))) === "true");
+// Clavier : flèche droite d'une étape à la suivante
+await page.focus('.ms-stop[data-n="1"]');
+await page.keyboard.press("ArrowRight");
+check("flèche droite : étape suivante", (await page.evaluate(() => document.activeElement.dataset.n)) === "2");
+// Changer de page ferme le plein écran
+await page.evaluate(() => (location.hash = "#voyage-v-sj"));
+await sleep(900);
+check("changer de page ferme le plein écran", !(await full()) && (await page.evaluate(() => getComputedStyle(document.body).overflow)) !== "hidden");
+// Séjour (une seule étape) : plein écran sans bandeau
+await openFull();
+check("séjour : plein écran sans bandeau", (await full()) && !(await page.$(".map-strip .ms-stop")) && !(await page.$eval(".map-strip-btn", (b) => b.offsetWidth)));
+if (SHOTS) await page.screenshot({ path: SHOTS + "/carte-sejour.png" });
+await page.keyboard.press("Escape");
+await sleep(300);
+// Thème sombre, sur ordinateur
+await page.setViewport({ width: 1280, height: 800 });
+await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "dark" }]);
+await page.evaluate(() => (location.hash = "#voyage-v-pt"));
+await sleep(900);
+await openFull();
+check("ordinateur : plein écran", JSON.stringify(await page.$eval(".map-stage", (e) => [e.offsetWidth, e.offsetHeight])) === "[1280,800]");
+if (SHOTS) await page.screenshot({ path: SHOTS + "/carte-plein-ecran-sombre.png" });
+await page.keyboard.press("Escape");
 
 console.log(`Carte : ${ok} vérifications réussies, ${ko} échec(s).`);
 await browser.close();

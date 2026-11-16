@@ -3,6 +3,56 @@
 .map-box { display: flex; flex-direction: column; gap: 8px; }
 #map { height: 360px; max-height: 60vh; border-radius: 12px; border: 1px solid var(--line); isolation: isolate; z-index: 0; background: var(--surface); }
 
+/* Conteneur de la carte : bouton plein écran, et en plein écran le bandeau des étapes (js/map.js) */
+.map-wrap { position: relative; }
+.map-stage { position: relative; }
+.map-btn {
+  position: absolute; z-index: 1001; display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .25); cursor: pointer;
+}
+.map-btn:hover { background: var(--bg); }
+.map-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.map-full-btn { top: 10px; right: 10px; }
+.map-strip-btn, .map-strip-box { display: none; }
+
+/* Plein écran : toute la fenêtre, au-dessus du menu et de l'en-tête */
+body.map-full-open { overflow: hidden; }
+.map-wrap.is-full .map-stage { position: fixed; inset: 0; z-index: 3500; height: 100vh; height: 100dvh; background: var(--bg); }
+.map-wrap.is-full #map { height: 100%; max-height: none; border: 0; border-radius: 0; }
+.map-wrap.is-full .map-full-btn { top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); }
+.map-wrap.is-full .leaflet-top { top: env(safe-area-inset-top, 0px); }
+.map-wrap.is-full .leaflet-left { left: env(safe-area-inset-left, 0px); }
+/* Attribution et bouton du bandeau : au-dessus du bandeau (--strip-h : sa hauteur, 0 s'il est masqué) */
+.map-wrap.is-full .leaflet-bottom { bottom: calc(var(--strip-h, 0px) + env(safe-area-inset-bottom, 0px)); }
+.map-wrap.is-full.has-strip .map-strip-btn { display: grid; left: calc(10px + env(safe-area-inset-left, 0px)); bottom: calc(var(--strip-h, 0px) + 10px + env(safe-area-inset-bottom, 0px)); }
+
+/* Bandeau des étapes : défilement horizontal au doigt, aimanté sur chaque étape */
+.map-wrap.is-full.has-strip .map-strip-box:not([hidden]) {
+  display: block; position: absolute; z-index: 1001; left: 0; right: 0; bottom: 0;
+  padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(6px); border-top: 1px solid var(--line);
+}
+.map-strip {
+  list-style: none; margin: 0; padding: 2px calc(14px + env(safe-area-inset-right, 0px)) 2px calc(14px + env(safe-area-inset-left, 0px));
+  display: flex; gap: 10px; overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory; scroll-padding-inline: 14px; scrollbar-width: none;
+}
+.map-strip::-webkit-scrollbar { display: none; }
+.map-strip li { flex: 0 0 180px; scroll-snap-align: start; }
+.ms-stop {
+  width: 100%; height: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; text-align: left;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer;
+}
+.ms-stop:hover:not(:disabled) { border-color: var(--route); }
+.ms-stop:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+.ms-stop.is-active { border-color: var(--route); box-shadow: 0 0 0 2px var(--route); }
+.ms-stop:disabled { opacity: .5; cursor: default; }
+.ms-stop .pin { flex: none; }
+.ms-text { display: flex; flex-direction: column; min-width: 0; }
+.ms-text b { font-family: var(--display); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-text span { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
 .pin { background: transparent; border: 0; }
 .pin span {
   display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;

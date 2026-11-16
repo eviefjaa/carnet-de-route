@@ -31,7 +31,7 @@ css/
   layout.css          Menu de gauche et mise en page
   components.css      Boutons, formulaires, en-tête, messages
   itinerary.css       Ligne de route, étapes, trajets
-  map.css             Carte
+  map.css             Carte, plein écran et bandeau des étapes
   auth.css            Connexion et compte
   autocomplete.css    Suggestions de lieux
   explore.css         Destinations, fiches pays, favoris, profil, paramètres
@@ -49,7 +49,7 @@ js/
   events.js           Clics, saisies, formulaires
   utils.js            Dates, durées, liens
   toast.js            Messages temporaires
-  map.js              Carte (Leaflet + OpenStreetMap)
+  map.js              Carte (Leaflet + OpenStreetMap), plein écran (en CSS, fermé par ✕, Échap ou Retour)
   geocode.js          Placement des lieux sur la carte (Nominatim)
   routes.js           Tracé des routes pour les trajets en voiture ou en bus (OSRM d'OpenStreetMap)
   places.js           Recherche de lieux dans le monde (Photon / OpenStreetMap)
@@ -77,6 +77,7 @@ js/
     transport.js      Trajet : affichage et formulaire
     actions.js        Boutons d'action et d'insertion
     budget.js         Section Budget (tableau des coûts)
+    map-strip.js      Bandeau des étapes de la carte en plein écran
     program.js        Programme jour par jour d'un lieu (étape de road trip, repliable, ou séjour)
     checklist.js      Activités : ce qui reste à réserver, case « réservé »
     share.js          Section Voyageurs d'un voyage

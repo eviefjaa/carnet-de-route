@@ -64,6 +64,6 @@ label.f input::-webkit-datetime-edit { padding: 0; }
 .empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 28px; text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
 
 /* Message temporaire */
-.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 2000; }
+.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 4000; } /* au-dessus de la carte en plein écran */
 /* Le message ne bloque pas les boutons qu'il recouvre (en bas de l'écran sur téléphone) */
 .toast { pointer-events: none; }

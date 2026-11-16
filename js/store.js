@@ -38,6 +38,9 @@ export const state = {
   inviteOpen: false,  // champ « Inviter une personne » ouvert
   openItems: new Set(), // étapes et trajets dépliés (le détail s'affiche au clic sur leur carte)
   programOpen: new Set(), // étapes de road trip dont le programme est déplié (pour la session, jamais enregistré)
+  mapFull: false,   // carte du voyage en plein écran (js/map.js)
+  mapStripHidden: false, // bandeau des étapes masqué en plein écran (pour la session)
+  mapActiveStop: null,   // numéro de l'étape en surbrillance sur la carte et dans le bandeau
   selecting: false, // « Mes voyages » en mode sélection (pour supprimer plusieurs voyages)
   selected: new Set(), // voyages cochés dans ce mode
   networkTab: null,  // liste affichée depuis Mon profil (#abonnes, #abonnements, #mes-publications, #demandes)

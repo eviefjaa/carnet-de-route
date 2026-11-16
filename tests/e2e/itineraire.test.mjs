@@ -59,9 +59,9 @@ const publishTrip = (title) => run(dan, async (title) => {
   const s = await import("/js/social.js");
   if (!(await import("/js/store.js")).state.profile) await s.saveProfile({ name: "Dan", handle: "dan.route", bio: "", visibility: "public" });
   return s.publish({ name: title, currency: "EUR", country: "PT", items: [
-    { id: "a", type: "stop", place: "Lisbonne", country: "Portugal", arrive: "2026-06-01", depart: "2026-06-03", price: 200, notes: "Code porte 1234", todos: [{ id: "t", text: "Tram 28" }, { id: "u", text: "Belém", date: "2026-06-02", time: "10:00", how: "Tram 15", maps: "https://maps.app.goo.gl/x" }] },
+    { id: "a", type: "stop", place: "Lisbonne", country: "Portugal", arrive: "2026-06-01", depart: "2026-06-03", geo: { q: "Lisbonne", lat: 38.72, lng: -9.14 }, price: 200, notes: "Code porte 1234", todos: [{ id: "t", text: "Tram 28" }, { id: "u", text: "Belém", date: "2026-06-02", time: "10:00", how: "Tram 15", maps: "https://maps.app.goo.gl/x" }] },
     { id: "b", type: "transport", mode: "train", from: "Lisbonne", to: "Porto", dep: "2026-06-03T09:00", arr: "2026-06-03T12:00", price: 30 },
-    { id: "c", type: "stop", place: "Porto", country: "Portugal", arrive: "2026-06-03", depart: "2026-06-05", todos: [] },
+    { id: "c", type: "stop", place: "Porto", country: "Portugal", arrive: "2026-06-03", depart: "2026-06-05", geo: { q: "Porto", lat: 41.15, lng: -8.61 }, todos: [] },
   ] }, { title, visibility: "public", recos: [{ kind: "resto", name: "Chez Jo", where: "Alfama", note: "La morue", url: "https://chezjo.pt", stop: 0 }] });
 }, title);
 const postId = await publishTrip("Portugal en train");
@@ -75,6 +75,18 @@ check("bouton visible sans compte", true);
   check("road trip publié : programme de l'étape, jour et heure, sans date ni lien", prog.includes("Jour 2") && prog.includes("10 h 00") && prog.includes("Belém") && prog.includes("Tram 15") && prog.includes("Sans jour précis") && prog.includes("Tram 28")
     && !(await eve.$eval(".post", (e) => e.innerHTML)).includes("maps.app")); }
 if (process.env.SHOTS) await (await eve.$(".post .item.stop")).screenshot({ path: process.env.SHOTS + "/publication-programme.png" });
+// Carte de la publication en plein écran, avec son bandeau (« Jour N » de la publication)
+await eve.waitForSelector(".map-full-btn", { timeout: 10000 }).catch(() => {});
+await tap(eve, ".map-full-btn");
+await sleep(700);
+check("publication : plein écran et bandeau", !!(await eve.$(".map-wrap.is-full"))
+  && JSON.stringify(await eve.$$eval(".ms-stop", (l) => l.map((b) => b.innerText.replace(/\s+/g, " ").trim()))) === JSON.stringify(["1 Lisbonne Jour 1 · 2 nuits", "2 Porto Jour 3 · 2 nuits"]));
+await tap(eve, '.ms-stop[data-n="2"]');
+await sleep(1800);
+check("publication : toucher une étape ouvre sa popup", ((await eve.$eval(".leaflet-popup-content", (e) => e.textContent).catch(() => "")) || "").includes("Porto"));
+await eve.keyboard.press("Escape");
+await sleep(400);
+check("publication : Échap ferme le plein écran", !(await eve.$(".map-wrap.is-full")));
 await eve.waitForSelector(".comments", { timeout: 10000 }).catch(() => {});
 await sleep(500);
 if (process.env.SHOTS) await (await eve.$(".post .hero")).screenshot({ path: process.env.SHOTS + "/creer-voyage-bouton.png" });
