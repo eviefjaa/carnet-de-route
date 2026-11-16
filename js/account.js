@@ -125,7 +125,7 @@ export async function deleteAccount(password) {
 
 // Versions reçues pendant une saisie, appliquées dès que la saisie est finie
 const deferred = new Map();
-const editingTrip = (id) => id === state.currentId && !!(state.editingId || state.insertAt || state.todoAdding || isTyping());
+const editingTrip = (id) => id === state.currentId && !!(state.editingId || state.insertAt || state.actForm || isTyping());
 setInterval(() => {
   for (const [id, trip] of deferred) {
     if (editingTrip(id)) continue;

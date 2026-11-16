@@ -1,7 +1,8 @@
 // Copie publique d'un voyage, pour une publication
 //
 // On ne garde que l'essentiel : étapes, activités, trajets et carte.
-// Séjour : le programme est publié jour par jour (jour, heure, activité, comment y aller).
+// Programme de chaque étape (séjour ou road trip) : publié jour par jour (jour, heure, activité,
+// comment y aller), sans dates, liens Maps, billets ni réservations.
 // Les dates deviennent « Jour 1, Jour 2… » (ne pas révéler quand on est absent de chez soi),
 // et les positions sont arrondies à environ 2 km (une adresse d'hébergement ne doit pas se
 // deviner sur la carte). Le tracé des routes est publié sans ses 2 premiers et 2 derniers
@@ -83,12 +84,12 @@ export function publicCopy(trip, { budget = false } = {}) {
           nights: nights(it.arrive, it.depart),
           geo: roundGeo(it.geo),
           todos: byDate(it.todos).map((t) => String(t.text || "").slice(0, 120)).filter(Boolean).slice(0, 30),
-          ...(sejour ? { program: (it.todos || []).filter((t) => t.text).slice(0, 60).map((t) => ({
+          program: (it.todos || []).filter((t) => t.text).slice(0, 60).map((t) => ({
             text: String(t.text).slice(0, 120),
             day: day(t.date),
             time: /^([01]\d|2[0-3]):[0-5]\d$/.test(t.time || "") ? t.time : "",
             how: String(t.how || "").slice(0, 200),
-          })) } : {}),
+          })),
         }
       : {
           type: "transport",

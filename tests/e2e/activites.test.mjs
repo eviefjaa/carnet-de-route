@@ -1,4 +1,4 @@
-// Dates des activités d'une étape (« À faire et à réserver ») : ajout rapide et formulaire d'étape
+// Programme jour par jour d'une étape de road trip : replié, déplié, ajout un jour donné avec une heure, réservé, formulaire d'étape
 import puppeteer from "puppeteer-core";
 import http from "node:http";
 import fs from "node:fs";
@@ -34,32 +34,59 @@ await page.goto(`http://localhost:${PORT}/index.html#voyage-v-ly`, { waitUntil: 
 await page.reload({ waitUntil: "networkidle0" });
 const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem("carnet-route-trips"))["v-ly"].items[0].todos);
 
-// Ajout rapide depuis la checklist, avec une date
+// Programme de l'étape : replié par défaut, sur une ligne
 await page.click('[data-act="toggle-item"][data-id="s1"]');
-await page.waitForSelector('[data-act="todo-add"]');
-await page.click('[data-act="todo-add"]');
-await page.waitForSelector("form[data-todo-form] input[name=date]");
-const bounds = await page.$eval("form[data-todo-form] input[name=date]", (e) => e.min + " " + e.max);
-check("date bornée par l'étape", bounds === "2030-03-02 2030-03-05");
-await page.type("form[data-todo-form] input[name=text]", "Bouchon Daniel et Denise");
-await page.$eval("form[data-todo-form] input[name=date]", (e) => { e.value = "2030-03-03"; });
-check("case « À réserver » décochée à l'ajout", !(await page.$eval("form[data-todo-form] input[name=book]", (e) => e.checked)));
-await page.click("form[data-todo-form] input[name=book]");
-await page.$eval("form[data-todo-form]", (f) => f.requestSubmit());
+await page.waitForSelector('[data-act="program-toggle"][data-stop="s1"]');
+const toggle = '[data-act="program-toggle"][data-stop="s1"]';
+const summary = () => page.$eval(toggle, (e) => e.textContent.replace(/\s+/g, " ").trim());
+check("replié par défaut, résumé sur une ligne", (await page.$eval(toggle, (e) => e.getAttribute("aria-expanded"))) === "false"
+  && (await summary()) === "▸ Programme · 1 activité sur 4 jours · 1 à réserver" && !(await page.$(".pg-days .sj-day")));
+check("« à réserver » en rouge", (await page.$eval(".pg-pending", (e) => getComputedStyle(e).color)) === (await page.$eval(".to-book", (e) => getComputedStyle(e).color)));
+if (SHOTS) await (await page.$(".item.stop")).screenshot({ path: SHOTS + "/programme-replie.png" });
+await page.click(toggle);
+await page.waitForSelector(".pg-days .sj-day");
+const titles = () => page.$$eval(".pg-days .sj-day h3", (l) => l.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
+check("déplié : un bloc par jour, puis les activités sans jour", (await page.$eval(toggle, (e) => e.getAttribute("aria-expanded"))) === "true"
+  && JSON.stringify((await titles()).map((t) => t.slice(0, 6))) === JSON.stringify(["Jour 1", "Jour 2", "Jour 3", "Jour 4", "Pas en"]));
+
+// Ajout un jour donné, avec une heure : le « + » du jour préremplit la date
+await page.click('.pg-days [data-act="act-add"][data-date="2030-03-03"]');
+await page.waitForSelector("form[data-act-form] input[name=text]");
+check("date du jour préremplie, bornée par l'étape", (await page.$eval("form[data-act-form] input[name=date]", (e) => [e.value, e.min, e.max].join(" "))) === "2030-03-03 2030-03-02 2030-03-05");
+check("case « À réserver » décochée à l'ajout", !(await page.$eval("form[data-act-form] input[name=book]", (e) => e.checked)));
+await page.type("form[data-act-form] input[name=text]", "Bouchon Daniel et Denise");
+await page.$eval("form[data-act-form] input[name=time]", (e) => { e.value = "12:30"; });
+await page.type("form[data-act-form] input[name=how]", "Métro D");
+await page.click("form[data-act-form] input[name=book]");
+if (SHOTS) await (await page.$("form[data-act-form]")).screenshot({ path: SHOTS + "/programme-formulaire.png" });
+await page.$eval("form[data-act-form]", (f) => f.requestSubmit());
 await sleep(300);
 let todos = await stored();
-check("activité enregistrée avec sa date, à réserver", todos[1] && todos[1].text === "Bouchon Daniel et Denise" && todos[1].date === "2030-03-03" && todos[1].book === true);
+check("activité enregistrée avec sa date et son heure, à réserver", todos[1] && todos[1].text === "Bouchon Daniel et Denise" && todos[1].date === "2030-03-03" && todos[1].time === "12:30" && todos[1].how === "Métro D" && todos[1].book === true);
 check("activité sans date : pas de date inventée", !("date" in todos[0]));
-await page.click('[data-act="todo-close"]');
+const dayOf = (text) => page.$$eval(".pg-days .sj-day", (l, text) => (l.find((d) => d.innerText.includes(text)) || {}).ariaLabel || "", text);
+check("retrouvée à sa place : Jour 2, avec son heure", (await dayOf("Bouchon")).startsWith("Jour 2") && (await page.$eval(".pg-days .sj-act:not(.is-free) .sj-time", (e) => e.textContent).catch(() => "")) === "12 h 30");
+check("le programme reste ouvert après l'ajout", (await page.$eval(toggle, (e) => e.getAttribute("aria-expanded"))) === "true");
+// Cocher « réservé »
+await page.$$eval(".pg-days .sj-act", (l) => l.find((li) => li.innerText.includes("Bouchon")).querySelector("input[type=checkbox]").click());
+await sleep(300);
+check("cocher réservé", (await stored()).find((x) => x.text.startsWith("Bouchon")).done === true
+  && (await page.$$eval(".pg-days .sj-act.done", (l) => l.map((e) => e.innerText).join(""))).includes("Bouchon"));
+if (SHOTS) await (await page.$(".item.stop")).screenshot({ path: SHOTS + "/programme-deplie.png" });
+// Replier, au clavier
+await page.focus(toggle);
+await page.keyboard.press("Enter");
 await sleep(200);
-const shown = await page.$$eval(".cl-list li", (l) => l.map((li) => (li.querySelector(".cl-date") || {}).textContent || ""));
-check("date affichée à côté de l'activité, et seulement là ; l'activité datée passe devant", /3 mars/.test(shown[0]) && shown[1] === "");
-if (SHOTS) await (await page.$(".item.stop")).screenshot({ path: SHOTS + "/activites-checklist.png" });
+check("replier au clavier", (await page.$eval(toggle, (e) => e.getAttribute("aria-expanded"))) === "false" && !(await page.$(".pg-days .sj-day"))
+  && (await summary()) === "▸ Programme · 2 activités sur 4 jours · 1 à réserver");
+await page.focus(toggle);
+await page.keyboard.press("Enter");
+await sleep(200);
 
-// Formulaire de l'étape : on ajoute une date à l'activité qui n'en avait pas
+// Formulaire de l'étape : on ajoute une date à l'activité qui n'en avait pas ; heure et « comment y aller » gardés
 await page.click('[data-act="edit"][data-id="s1"]');
 await page.waitForSelector('form[data-form="stop"] [name="todoDate"]');
-check("un champ date par activité dans le formulaire", (await page.$$('form[data-form="stop"] [name="todoDate"]')).length === 2);
+check("un champ date et un champ heure par activité dans le formulaire", (await page.$$('form[data-form="stop"] [name="todoDate"]')).length === 2 && (await page.$$('form[data-form="stop"] [name="todoTime"]')).length === 2);
 await page.$eval('#td-date-a', (e) => { e.value = "2030-03-04"; });
 // Nouvelle ligne : bornée elle aussi
 await page.click('[data-act="add-todo-row"]');
@@ -70,25 +97,22 @@ if (SHOTS) await (await page.$('form[data-form="stop"] .todos-edit')).screenshot
 await page.$eval('form[data-form="stop"]', (f) => f.requestSubmit());
 await sleep(300);
 todos = await stored();
-const byId = (id) => todos.find((x) => x.id === id);
-check("date ajoutée depuis le formulaire", byId("a").date === "2030-03-04" && todos.find((x) => x.text.startsWith("Bouchon")).date === "2030-03-03");
-// Ordre chronologique : le 3 mars, le 4 mars, puis l'activité sans date
-const order = await page.$$eval(".cl-list li label > span:not(.cl-dot)", (l) => l.map((e) => e.textContent.slice(0, 12)).join(" | "));
-check("checklist dans l'ordre des dates, sans date à la fin", order === "Bouchon Dani | Musée des Co | Pentes de la");
-check("« À réserver » dans l'ordre, sans l'activité qui n'a rien à réserver", (await page.$eval(".to-book", (e) => e.textContent.trim())) === "À réserver : Bouchon Daniel et Denise, Musée des Confluences");
-check("activité sans réservation : pas en rouge", (await page.$$eval(".cl-list li", (l) => l.map((li) => li.className).join(","))) === ",,is-free"
-  && (await page.$eval(".cl-list li.is-free span", (e) => getComputedStyle(e).color)) !== (await page.$eval(".cl-list li:not(.is-free) span", (e) => getComputedStyle(e).color)));
-check("rien à réserver : un point à la place de la case", !!(await page.$(".cl-list li.is-free .cl-dot")) && !(await page.$(".cl-list li.is-free input")));
-check("compteur sur les seules activités à réserver", (await page.$eval(".cl-progress", (e) => e.textContent)) === "0/2 réservé");
+const bouchon = todos.find((x) => x.text.startsWith("Bouchon"));
+check("date ajoutée depuis le formulaire", todos.find((x) => x.id === "a").date === "2030-03-04" && bouchon.date === "2030-03-03");
+check("l'heure et « comment y aller » ne sont pas perdus", bouchon.time === "12:30" && bouchon.how === "Métro D" && bouchon.done === true);
+// Chaque activité dans son jour
+check("programme : chaque activité dans son jour", (await dayOf("Bouchon")).startsWith("Jour 2") && (await dayOf("Musée")).startsWith("Jour 3") && (await dayOf("Pentes")).startsWith("Pas encore"));
+check("« À réserver » de la carte : ce qui reste à réserver", (await page.$eval(".to-book", (e) => e.textContent.trim())) === "À réserver : Musée des Confluences");
+check("activité sans réservation : pas en rouge", (await page.$eval(".pg-days .sj-act.is-free .sj-text", (e) => getComputedStyle(e).color)) !== (await page.$eval(".pg-days .sj-act:not(.is-free):not(.done) .sj-text", (e) => getComputedStyle(e).color)));
+check("rien à réserver : un point à la place de la case", !!(await page.$(".pg-days .sj-act.is-free .cl-dot")) && !(await page.$(".pg-days .sj-act.is-free input")));
 check("nouvelle ligne du formulaire : rien à réserver", (await stored()).find((x) => x.text.startsWith("Pentes")).book === false);
-if (SHOTS) await (await page.$(".item.stop")).screenshot({ path: SHOTS + "/activites-ordre.png" });
 await page.click('[data-act="edit"][data-id="s1"]');
 await page.waitForSelector('form[data-form="stop"] [name="todoText"]');
 // Dans le formulaire, décocher « À réserver » efface la case « réservé » de la ligne
 check("formulaire : case « réservé » masquée sans réservation", (await page.$$eval('form[data-form="stop"] [name="todoDone"]', (l) => l.map((e) => getComputedStyle(e).visibility).join(","))) === "visible,visible,hidden");
 check("formulaire dans l'ordre des dates", (await page.$$eval('form[data-form="stop"] [name="todoText"]', (l) => l.map((e) => e.value.slice(0, 6)).join(","))) === "Boucho,Musée ,Pentes");
 
-console.log(`Dates des activités : ${ok} vérifications réussies, ${ko} échec(s).`);
+console.log(`Programme des étapes : ${ok} vérifications réussies, ${ko} échec(s).`);
 await browser.close();
 server.close();
 process.exit(ko ? 1 : 0);

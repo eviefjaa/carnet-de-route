@@ -40,7 +40,10 @@ assert.equal(pub.kind, "sejour");
 assert.deepEqual(pub.items[0].program.map((a) => [a.text.slice(0, 5), a.day, a.time]),
   [["Dîner", 1, "20:00"], ["Musée", 1, "09:15"], ["Balad", null, ""], ["Hors ", 32, ""], ["Batea", 2, ""]]);
 assert.doesNotMatch(JSON.stringify(pub), /2030|maps\.app|tickets/);
-assert.equal("kind" in publicCopy({ items: [stop] }), false, "road trip : pas de type ni de programme");
-assert.equal("program" in publicCopy({ items: [stop] }).items[0], false);
+assert.equal("kind" in publicCopy({ items: [stop] }), false, "road trip : pas de type");
+// Road trip : le programme de chaque étape est publié aussi, avec les mêmes règles
+{ const road = publicCopy({ items: [{ ...stop, todos: [...stop.todos, { id: "e", text: "Bateau", date: "2030-05-02", time: "07:30", how: "Port", maps: "https://maps.app.goo.gl/x", tickets: [{ id: "f" }], book: true, done: true }] }] });
+  assert.deepEqual(road.items[0].program.slice(-1), [{ text: "Bateau", day: 2, time: "07:30", how: "Port" }]);
+  assert.doesNotMatch(JSON.stringify(road), /2030|maps\.app|tickets|"book"|"done"/); }
 
 console.log("Séjour : tous les tests passent.");

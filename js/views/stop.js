@@ -4,9 +4,10 @@ import { esc, uid, safeUrl, dayOrEmpty, timeOrEmpty, byDate, needsBooking, fmtHo
 import { state, tripStart } from "../store.js";
 import { itemActions } from "./actions.js";
 import { pickedPlace } from "../autocomplete.js";
-import { checklist, dateRange, bookBox } from "./checklist.js";
+import { dateRange, bookBox } from "./checklist.js";
+import { stopProgram, stopMoves } from "./program.js";
 
-// sejour : lieu d'un séjour, sans numéro de jour ni checklist (le programme les remplace)
+// sejour : lieu d'un séjour, sans numéro de jour ni programme (affiché à part, toujours déplié)
 export function stopCard(it, trip, idx, { sejour = false } = {}) {
   const start = tripStart(trip);
   const dayN = !sejour && it.arrive && start ? nights(start, it.arrive) + 1 : null;
@@ -44,7 +45,7 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
     ${links.length ? `<div class="links">${links.map(linkCard).join("")}</div>` : ""}
     ${it.notes ? `<div class="notes">${esc(it.notes)}</div>` : ""}
     ${maps ? `<div class="leg-extra"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Ouvrir dans Google Maps ↗</a></div>` : ""}
-    ${sejour ? "" : checklist(it)}
+    ${sejour ? "" : stopProgram(it, { firstDay: dayN || 1, moves: stopMoves(trip, idx) })}
     ${itemActions(it, idx, trip)}
     </div>` : ""}
   </article>`;
@@ -87,7 +88,7 @@ export function stopForm(it, isNew, { sejour = false } = {}) {
     </div>
     <div><button class="btn small" data-act="add-link" type="button">+ Ajouter un lien</button></div>
     ${sejour ? "" : `<div class="f-label">
-      À faire et à réserver (cochez ce qui est déjà réservé)
+      Programme (cochez ce qui est déjà réservé)
       <div class="todos-edit" data-todos>${byDate(it.todos).map((t) => todoRow(t, it)).join("")}</div>
     </div>
     <div><button class="btn small" data-act="add-todo-row" type="button">+ Ajouter une activité</button></div>`}
@@ -117,6 +118,7 @@ export function todoRow(t, stop = {}) {
     <button class="btn ghost small" data-act="rm-todo-row" type="button" aria-label="Retirer cette activité">✕</button>
     <div class="todo-extra">
       <label class="todo-date">Date<input type="date" name="todoDate" id="td-date-${esc(t.id)}" value="${esc(t.date || "")}"${dateRange(stop)}></label>
+      <label class="todo-date">Heure<input type="time" name="todoTime" id="td-time-${esc(t.id)}" value="${esc(t.time || "")}"></label>
       ${bookBox("todoBook", "td-book-" + t.id, needsBooking(t))}
       <input name="todoMaps" id="td-maps-${esc(t.id)}" value="${esc(t.maps || "")}" placeholder="Lien Google Maps du lieu (facultatif)" inputmode="url" autocomplete="off" aria-label="Lien Google Maps du lieu">
     </div>
@@ -153,6 +155,7 @@ export function readStopForm(f) {
       done: r.querySelector('[name="todoBook"]').checked && r.querySelector('[name="todoDone"]').checked, // réservé : seulement si à réserver
       maps: safeUrl(r.querySelector('[name="todoMaps"]').value),
       date: dayOrEmpty(r.querySelector('[name="todoDate"]').value),
+      time: timeOrEmpty(r.querySelector('[name="todoTime"]').value),
     }))
     .filter((t) => t.text);
   return o;

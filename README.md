@@ -36,7 +36,7 @@ css/
   autocomplete.css    Suggestions de lieux
   explore.css         Destinations, fiches pays, favoris, profil, paramètres
   budget.css          Budget et prix
-  checklist.css       Checklist des étapes
+  checklist.css       Activités des étapes et programme replié
   share.css           Voyageurs et invitations
   social.css          Profils, abonnements et publications
   tickets.css         Billets des trajets
@@ -77,7 +77,8 @@ js/
     transport.js      Trajet : affichage et formulaire
     actions.js        Boutons d'action et d'insertion
     budget.js         Section Budget (tableau des coûts)
-    checklist.js      Checklist « À faire et à réserver » de chaque étape
+    program.js        Programme jour par jour d'un lieu (étape de road trip, repliable, ou séjour)
+    checklist.js      Activités : ce qui reste à réserver, case « réservé »
     share.js          Section Voyageurs d'un voyage
     social.js         Fil d'actualité, Découvrir, profil d'une personne, publication
     tickets.js        Billets affichés dans un trajet, une activité ou un formulaire
@@ -109,11 +110,11 @@ Après toute modification de `firestore.rules`, copiez son contenu dans la conso
 
 Dans « Mon profil », on crée un profil public (nom, pseudo unique, bio) et on choisit un compte public (tout le monde peut s'abonner) ou privé (chaque demande d'abonnement est à accepter). L'adresse e-mail n'apparaît jamais.
 
-Sur la page d'un voyage, « Publier l'itinéraire » crée une copie figée, que personne ne peut modifier, visible par « Tout le monde » (même sans compte, avec le lien), « Mes abonnés » ou « Moi seul(e) ». La visibilité se change et la publication se supprime à tout moment. Sont publiés : les étapes, les activités, les trajets et la carte (positions arrondies à environ 2 km), avec « Jour 1, Jour 2… » à la place des dates. Ne sont jamais publiés : dates, prix, notes, adresses, liens et numéros de réservation, billets, co-voyageurs.
+Sur la page d'un voyage, « Publier l'itinéraire » crée une copie figée, que personne ne peut modifier, visible par « Tout le monde » (même sans compte, avec le lien), « Mes abonnés » ou « Moi seul(e) ». La visibilité se change et la publication se supprime à tout moment. Sont publiés : les étapes, leur programme (« Jour N », heure, activité, comment y aller), les trajets et la carte (positions arrondies à environ 2 km), avec « Jour 1, Jour 2… » à la place des dates. Ne sont jamais publiés : dates, prix, notes, adresses, liens et numéros de réservation, billets, co-voyageurs.
 
 En publiant, on peut ajouter des recommandations facultatives : restaurants, hébergements, adresses ou activités, avec un lieu, un mot et un lien. Les itinéraires publiés peuvent être commentés par les personnes qui les voient et qui ont un profil public. Un commentaire est supprimé par son auteur ou par l'auteur de l'itinéraire, et il n'est jamais modifié.
 
-Sur la page d'un itinéraire publié, « Créer mon voyage à partir de cet itinéraire » en fait un voyage à soi, modifiable comme les autres (même sans compte : il est alors enregistré dans le navigateur). On choisit son nom et, si on veut, une date de départ : « Jour 1, Jour 2… » redeviennent alors des dates. Les étapes, activités, trajets et programme d'un séjour sont repris ; les recommandations vont dans les notes de leur étape, avec leur lien. Les positions et tracés sont recalculés à partir des noms de lieux, et rien d'autre n'est repris (budget, commentaires, favoris). La publication d'origine ne change pas, et le voyage affiche « Inspiré de l'itinéraire de @pseudo » avec un lien vers elle (`source` dans le voyage).
+Sur la page d'un itinéraire publié, « Créer mon voyage à partir de cet itinéraire » en fait un voyage à soi, modifiable comme les autres (même sans compte : il est alors enregistré dans le navigateur). On choisit son nom et, si on veut, une date de départ : « Jour 1, Jour 2… » redeviennent alors des dates. Les étapes, leur programme (avec les heures) et les trajets sont repris ; les recommandations vont dans les notes de leur étape, avec leur lien. Les positions et tracés sont recalculés à partir des noms de lieux, et rien d'autre n'est repris (budget, commentaires, favoris). La publication d'origine ne change pas, et le voyage affiche « Inspiré de l'itinéraire de @pseudo » avec un lien vers elle (`source` dans le voyage).
 
 La page « Notifications » signale les commentaires sur ses itinéraires, les mises en favori de ses itinéraires (par des personnes qui ont un profil), les nouveaux abonnés, les demandes d'abonnement, les demandes acceptées et les voyageurs qui rejoignent ses voyages. Elles sont déduites des abonnements et des commentaires existants (aucun autre compte ne peut en écrire), rechargées toutes les 3 minutes et au retour sur l'onglet. Le nombre de nouveautés s'affiche dans le menu et sur son bouton, sur téléphone.
 
@@ -125,13 +126,13 @@ Tests en local avec les émulateurs Firebase : lancer `firebase emulators:start 
 
 ## Billets des trajets
 
-Chaque trajet a une zone « Billets » pour y ranger des PDF ou des photos (billets de train, d'avion, de bus…), dès sa création dans le formulaire ou plus tard. Chaque activité de la checklist d'une étape peut aussi avoir ses billets (musée, excursion…). Il faut être connecté : les billets sont enregistrés dans le compte et visibles par tous les voyageurs du voyage.
+Chaque trajet a une zone « Billets » pour y ranger des PDF ou des photos (billets de train, d'avion, de bus…), dès sa création dans le formulaire ou plus tard. Chaque activité du programme d'une étape peut aussi avoir ses billets (musée, excursion…). Il faut être connecté : les billets sont enregistrés dans le compte et visibles par tous les voyageurs du voyage.
 
 Les billets sont stockés dans Firestore (`trips/{id}/files/{idDuBillet}`), encodés en base64, sans Firebase Storage (qui demande le forfait payant Blaze). Un document Firestore ne dépassant pas 1 Mo, chaque fichier est limité à 700 Ko ; les photos sont réduites automatiquement avant l'envoi.
 
 ## Rappels par e-mail
 
-Chaque jour, GitHub Actions lance `scripts/reminders/send-reminders.js`. Pour chaque étape qui commence dans 3 jours ou moins et dont la checklist contient encore des éléments non cochés, un e-mail est envoyé à chacun des voyageurs (une seule fois par étape). Seules les adresses confirmées reçoivent les rappels : un lien de confirmation est envoyé à la création du compte.
+Chaque jour, GitHub Actions lance `scripts/reminders/send-reminders.js`. Pour chaque étape qui commence dans 3 jours ou moins et dont le programme contient encore des activités à réserver non cochées, un e-mail est envoyé à chacun des voyageurs (une seule fois par étape). Seules les adresses confirmées reçoivent les rappels : un lien de confirmation est envoyé à la création du compte.
 
 Secrets à créer dans GitHub (Settings → Secrets and variables → Actions) :
 - `FIREBASE_SERVICE_ACCOUNT` : contenu du fichier JSON de la clé de compte de service Firebase

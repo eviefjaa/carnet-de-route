@@ -3,9 +3,9 @@
 import { state, currentTrip, save, flush, createTrip, deleteTrip, neighbours, isOwner, resetUi } from "./store.js";
 import { render } from "./views/trip.js";
 import { linkRow, todoRow, newStop, readStopForm } from "./views/stop.js";
-import { readActivityForm } from "./views/sejour.js";
+import { readActivityForm } from "./views/program.js";
 import { newTransport, readTransportForm } from "./views/transport.js";
-import { uid, nights, duration, plural, safeUrl, dayOrEmpty } from "./utils.js";
+import { uid, nights, duration, plural } from "./utils.js";
 import { toast } from "./toast.js";
 import * as cloud from "./cloud.js";
 import { deleteAccount } from "./account.js";
@@ -27,7 +27,7 @@ export function bindEvents() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeMenu();
     // Entrée dans une activité du formulaire d'étape : nouvelle activité plutôt qu'enregistrer
-    if (e.key === "Enter" && ["todoText", "todoMaps", "todoDate"].includes(e.target.name)) {
+    if (e.key === "Enter" && ["todoText", "todoMaps", "todoDate", "todoTime"].includes(e.target.name)) {
       e.preventDefault();
       addTodoRow(e.target.closest("[data-todo-row]"));
     }
@@ -129,6 +129,15 @@ function onClick(e) {
       else state.openItems.add(id);
       break;
     }
+    // Programme d'une étape de road trip : déplié ou replié, gardé pendant la session
+    case "program-toggle": {
+      const id = b.dataset.stop;
+      if (state.programOpen.has(id)) state.programOpen.delete(id);
+      else state.programOpen.add(id);
+      render();
+      document.querySelector(`[data-act="program-toggle"][data-stop="${CSS.escape(id)}"]`)?.focus();
+      return;
+    }
     case "edit":
       state.editingId = b.dataset.id;
       state.insertAt = null;
@@ -184,11 +193,13 @@ function onClick(e) {
       break;
     case "act-add":
       state.actForm = { stop: b.dataset.stop, date: b.dataset.date || "" };
+      state.programOpen.add(b.dataset.stop); // le formulaire est dans le programme
       render();
       document.querySelector("form[data-act-form] input[name=text]")?.focus();
       return;
     case "act-edit":
       state.actForm = { stop: b.dataset.stop, todo: b.dataset.todo };
+      state.programOpen.add(b.dataset.stop);
       render();
       document.querySelector("form[data-act-form] input[name=text]")?.focus();
       return;
@@ -229,18 +240,7 @@ function findTodo(stopId, todoId) {
   const s = findStop(stopId);
   return s && (s.todos || []).find((x) => x.id === todoId);
 }
-// Ajoute un élément à la checklist d'une étape ; renvoie false si rien à ajouter
-function addTodo(stopId, text, maps = "", date = "", book = false) {
-  text = text.trim();
-  const s = findStop(stopId);
-  if (!text || !s) return false;
-  const link = safeUrl(maps);
-  const day = dayOrEmpty(date);
-  s.todos = [...(s.todos || []), { id: uid(), text, done: false, book, ...(link ? { maps: link } : {}), ...(day ? { date: day } : {}) }];
-  save();
-  return true;
-}
-// Séjour : ajout ou modification d'une activité du programme
+// Programme (séjour ou étape) : ajout ou modification d'une activité
 function saveActivity(f) {
   const s = findStop(f.dataset.actForm);
   if (!s) return;
@@ -257,31 +257,15 @@ function saveActivity(f) {
     s.todos = [...(s.todos || []), { id: uid(), done: false, ...clean(v), book: v.book }];
   }
   state.actForm = null;
+  state.programOpen.add(s.id);
   save();
   render();
   toast(old ? "Enregistré" : "Activité ajoutée");
-}
-function focusTodoInput() {
-  const input = document.querySelector("form[data-todo-form] input[name=text]");
-  if (input) input.focus();
 }
 
 // ---------- Menu, destinations, favoris, paramètres ----------
 function onPageClick(act, b) {
   switch (act) {
-    case "todo-add":
-      state.todoAdding = b.dataset.stop;
-      render();
-      focusTodoInput();
-      return true;
-    case "todo-close": {
-      // Ce qui est tapé est enregistré aussi, pour ne pas le perdre
-      const form = b.closest("form[data-todo-form]");
-      if (form) addTodo(form.dataset.todoForm, form.text.value, form.maps ? form.maps.value : "", form.date ? form.date.value : "", !!(form.book && form.book.checked));
-      state.todoAdding = null;
-      render();
-      return true;
-    }
     case "todo-del": {
       const s = findStop(b.dataset.stop);
       if (s) {
@@ -599,15 +583,6 @@ function onSubmit(e) {
     saveActivity(actForm);
     return;
   }
-  const todoForm = e.target.closest("form[data-todo-form]");
-  if (todoForm) {
-    e.preventDefault();
-    if (addTodo(todoForm.dataset.todoForm, todoForm.text.value, todoForm.maps ? todoForm.maps.value : "", todoForm.date ? todoForm.date.value : "", !!(todoForm.book && todoForm.book.checked))) {
-      render();
-      focusTodoInput(); // on peut enchaîner plusieurs ajouts
-    }
-    return;
-  }
   const delForm = e.target.closest("form[data-delete-account]");
   if (delForm) {
     e.preventDefault();
@@ -692,10 +667,14 @@ function onSubmit(e) {
   toast("Enregistré");
 }
 
-// Les activités gardent leurs billets ; ceux des activités retirées sont supprimés du compte
+// Les activités gardent leurs billets et « comment y aller » (absents du formulaire de l'étape) ;
+// les billets des activités retirées sont supprimés du compte
 function keepTodoTickets(stop, old) {
   const before = new Map(((old && old.todos) || []).map((x) => [x.id, x]));
-  stop.todos = stop.todos.map((x) => (before.get(x.id)?.tickets?.length ? { ...x, tickets: before.get(x.id).tickets } : x));
+  stop.todos = stop.todos.map((x) => {
+    const b = before.get(x.id);
+    return { ...x, ...(b?.tickets?.length ? { tickets: b.tickets } : {}), ...(b?.how ? { how: b.how } : {}) };
+  });
   const kept = new Set(stop.todos.map((x) => x.id));
   deleteTicketFiles([...before.values()].filter((x) => !kept.has(x.id)).flatMap((x) => x.tickets || []));
 }

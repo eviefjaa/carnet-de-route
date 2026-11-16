@@ -1,10 +1,8 @@
-/* Checklist d'une étape */
+/* Activités d'une étape (« À faire » d'un itinéraire publié), boutons communs au programme */
 
 .checklist { border-top: 1px dashed var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
 .cl-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .cl-head h3 { white-space: nowrap; font-family: var(--body); font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
-.cl-progress { white-space: nowrap; font-family: var(--body); font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--ticket); color: var(--ink); }
-.cl-progress.all { background: var(--accent-soft); color: var(--accent); }
 .cl-add {
   margin-left: auto; display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
   border-radius: 50%; border: 1px solid var(--accent); background: transparent; color: var(--accent);
@@ -12,25 +10,11 @@
 }
 .cl-add:hover { background: var(--accent); color: var(--accent-ink); }
 
-.cl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-.cl-list li { display: flex; align-items: center; gap: 6px; border-radius: 8px; padding: 2px 4px; }
-.cl-list li:hover { background: var(--bg); }
-.cl-list label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 5px 0; cursor: pointer; }
-.cl-list input[type="checkbox"] { flex: none; width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
-.cl-list span { overflow-wrap: anywhere; }
-/* Réservé : en vert (plus de texte barré) */
-.cl-list li.done > label span { color: var(--accent); font-weight: 600; }
-.cl-list li.done > label input[type="checkbox"] { accent-color: var(--accent); }
-/* Encore à réserver : en rouge pour ne pas l'oublier */
-.cl-list li:not(.done) > label span { color: var(--danger); font-weight: 600; }
-.cl-list li:not(.done) > label input[type="checkbox"] { accent-color: var(--danger); }
-/* Rien à réserver : couleur normale, la case sert juste à dire que c'est fait */
-.cl-list li.is-free > label span { color: var(--ink); font-weight: 500; }
 /* Point à la place de la case, de la même largeur pour garder les textes alignés */
 .cl-dot { flex: none; width: 18px; height: 18px; display: grid; place-items: center; }
 .cl-dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
 .cl-del { flex: none; border: 0; background: none; color: var(--muted); padding: 4px 6px; border-radius: 6px; opacity: .5; }
-.cl-list li:hover .cl-del, .cl-del:focus-visible { opacity: 1; }
+.cl-del:focus-visible { opacity: 1; }
 .cl-del:hover { color: var(--danger); }
 @media (hover: none) { .cl-del { opacity: .8; } }
 
@@ -73,3 +57,17 @@
 .todo-book:has(input:checked) { border-color: var(--danger); color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
 .todo-book:has(input:checked)::before { content: "✓"; border: 0; width: auto; height: auto; font-size: 13px; line-height: 1; }
 .todo-book:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Programme d'une étape de road trip : replié en une ligne, déplié jour par jour (views/program.js) */
+.program { border-top: 1px dashed var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.pg-head { display: flex; align-items: center; gap: 8px; }
+.pg-toggle { flex: 1; min-width: 0; display: block; padding: 6px 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.pg-toggle b { color: var(--ink); font-weight: 600; }
+.pg-toggle:hover b { text-decoration: underline; }
+.pg-arrow { display: inline-block; width: 1em; color: var(--ink); font-size: 16px; transition: transform .15s; }
+.program.open .pg-arrow { transform: rotate(90deg); }
+.pg-pending { color: var(--danger); font-weight: 600; white-space: nowrap; }
+.pg-days { display: flex; flex-direction: column; gap: 8px; }
+.program .sj-day { margin: 0; padding: 10px 12px; background: var(--bg); }
+.program .sj-day::before { display: none; } /* pas de point sur la ligne du trajet : on est dans la carte de l'étape */
+@media (prefers-reduced-motion: reduce) { .pg-arrow { transition: none; } }

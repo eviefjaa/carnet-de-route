@@ -187,7 +187,7 @@ function normalizePost(id, p) {
     : { type: "stop", place: text(i.place, 120), country: text(i.country, 60), day: intOrNull(i.day), nights: intOrNull(i.nights),
         geo: geoOrNull(i.geo),
         todos: (Array.isArray(i.todos) ? i.todos : []).map((t) => text(t, 120)).filter(Boolean),
-        // Programme d'un séjour : jour (entier), heure (HH:MM), activité, comment y aller
+        // Programme de l'étape (séjour ou road trip) : jour (entier), heure (HH:MM), activité, comment y aller
         program: (Array.isArray(i.program) ? i.program : []).filter(isObj).slice(0, 60).map((a) => ({
           text: text(a.text, 120), day: intOrNull(a.day), time: /^([01]\d|2[0-3]):[0-5]\d$/.test(a.time) ? a.time : "", how: text(a.how, 200),
         })).filter((a) => a.text) });

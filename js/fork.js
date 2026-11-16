@@ -32,8 +32,9 @@ export function tripFromPost(post, { name, start = "" } = {}, kinds = {}) {
     const arrive = dayOf(it.day);
     const depart = arrive && Number.isInteger(it.nights) && it.nights >= 0 ? addDays(arrive, it.nights) : "";
     // Activités : rien à réserver d'office (book: false), à l'auteur du nouveau voyage d'en décider
-    const program = Array.isArray(it.program) ? it.program : null;
-    const todos = sejour && program
+    // Programme (jour, heure, comment y aller) ; les anciennes publications de road trip n'ont que todos
+    const program = Array.isArray(it.program) && it.program.length ? it.program : null;
+    const todos = program
       ? program.filter((a) => a.text).map((a) => ({ id: uid(), text: text(a.text, 120), done: false, book: false,
           date: dayOf(a.day), time: /^([01]\d|2[0-3]):[0-5]\d$/.test(a.time || "") ? a.time : "", how: text(a.how, 200) }))
       : (it.todos || []).filter(Boolean).map((t) => ({ id: uid(), text: text(t, 120), done: false, book: false }));

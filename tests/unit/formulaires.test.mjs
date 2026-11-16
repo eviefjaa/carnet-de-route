@@ -6,7 +6,9 @@ const root = fileURLToPath(new URL("../..", import.meta.url));
 const { state } = await import(root + "/js/store.js");
 const { stopForm, newStop, stopCard } = await import(root + "/js/views/stop.js");
 const { transportForm, transportCard } = await import(root + "/js/views/transport.js");
-const { checklist } = await import(root + "/js/views/checklist.js");
+const { stopProgram } = await import(root + "/js/views/program.js");
+// Programme d'une étape de road trip, déplié
+const checklist = (it) => { state.programOpen.add(it.id); return stopProgram(it); };
 const { byDate } = await import(root + "/js/utils.js");
 
 // Étape : formulaire de création avec une checklist vide, puis de modification avec ses activités
@@ -56,16 +58,15 @@ assert.match(stopForm(withMaps, false), /name="todoMaps"[^>]*value="https:\/\/ma
   assert.equal(red(card("", "2030-03-05")), "Arrivée à définir");
   assert.equal(red(card("2030-03-02", "2030-03-05")), "", "dates complètes : rien en rouge"); }
 
-// Date d'une activité : affichée dans la checklist, proposée dans les deux formulaires, bornée par l'étape
+// Date d'une activité : son jour dans le programme, proposée dans les deux formulaires, bornée par l'étape
 { const it = { ...newStop("Lyon", "2030-03-02"), depart: "2030-03-05", todos: [
     { id: "d1", text: "Restaurant", done: false, date: "2030-03-03" }, { id: "d2", text: "Musée", done: false }] };
-  state.todoAdding = null;
   const cl = checklist(it);
-  assert.match(cl, /<time class="cl-date" datetime="2030-03-03">[^<]*3 mars<\/time>/);
-  assert.equal((cl.match(/cl-date/g) || []).length, 1, "pas de date affichée pour l'activité sans date");
-  state.todoAdding = it.id;
-  assert.match(checklist(it), /type="date" name="date"[^>]* min="2030-03-02" max="2030-03-05"/);
-  state.todoAdding = null;
+  assert.match(cl, /aria-label="Jour 2 [^"]*3 mars"[\s\S]*?Restaurant/);
+  assert.match(cl, /aria-label="Pas encore de jour"[\s\S]*?Musée/, "activité sans date : à part");
+  state.actForm = { stop: it.id, date: "2030-03-03" };
+  assert.match(checklist(it), /type="date" name="date"[^>]* value="2030-03-03" min="2030-03-02" max="2030-03-05"/);
+  state.actForm = null;
   const sf = stopForm(it, false);
   assert.match(sf, /name="todoDate" id="td-date-d1" value="2030-03-03" min="2030-03-02" max="2030-03-05"/);
   assert.match(sf, /name="todoDate" id="td-date-d2" value=""/); }
@@ -76,32 +77,32 @@ assert.match(stopForm(withMaps, false), /name="todoMaps"[^>]*value="https:\/\/ma
   assert.deepEqual(byDate(todos).map((t) => t.id), ["a1", "a2", "a3", "b", "x", "y"]);
   assert.equal(todos[0].id, "x");
   assert.deepEqual(byDate(undefined), []);
-  const it = { ...newStop("Lyon"), todos };
+  const it = { ...newStop("Lyon", "2030-03-03"), depart: "2030-03-04", todos };
   const cl = checklist(it);
-  assert.ok(cl.indexOf("A matin") < cl.indexOf(">B<") && cl.indexOf(">B<") < cl.indexOf("Sans date 1"), "checklist dans l'ordre des dates"); }
+  assert.ok(cl.indexOf("A matin") < cl.indexOf("A soir") && cl.indexOf("A soir") < cl.indexOf(">A<") && cl.indexOf(">A<") < cl.indexOf(">B<") && cl.indexOf(">B<") < cl.indexOf("Sans date 1"), "programme dans l'ordre des dates et des heures"); }
 
 // À réserver ou non : seules les activités à réserver sont en rouge et comptées ; sans « book », une activité ancienne reste à réserver
 { const { tripPending } = await import(root + "/js/views/checklist.js");
   const it = { ...newStop("Lyon"), todos: [{ id: "r", text: "Resto", done: false, book: true }, { id: "f", text: "Balade", done: false, book: false },
     { id: "o", text: "Ancienne", done: false }, { id: "v", text: "Visite faite", done: true, book: false }] };
   const cl = checklist(it);
-  assert.match(cl, /<li class="is-free">[\s\S]*?Balade/);
-  assert.match(cl, /<li class="">[\s\S]*?Resto/);
-  assert.match(cl, /<li class="is-free">[\s\S]*?Visite faite/, "« réservé » n'a pas de sens sans réservation");
-  assert.match(cl, /0\/2 réservé</, "seules les deux activités à réserver sont comptées");
-  assert.match(cl, /<li class="is-free">\s*<label>\s*<span class="cl-dot"[^>]*><\/span>\s*<span>Balade/, "rien à réserver : un point, pas de case");
+  assert.match(cl, /<li class="sj-act is-free">[\s\S]*?Balade/);
+  assert.match(cl, /<li class="sj-act">[\s\S]*?Resto/);
+  assert.match(cl, /<li class="sj-act is-free">[\s\S]*?Visite faite/, "« réservé » n'a pas de sens sans réservation");
+  assert.match(cl, /<span class="pg-pending">2 à réserver<\/span>/, "seules les deux activités à réserver sont comptées");
+  assert.match(cl, /<li class="sj-act is-free">\s*<div class="sj-act-main">\s*<label>\s*<span class="cl-dot"[^>]*><\/span>\s*<span class="sj-text">Balade/, "rien à réserver : un point, pas de case");
   assert.doesNotMatch(cl, /id="todo-f"/);
   assert.match(cl, /aria-label="Réservé : Resto"/);
   assert.equal(tripPending({ items: [it] }), 2);
-  assert.equal(checklist({ ...it, todos: [it.todos[1]] }).includes("cl-progress"), false, "rien à réserver : pas de compteur");
+  assert.equal(checklist({ ...it, todos: [it.todos[1]] }).includes("pg-pending"), false, "rien à réserver : pas de compteur");
   const card = stopCard({ ...it, id: "s" }, { currency: "EUR", items: [it] }, 0);
   assert.match(card, /À réserver : Resto, Ancienne</);
   const sf = stopForm(it, false);
   assert.match(sf, /name="todoBook" id="td-book-r" checked/);
   assert.match(sf, /name="todoBook" id="td-book-f">/);
   assert.match(sf, /name="todoBook" id="td-book-o" checked/);
-  state.todoAdding = it.id;
-  assert.match(checklist(it), /name="book" id="todo-book-[^"]+"><span>À réserver<\/span>/, "case décochée à l'ajout");
-  state.todoAdding = null; }
+  state.actForm = { stop: it.id, date: "" };
+  assert.match(checklist(it), /name="book" id="act-book-new"><span>À réserver<\/span>/, "case décochée à l'ajout");
+  state.actForm = null; }
 
-console.log("Formulaires et checklist : tous les tests passent.");
+console.log("Formulaires et programme des étapes : tous les tests passent.");

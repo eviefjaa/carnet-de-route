@@ -59,7 +59,7 @@ const publishTrip = (title) => run(dan, async (title) => {
   const s = await import("/js/social.js");
   if (!(await import("/js/store.js")).state.profile) await s.saveProfile({ name: "Dan", handle: "dan.route", bio: "", visibility: "public" });
   return s.publish({ name: title, currency: "EUR", country: "PT", items: [
-    { id: "a", type: "stop", place: "Lisbonne", country: "Portugal", arrive: "2026-06-01", depart: "2026-06-03", price: 200, notes: "Code porte 1234", todos: [{ id: "t", text: "Tram 28" }] },
+    { id: "a", type: "stop", place: "Lisbonne", country: "Portugal", arrive: "2026-06-01", depart: "2026-06-03", price: 200, notes: "Code porte 1234", todos: [{ id: "t", text: "Tram 28" }, { id: "u", text: "Belém", date: "2026-06-02", time: "10:00", how: "Tram 15", maps: "https://maps.app.goo.gl/x" }] },
     { id: "b", type: "transport", mode: "train", from: "Lisbonne", to: "Porto", dep: "2026-06-03T09:00", arr: "2026-06-03T12:00", price: 30 },
     { id: "c", type: "stop", place: "Porto", country: "Portugal", arrive: "2026-06-03", depart: "2026-06-05", todos: [] },
   ] }, { title, visibility: "public", recos: [{ kind: "resto", name: "Chez Jo", where: "Alfama", note: "La morue", url: "https://chezjo.pt", stop: 0 }] });
@@ -71,6 +71,10 @@ const eve = await newPage("eve");
 await eve.goto(SITE + "#publication-" + postId);
 await eve.waitForSelector('[data-act="fork-open"]', { timeout: 15000 });
 check("bouton visible sans compte", true);
+{ const prog = await eve.$eval(".post .item.stop .post-program", (e) => e.innerText.replace(/\s+/g, " ")).catch(() => "");
+  check("road trip publié : programme de l'étape, jour et heure, sans date ni lien", prog.includes("Jour 2") && prog.includes("10 h 00") && prog.includes("Belém") && prog.includes("Tram 15") && prog.includes("Sans jour précis") && prog.includes("Tram 28")
+    && !(await eve.$eval(".post", (e) => e.innerHTML)).includes("maps.app")); }
+if (process.env.SHOTS) await (await eve.$(".post .item.stop")).screenshot({ path: process.env.SHOTS + "/publication-programme.png" });
 await eve.waitForSelector(".comments", { timeout: 10000 }).catch(() => {});
 await sleep(500);
 if (process.env.SHOTS) await (await eve.$(".post .hero")).screenshot({ path: process.env.SHOTS + "/creer-voyage-bouton.png" });
@@ -100,7 +104,8 @@ const [lis, leg, por] = t.items;
 check("étapes et trajet dans l'ordre", t.items.map((i) => i.place || i.mode).join(",") === "Lisbonne,train,Porto");
 check("dates recalculées", lis.arrive === "2027-05-01" && lis.depart === "2027-05-03" && leg.dep === "2027-05-03" && por.arrive === "2027-05-03" && por.depart === "2027-05-05");
 check("pays et devise", t.country === "PT" && t.currency === "EUR");
-check("activité reprise, rien à réserver", lis.todos.length === 1 && lis.todos[0].text === "Tram 28" && lis.todos[0].book === false);
+check("activités reprises, rien à réserver", lis.todos.length === 2 && lis.todos.every((x) => x.book === false));
+check("programme repris : jour et heure", JSON.stringify(lis.todos.map((x) => [x.text, x.date, x.time, x.how])) === JSON.stringify([["Tram 28", "", "", ""], ["Belém", "2027-05-02", "10:00", "Tram 15"]]));
 check("recommandation dans les notes de l'étape", lis.notes === "Chez Jo (Restaurant), Alfama : La morue" && lis.links[0].url === "https://chezjo.pt/");
 check("ni prix ni notes privées de l'auteur", !JSON.stringify(t).includes("1234") && t.items.every((i) => i.price === null));
 check("origine enregistrée", t.source && t.source.postId === postId && t.source.ownerHandle === "dan.route");

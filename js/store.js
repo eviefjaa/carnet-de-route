@@ -18,7 +18,6 @@ export const state = {
   editingId: null,  // élément en cours de modification
   insertAt: null,   // { pos, draft } : nouvel élément en cours de création
   confirm: null,    // id de l'élément à confirmer pour suppression ("trip" pour le voyage)
-  todoAdding: null, // id de l'étape dont on remplit la checklist
   replyTo: null,    // commentaire auquel on est en train de répondre
   deleteAccount: null, // suppression du compte : null, "open" (formulaire) ou "busy" (en cours)
   actForm: null,    // séjour : formulaire d'activité ouvert { stop, todo (modification) ou date (ajout) }
@@ -38,6 +37,7 @@ export const state = {
   forkOpen: false,  // formulaire « Créer mon voyage à partir de cet itinéraire » ouvert
   inviteOpen: false,  // champ « Inviter une personne » ouvert
   openItems: new Set(), // étapes et trajets dépliés (le détail s'affiche au clic sur leur carte)
+  programOpen: new Set(), // étapes de road trip dont le programme est déplié (pour la session, jamais enregistré)
   selecting: false, // « Mes voyages » en mode sélection (pour supprimer plusieurs voyages)
   selected: new Set(), // voyages cochés dans ce mode
   networkTab: null,  // liste affichée depuis Mon profil (#abonnes, #abonnements, #mes-publications, #demandes)
@@ -228,7 +228,6 @@ export function resetUi() {
   state.editingId = null;
   state.insertAt = null;
   state.confirm = null;
-  state.todoAdding = null;
   state.actForm = null;
   state.replyTo = null;
   if (state.deleteAccount !== "busy") state.deleteAccount = null;

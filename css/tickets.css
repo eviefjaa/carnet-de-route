@@ -20,9 +20,7 @@
 .tickets.in-form { border-top: 0; padding-top: 0; text-transform: none; letter-spacing: 0; font-weight: 400; }
 .tk-open.is-pending { cursor: default; border-style: dashed; }
 
-/* Billets d'une activité de la checklist */
-.cl-list li { flex-wrap: wrap; }
-.cl-list li > .tk-list { padding: 0 0 4px 28px; }
+/* Billets d'une activité */
 .tk-add-mini { padding: 2px 8px; font-size: 12px; opacity: .75; }
-.cl-list li:hover .tk-add-mini, .tk-add-mini:focus-within { opacity: 1; }
+.tk-add-mini:focus-within { opacity: 1; }
 @media (hover: none) { .tk-add-mini { opacity: 1; } }

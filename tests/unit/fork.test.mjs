@@ -83,6 +83,22 @@ const road = {
     { text: "Colisée", date: "2027-04-11", time: "09:30", how: "Métro B", done: false, book: false },
     { text: "Vatican", date: "", time: "", how: "", done: false, book: false }], "programme repris, activité vide ignorée"); }
 
+// Road trip publié avec son programme : heures et « comment y aller » repris, rien à réserver
+{ const post = { id: "r2", title: "Porto", ownerHandle: "dan", trip: { items: [
+    { type: "stop", place: "Porto", day: 2, nights: 1, todos: ["Livraria", "Dîner"], program: [
+      { text: "Livraria", day: 2, time: "09:30", how: "Tram 22" }, { text: "Dîner", day: null, time: "20:00", how: "" }] }] } };
+  const [porto] = tripFromPost(post, { start: "2030-06-01" }).items;
+  assert.deepEqual([porto.arrive, porto.depart], ["2030-06-02", "2030-06-03"]);
+  assert.deepEqual(porto.todos.map(({ text, date, time, how, book }) => [text, date, time, how, book]),
+    [["Livraria", "2030-06-02", "09:30", "Tram 22", false], ["Dîner", "", "20:00", "", false]]); }
+// Publication d'un road trip puis copie : les heures font l'aller-retour, jamais les dates d'origine
+{ const t = { items: [{ id: "a", type: "stop", place: "Porto", arrive: "2026-07-01", depart: "2026-07-02",
+    todos: [{ id: "x", text: "Cave", date: "2026-07-02", time: "17:00", how: "À pied", maps: "https://maps.app.goo.gl/x", book: true, done: true }] }] };
+  const post = { id: "r3", ownerHandle: "dan", title: "P", trip: publicCopy(t) };
+  assert.doesNotMatch(JSON.stringify(post), /2026|maps\.app/);
+  const [s] = tripFromPost(post, { start: "2030-01-10" }).items;
+  assert.deepEqual(s.todos.map(({ date, time, how, done }) => [date, time, how, done]), [["2030-01-11", "17:00", "À pied", false]]); }
+
 // Origine : gardée par normalize et la fusion, jamais copiée dans une nouvelle publication
 { const t = tripFromPost(road, { name: "X" });
   const trip = { name: "X", currency: "EUR", ...t };
