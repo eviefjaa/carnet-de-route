@@ -39,6 +39,7 @@ css/
   checklist.css       Activités des étapes et programme replié
   share.css           Voyageurs et invitations
   social.css          Profils, abonnements et publications
+  datepicker.css      Calendrier et liste des heures (ordinateur)
   tickets.css         Billets des trajets
   trips.css           Page Mes voyages (cartes)
 js/
@@ -49,6 +50,7 @@ js/
   events.js           Clics, saisies, formulaires
   utils.js            Dates, durées, liens
   toast.js            Messages temporaires
+  datepicker.js       Calendrier et liste des heures du site, sur ordinateur (téléphone et tablette : sélecteur du système)
   map.js              Carte (Leaflet + OpenStreetMap), plein écran (en CSS, fermé par ✕, Échap ou Retour)
   geocode.js          Placement des lieux sur la carte (Nominatim)
   routes.js           Tracé des routes pour les trajets en voiture ou en bus (OSRM d'OpenStreetMap)

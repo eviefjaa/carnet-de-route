@@ -1,0 +1,41 @@
+/* Calendrier et liste des heures du site, sur ordinateur (js/datepicker.js) */
+
+.dp {
+  position: fixed; z-index: 4500; display: flex; flex-direction: column; gap: 8px; padding: 12px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .18); font-family: var(--body);
+}
+.dp-body { display: flex; gap: 14px; }
+/* :where : priorité minimale, les règles ci-dessous l'emportent */
+:where(.dp) button { font: inherit; color: inherit; }
+.dp button:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+
+/* Mois */
+.dp-cal { width: 266px; display: flex; flex-direction: column; gap: 6px; }
+.dp-head { display: flex; align-items: center; justify-content: space-between; }
+.dp-head b { font-family: var(--display); font-size: 16px; font-weight: 700; }
+.dp-head b::first-letter { text-transform: uppercase; }
+.dp-nav { width: 32px; height: 32px; border: 0; border-radius: 8px; background: none; font-size: 20px; line-height: 1; cursor: pointer; }
+.dp-week, .dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.dp-week span { text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); padding: 2px 0; }
+.dp-day { height: 36px; border: 0; border-radius: 10px; background: none; font-variant-numeric: tabular-nums; font-size: 14px; cursor: pointer; }
+.dp-day.is-today { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.dp-day.is-sel { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.dp-day:disabled { color: var(--muted); opacity: .4; cursor: default; }
+
+/* Heures */
+.dp-times-box { width: 92px; display: flex; flex-direction: column; gap: 6px; }
+.dp-times-title { font-size: 12px; font-weight: 600; color: var(--muted); padding: 8px 0 3px; text-align: center; }
+.dp-times-title.is-ask { color: var(--accent); }
+.dp-times { height: 252px; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 2px; padding-right: 2px; }
+.dp-time { flex: none; height: 32px; border: 0; border-radius: 8px; background: none; font-size: 14px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.dp-time.is-sel { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+
+/* Bas du calendrier */
+.dp-foot { display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.dp-link { border: 0; background: none; padding: 4px 6px; font-size: 13px; font-weight: 600; color: var(--accent); cursor: pointer; border-radius: 6px; }
+.dp-foot .dp-link:only-child { margin-left: auto; }
+
+@media (hover: hover) {
+  .dp-nav:hover, .dp-day:not(:disabled):not(.is-sel):hover, .dp-time:not(.is-sel):hover, .dp-link:hover { background: var(--bg); }
+}

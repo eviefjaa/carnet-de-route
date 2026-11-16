@@ -8,6 +8,7 @@ import { startAccounts } from "./account.js";
 import { bindAutocomplete } from "./autocomplete.js";
 import { bindSwipe } from "./swipe.js";
 import { bindInviteSuggest } from "./share.js";
+import { bindDatePicker } from "./datepicker.js";
 import { readHash, bindRouter } from "./router.js";
 import { onSocialLoaded, resetSocial, refreshNotifications } from "./social.js";
 import { renderSidebar } from "./views/sidebar.js";
@@ -20,6 +21,7 @@ bindEvents();
 bindAutocomplete();
 bindSwipe();
 bindInviteSuggest();
+bindDatePicker();
 // Profils, fils et commentaires rechargés à chaque page : on voit les nouveautés des autres
 window.addEventListener("hashchange", resetSocial);
 bindRouter(render);
