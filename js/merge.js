@@ -23,12 +23,18 @@ export function mergeTrip(base, mine, theirs, skip = []) {
   const out = { ...theirs };
   const keys = new Set([...Object.keys(base || {}), ...Object.keys(mine)]);
   for (const k of keys) {
+    if (k === "lastEdit") continue; // fusionné clé par clé, plus bas
     if (k === "items" || skip.includes(k)) continue;
     if (same(mine[k], base ? base[k] : undefined)) continue; // pas touché chez moi : on garde celui du serveur
     if (k in mine) out[k] = mine[k];
     else delete out[k];
   }
   out.items = mergeItems((base && base.items) || [], mine.items || [], theirs.items || []);
+  // Traces de modification (une par voyageur) : clé par clé. Je ne change que la mienne :
+  // je garde ma version de ma clé, les autres viennent du serveur
+  const edits = mergeKeys((base && base.lastEdit) || {}, mine.lastEdit || {}, theirs.lastEdit || {});
+  if (Object.keys(edits).length) out.lastEdit = edits;
+  else delete out.lastEdit;
   return out;
 }
 
@@ -62,4 +68,15 @@ function mergeItems(base, mine, theirs) {
     result.splice(pos, 0, t);
   });
   return result;
+}
+
+// Fusion d'un objet clé par clé : une clé changée chez moi l'emporte, sinon celle du serveur
+function mergeKeys(base, mine, theirs) {
+  const out = { ...theirs };
+  for (const k of new Set([...Object.keys(base), ...Object.keys(mine)])) {
+    if (same(mine[k], base[k])) continue;
+    if (k in mine) out[k] = mine[k];
+    else delete out[k];
+  }
+  return out;
 }

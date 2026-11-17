@@ -2,6 +2,7 @@
 // personne, publication d'un itinéraire ; sections « Publier » d'un voyage et « Profil public »
 
 import { esc, plural, MODES, safeUrl, fmtMoney } from "../utils.js";
+import { editText } from "../changes.js";
 import { computeBudget } from "../budget.js";
 import { state } from "../store.js";
 import { prefs, savePrefs, isFavoritePost } from "../prefs.js";
@@ -552,8 +553,7 @@ function replyForm(p, c) {
 // ---------- Notifications ----------
 // Nouveautés du menu : notifications pas encore vues, plus invitations en attente de réponse
 export const unreadNotifications = () =>
-  !state.user ? 0
-    : (state.notifs ? state.notifs.list.filter((n) => n.at > (prefs.notifSeen || 0)).length : 0) + state.invitations.length;
+  !state.user ? 0 : social.allNotifications().filter((n) => n.at > (prefs.notifSeen || 0)).length + state.invitations.length;
 
 // La page ouverte : tout est lu (la mise en avant reste visible jusqu'au prochain affichage)
 export function markNotificationsSeen() {
@@ -582,6 +582,7 @@ function notifLine(n, seen) {
     : n.type === "request" ? [`${who} demande à s'abonner à vous. Vous pouvez accepter ou refuser dans Mon profil.`, "#profil"]
     : n.type === "accepted" ? [`${who} a accepté votre demande d'abonnement.`, `#personne-${n.who}`]
     : n.type === "joined" ? [`${who} a rejoint votre voyage « ${esc(n.tripName)} ».`, `#voyage-${n.tripId}`]
+    : n.type === "edited" ? [`${who} a modifié « ${esc(n.tripName)} » : ${esc(editText(n.what, n.more))}.`, `#voyage-${n.tripId}`]
     : n.type === "favorite" ? [`${who} a ajouté « ${esc(n.postTitle)} » à ses favoris.`, `#publication-${n.postId}`]
     : [`${who} s'est abonné(e) à vous.`, `#personne-${n.who}`];
   const fresh = n.at > seen;
@@ -593,17 +594,17 @@ function notifLine(n, seen) {
 }
 
 export function notificationsView() {
-  const head = `<header class="page-head"><h1>Notifications</h1><p class="lead">Commentaires, favoris, abonnements et voyageurs qui rejoignent vos voyages.</p></header>`;
+  const head = `<header class="page-head"><h1>Notifications</h1><p class="lead">Commentaires, favoris, abonnements, et voyageurs qui rejoignent ou modifient vos voyages.</p></header>`;
   if (!isEnabled()) return `<section class="page">${head}${errorNote("Les comptes ne sont pas activés sur ce site.")}</section>`;
   if (!state.user) return `<section class="page">${head}${signInPanel("Connectez-vous pour voir qui commente vos itinéraires et qui s'abonne à vous.")}</section>`;
   if (!state.notifs) return `<section class="page">${head}${loadingNote}</section>`;
-  const list = state.notifs.list;
+  const list = social.allNotifications();
   const seen = prefs.notifSeen || 0;
   return `<section class="page">${head}
     ${invitationsBlock()}
     ${list.length
       ? `<ul class="notifs">${list.map((n) => notifLine(n, seen)).join("")}</ul>`
-      : state.invitations.length ? "" : `<p class="note">Rien pour l'instant. Les commentaires sur vos itinéraires, vos nouveaux abonnés et les voyageurs qui rejoignent vos voyages apparaîtront ici.</p>`}
+      : state.invitations.length ? "" : `<p class="note">Rien pour l'instant. Les commentaires sur vos itinéraires, vos nouveaux abonnés et les voyageurs qui rejoignent ou modifient vos voyages apparaîtront ici.</p>`}
   </section>`;
 }
 

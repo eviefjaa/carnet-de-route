@@ -44,6 +44,26 @@ service cloud.firestore {
         return added.size() == 0
           || (added.size() == 1 && isMember() && !(added[0] in resource.data.members) && inMyNetwork(added[0]));
       }
+      // Traces de modification (lastEdit) : chacun n'écrit que la sienne, avec la date fixée par Firebase.
+      // On peut supprimer la sienne (quitter le voyage, supprimer son compte) ; le créateur, celle
+      // d'une personne qu'il retire du voyage. Vérifié pour toutes les écritures, créateur compris.
+      function editsOld() { return resource.data.get("lastEdit", {}); }
+      function editsNew() { return request.resource.data.get("lastEdit", {}); }
+      function phraseOk(w, i) { return w.size() <= i || (w[i] is string && w[i].size() <= 120); }
+      function validEdit(e) {
+        return e is map && e.keys().hasOnly(["at", "since", "what", "more"])
+          && e.at == request.time && e.since is timestamp && e.since <= e.at
+          && e.what is list && e.what.size() <= 5
+          && phraseOk(e.what, 0) && phraseOk(e.what, 1) && phraseOk(e.what, 2) && phraseOk(e.what, 3) && phraseOk(e.what, 4)
+          && e.more is int && e.more >= 0;
+      }
+      function lastEditOk() {
+        let d = editsNew().diff(editsOld());
+        let written = d.addedKeys().union(d.changedKeys());
+        return editsNew() is map
+          && written.hasOnly([uid()]) && (!(uid() in written) || validEdit(editsNew()[uid()]))
+          && (d.removedKeys().hasOnly([uid()]) || (isOwner() && !d.removedKeys().hasAny(newData().members)));
+      }
       // Je retire mes propres invitations (refuser ou rejoindre) : mon adresse si elle y est
       // (adresse confirmée), mon compte ; rien d'autre
       function myInvitesRemoved() {
@@ -72,6 +92,7 @@ service cloud.firestore {
         && newData().members == [uid()]
         && newData().invites == []
         && newData().get("inviteUids", []) == []
+        && !("lastEdit" in newData())
         && newData().emails.keys().hasOnly([uid()])
         && newData().emails[uid()] == request.auth.token.email
         && !("joined" in newData());
@@ -80,7 +101,7 @@ service cloud.firestore {
       allow delete: if signedIn() && isOwner();
 
       allow update: if signedIn() && validTrip() && newData().invites is list && newUids() is list
-        && newData().invites.size() + newUids().size() <= 30 && uidsAddedOk() && (
+        && newData().invites.size() + newUids().size() <= 30 && uidsAddedOk() && lastEditOk() && (
         // Le créateur change tout, sauf le créateur, et reste dans le voyage.
         // Il peut retirer des voyageurs mais pas en ajouter : on n'entre que sur invitation
         (isOwner() && newData().owner == resource.data.owner && uid() in newData().members
@@ -93,11 +114,11 @@ service cloud.firestore {
         || (isMember() && !changed().hasAny(["owner", "members", "emails", "joined"])
             && newData().invites.hasAll(resource.data.invites) && newUids().hasAll(oldUids()))
         // Un voyageur quitte le voyage
-        || (isMember() && !isOwner() && changed().hasOnly(["members", "emails", "joined"])
+        || (isMember() && !isOwner() && changed().hasOnly(["members", "emails", "joined", "lastEdit"])
             && newData().members == resource.data.members.removeAll([uid()])
             && !(uid() in newData().emails) && leftJoined())
         // Le créateur supprime son compte : il confie le voyage à un autre voyageur et s'en retire
-        || (isOwner() && changed().hasOnly(["owner", "members", "emails", "joined"])
+        || (isOwner() && changed().hasOnly(["owner", "members", "emails", "joined", "lastEdit"])
             && newData().owner in resource.data.members && newData().owner != uid()
             && newData().members == resource.data.members.removeAll([uid()])
             && newData().emails.diff(resource.data.emails).affectedKeys().hasOnly([uid()])

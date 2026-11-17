@@ -51,4 +51,20 @@ assert.deepEqual(shared.members, ["x", "y"]);
   // Et vider un champ reste une modification
   assert.equal(mergeTrip(b, { ...b, items: [{ ...leg, to: "" }, stop("s", "Paraty")] }, b).items[0].to, "", "champ vidé chez moi"); }
 
+// Traces de modification : deux voyageurs qui modifient en même temps gardent chacun la leur
+{ const e = (what, at) => ({ at, since: at, what: [what], more: 0 });
+  const b = { ...base, lastEdit: { me: e("a", 1), other: e("b", 1) } };
+  const mine = { ...b, lastEdit: { me: e("mon changement", 5), other: e("b", 1) } };
+  const theirs = { ...b, lastEdit: { me: e("a", 1), other: e("son changement", 6) } };
+  for (const skip of [[], ["lastEdit"]]) {
+    const m = mergeTrip(b, mine, theirs, skip);
+    assert.deepEqual(m.lastEdit, { me: e("mon changement", 5), other: e("son changement", 6) }, "chacun garde sa trace");
+  }
+  assert.equal("lastEdit" in mergeTrip(base, { ...base }, { ...base }), false, "pas de trace : pas de champ"); }
+// Normalisation : dates Firestore en millisecondes, phrases tronquées, rien d'autre
+{ const { normalizeTrip } = await import(root + "/js/cloud.js");
+  globalThis.localStorage ??= { getItem: () => null, setItem() {}, removeItem() {} };
+  const t = normalizeTrip({ items: [], lastEdit: { u: { at: { toMillis: () => 42 }, since: { toMillis: () => 40 }, what: ["x".repeat(200), 3, "b", "c", "d", "e", "f"], more: -2, html: "<b>" }, v: "piège" } });
+  assert.deepEqual(t.lastEdit, { u: { at: 42, since: 40, what: ["x".repeat(120), "b", "c", "d", "e"], more: 0 } }); }
+
 console.log("Fusion des modifications simultanées : tous les tests passent.");

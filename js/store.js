@@ -66,6 +66,15 @@ export const onSyncChange = (fn) => (onSync = fn);
 // Des modifications d'autres voyageurs viennent d'être fusionnées dans un voyage
 let onMerged = () => {};
 export const onTripsMerged = (fn) => (onMerged = fn);
+// Un autre voyageur vient de modifier un voyage (sa trace lastEdit est plus récente) : (tripId, uid)
+let onEdited = () => {};
+export const onTripEdited = (fn) => (onEdited = fn);
+function noticeEdits(id, before, after) {
+  if (!before || !after || !state.user) return; // premier chargement : rien à signaler
+  Object.entries(after.lastEdit || {}).forEach(([u, e]) => {
+    if (u !== state.user.uid && e.at > (((before.lastEdit || {})[u] || {}).at || 0)) onEdited(id, u);
+  });
+}
 
 export function setSync(status, error = "") {
   sync.status = status;
@@ -139,6 +148,7 @@ async function flushCloud() {
       if (!cur) return;
       const next = snapshot(cur) === s ? merged : mergeTrip(JSON.parse(s), cur, merged);
       const changed = snapshot(next) !== snapshot(cur);
+      noticeEdits(id, cur, next);
       state.trips[id] = next;
       saved[id] = snapshot(merged);
       if (changed) onMerged(id);
@@ -168,6 +178,7 @@ export const hasUnsaved = () =>
 
 // Un voyage modifié depuis un autre appareil
 export function applyRemote(id, trip) {
+  noticeEdits(id, state.trips[id], trip);
   if (trip) {
     state.trips[id] = trip;
     saved[id] = snapshot(trip);

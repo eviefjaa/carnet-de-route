@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { initializeTestEnvironment, assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, query, collection, where, arrayUnion, arrayRemove, deleteField, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, query, collection, where, arrayUnion, arrayRemove, deleteField, serverTimestamp, Timestamp } from "firebase/firestore";
 
 const env = await initializeTestEnvironment({
   projectId: "demo-carnet",
@@ -186,6 +186,27 @@ await seed("trips/v46", trip({ invites: ["eve@x.fr"] }));
 await t("ancien voyage : refuser par adresse", updateDoc(T(eve, "trips/v46"), { invites: arrayRemove("eve@x.fr") }), true);
 await seed("follows/alice_eve", { follower: "alice", followed: "eve", status: "accepted", createdAt: 1 });
 await t("ancien voyage : inviter par compte", updateDoc(T(alice, "trips/v46"), { inviteUids: arrayUnion("eve") }), true);
+
+// ---------- Traces de modification (lastEdit) : chacun n'écrit que la sienne ----------
+await seed("trips/v50", trip({ members: ["alice", "bob", "carla"], emails: { alice: "alice@x.fr", bob: "bob@x.fr", carla: "carla@x.fr" },
+  lastEdit: { carla: { at: Timestamp.fromMillis(1), since: Timestamp.fromMillis(1), what: ["dates de Porto"], more: 0 } } }));
+const edit = (extra = {}) => ({ at: serverTimestamp(), since: serverTimestamp(), what: ["ajout de l'étape Porto"], more: 0, ...extra });
+await t("créer un voyage avec une trace", setDoc(T(alice, "trips/v51"), trip({ lastEdit: { alice: edit() } })), false);
+await t("écrire ma trace (avec une modification)", updateDoc(T(bob, "trips/v50"), { name: "Brésil 2", "lastEdit.bob": edit() }), true);
+await t("compléter ma trace (série commencée avant)", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ since: Timestamp.fromMillis(1000), more: 2 }) }), true);
+await t("écrire la trace d'un autre", updateDoc(T(bob, "trips/v50"), { "lastEdit.carla": edit() }), false);
+await t("le créateur écrit la trace d'un autre", updateDoc(T(alice, "trips/v50"), { "lastEdit.bob": edit() }), false);
+await t("le créateur efface la trace d'un voyageur resté", updateDoc(T(alice, "trips/v50"), { "lastEdit.carla": deleteField() }), false);
+await t("date choisie par l'appareil (pas celle de Firebase)", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ at: Timestamp.fromMillis(Date.now()) }) }), false);
+await t("début de série après la fin", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ since: Timestamp.fromMillis(Date.now() + 864e5) }) }), false);
+await t("phrase trop longue", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: ["x".repeat(121)] }) }), false);
+await t("6 phrases", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: ["a", "b", "c", "d", "e", "f"] }) }), false);
+await t("5 phrases de 120 caractères", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: Array(5).fill("y".repeat(120)) }) }), true);
+await t("phrase qui n'est pas du texte", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: [{ html: "<b>" }] }) }), false);
+await t("nombre en plus négatif", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ more: -1 }) }), false);
+await t("champ en plus dans la trace", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ html: "<b>" }) }), false);
+await t("quitter le voyage en effaçant sa trace", updateDoc(T(bob, "trips/v50"), { members: arrayRemove("bob"), "emails.bob": deleteField(), "lastEdit.bob": deleteField() }), true);
+await t("le créateur retire carla et sa trace", updateDoc(T(alice, "trips/v50"), { members: arrayRemove("carla"), "emails.carla": deleteField(), "lastEdit.carla": deleteField() }), true);
 
 // ---------- Données personnelles ----------
 await t("ses préférences", setDoc(T(alice, "users/alice/meta/prefs"), { theme: "dark" }), true);

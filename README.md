@@ -50,6 +50,7 @@ js/
   events.js           Clics, saisies, formulaires
   utils.js            Dates, durées, liens
   toast.js            Messages temporaires
+  changes.js          Résumé de ce qu'un voyageur a changé (notifications des voyages partagés)
   datepicker.js       Calendrier et liste des heures du site, sur ordinateur (téléphone et tablette : sélecteur du système)
   map.js              Carte (Leaflet + OpenStreetMap), plein écran (en CSS, fermé par ✕, Échap ou Retour)
   geocode.js          Placement des lieux sur la carte (Nominatim)
@@ -103,9 +104,11 @@ Sur la page d'un voyage, la section « Voyageurs » permet d'inviter quelqu'un p
 
 On peut aussi inviter une personne de son réseau (quelqu'un qu'on suit ou qui nous suit, abonnement accepté) sans connaître son adresse : dans le même champ, on tape son nom ou son @pseudo et on la choisit dans les suggestions (accents et majuscules ignorés). Aucun e-mail n'est envoyé : l'invitation vise son compte, et elle la voit dans « Mes voyages » et « Notifications », sans avoir besoin d'une adresse confirmée. Il faut un profil public pour avoir un réseau. Les règles Firestore vérifient l'abonnement au moment de l'invitation, une personne à la fois.
 
+Quand un voyageur modifie un voyage partagé, les autres le voient dans « Notifications » (et au compteur du menu), avec un résumé court : « Marie a modifié « Portugal 2027 » : ajout de l'étape Porto, 2 activités ajoutées à Lisbonne et 3 autres changements. » Si le voyage est ouvert à l'écran, un petit message s'affiche aussi (au plus toutes les 2 minutes par personne). Pour éviter un déluge, chaque voyageur a une seule trace par voyage, complétée tant qu'il continue de modifier dans l'heure (`lastEdit`, voir `js/changes.js`). On ne voit jamais ses propres modifications.
+
 Tous les voyageurs peuvent modifier le voyage et inviter d'autres personnes. Seul le créateur peut supprimer le voyage, annuler une invitation ou retirer quelqu'un ; les autres peuvent quitter le voyage.
 
-Les voyages sont dans `trips/{id}` (avec `owner`, `members`, `invites` pour les adresses invitées, `inviteUids` pour les comptes invités par nom ou pseudo, `emails`). Les anciens voyages, rangés dans `users/{uid}/trips`, sont déplacés automatiquement à la connexion suivante.
+Les voyages sont dans `trips/{id}` (avec `owner`, `members`, `invites` pour les adresses invitées, `inviteUids` pour les comptes invités par nom ou pseudo, `emails`, `lastEdit` pour la dernière série de modifications de chacun, que lui seul peut écrire). Les anciens voyages, rangés dans `users/{uid}/trips`, sont déplacés automatiquement à la connexion suivante.
 
 Après toute modification de `firestore.rules`, copiez son contenu dans la console Firebase (Firestore Database → Règles → Publier).
 
@@ -119,7 +122,7 @@ En publiant, on peut ajouter des recommandations facultatives : restaurants, hé
 
 Sur la page d'un itinéraire publié, « Créer mon voyage à partir de cet itinéraire » en fait un voyage à soi, modifiable comme les autres (même sans compte : il est alors enregistré dans le navigateur). On choisit son nom et, si on veut, une date de départ : « Jour 1, Jour 2… » redeviennent alors des dates. Les étapes, leur programme (avec les heures) et les trajets sont repris ; les recommandations vont dans les notes de leur étape, avec leur lien. Les positions et tracés sont recalculés à partir des noms de lieux, et rien d'autre n'est repris (budget, commentaires, favoris). La publication d'origine ne change pas, et le voyage affiche « Inspiré de l'itinéraire de @pseudo » avec un lien vers elle (`source` dans le voyage).
 
-La page « Notifications » signale les commentaires sur ses itinéraires, les mises en favori de ses itinéraires (par des personnes qui ont un profil), les nouveaux abonnés, les demandes d'abonnement, les demandes acceptées et les voyageurs qui rejoignent ses voyages. Elles sont déduites des abonnements et des commentaires existants (aucun autre compte ne peut en écrire), rechargées toutes les 3 minutes et au retour sur l'onglet. Le nombre de nouveautés s'affiche dans le menu et sur son bouton, sur téléphone.
+La page « Notifications » signale les modifications des voyages partagés (voir Partager un voyage), les commentaires sur ses itinéraires, les mises en favori de ses itinéraires (par des personnes qui ont un profil), les nouveaux abonnés, les demandes d'abonnement, les demandes acceptées et les voyageurs qui rejoignent ses voyages. Elles sont déduites des abonnements et des commentaires existants (aucun autre compte ne peut en écrire), rechargées toutes les 3 minutes et au retour sur l'onglet. Le nombre de nouveautés s'affiche dans le menu et sur son bouton, sur téléphone.
 
 Pages : « Mes publications » (ses itinéraires publiés, avec leur visibilité ; on y arrive après « Publier »), « Fil d'actualité » (publications des personnes suivies), « Découvrir » (derniers itinéraires publics et recherche de personnes), `#personne-…` (profil) et `#publication-…` (itinéraire publié).
 

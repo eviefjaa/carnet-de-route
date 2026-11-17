@@ -5,6 +5,7 @@
 
 import { firebaseConfig } from "./firebase-config.js";
 import { mergeTrip } from "./merge.js";
+import { describeChanges, mergeEdit } from "./changes.js";
 import { dayOrEmpty, timeOrEmpty } from "./utils.js";
 
 const V = "10.12.2";
@@ -114,7 +115,9 @@ export function errorMessage(e) {
 //   inviteUids  comptes invités par leur nom ou pseudo (personnes de mon réseau), pas encore là
 //   emails   { uid: adresse e-mail } des voyageurs, pour les afficher
 //   joined   { uid: date à laquelle la personne a rejoint le voyage }, pour les notifications
-export const SHARING = ["owner", "members", "invites", "inviteUids", "emails", "joined"];
+//   lastEdit { uid: { at, since, what, more } } : dernière série de modifications de chaque voyageur
+//            (ce qu'il a changé, en 5 phrases au plus), pour prévenir les autres. Chacun n'écrit que la sienne.
+export const SHARING = ["owner", "members", "invites", "inviteUids", "emails", "joined", "lastEdit"];
 
 const tripDoc = (id) => fb.doc(db, "trips", id);
 const myTrips = (uid) => fb.query(fb.collection(db, "trips"), fb.where("members", "array-contains", uid));
@@ -130,6 +133,15 @@ function normalize(t) {
   if (typeof t.currency !== "string") t.currency = "EUR";
   if ("kind" in t && t.kind !== "sejour") delete t.kind; // road trip par défaut
   if ("inviteUids" in t) t.inviteUids = (Array.isArray(t.inviteUids) ? t.inviteUids : []).filter((u) => typeof u === "string");
+  // Modifications des voyageurs : dates en millisecondes, phrases courtes, rien d'autre
+  if ("lastEdit" in t) {
+    const ms = (v) => (v && v.toMillis ? v.toMillis() : Number.isFinite(v) ? v : 0);
+    t.lastEdit = Object.fromEntries(Object.entries(isObj(t.lastEdit) ? t.lastEdit : {}).filter(([, e]) => isObj(e)).map(([u, e]) => [u, {
+      at: ms(e.at), since: ms(e.since),
+      what: (Array.isArray(e.what) ? e.what : []).filter((w) => typeof w === "string").slice(0, 5).map((w) => w.slice(0, 120)),
+      more: Number.isInteger(e.more) && e.more > 0 ? e.more : 0,
+    }]));
+  }
   // Itinéraire publié dont le voyage est tiré : id de la publication et pseudo de l'auteur
   if ("source" in t && !(isObj(t.source) && /^[A-Za-z0-9_-]{1,64}$/.test(t.source.postId) && typeof t.source.ownerHandle === "string")) delete t.source;
   t.items = (Array.isArray(t.items) ? t.items : []).filter((i) => isObj(i) && typeof i.id === "string" && (i.type === "stop" || i.type === "transport"));
@@ -184,15 +196,28 @@ export const newTripSharing = () => ({ owner: me.uid, members: [me.uid], invites
 // ne sont pas écrasées. Renvoie la version fusionnée (ce qui est maintenant sur le serveur).
 export async function saveTrip(id, trip, isNew, base) {
   if (isNew) {
-    await fb.setDoc(tripDoc(id), clean(trip));
+    const c = clean(trip);
+    delete c.lastEdit; // un voyage nouveau n'a pas de modifications à signaler
+    await fb.setDoc(tripDoc(id), c);
     return null;
   }
   return fb.runTransaction(db, async (tx) => {
     const snap = await tx.get(tripDoc(id));
     if (!snap.exists()) throw Object.assign(new Error("Voyage supprimé"), { code: "not-found" });
     const server = normalize(snap.data());
-    const merged = base ? mergeTrip(base, clean(trip), server, SHARING) : { ...server, ...content(trip) };
-    tx.set(tripDoc(id), content(merged), { merge: true });
+    const mine = clean(trip);
+    const merged = base ? mergeTrip(base, mine, server, SHARING) : { ...server, ...content(trip) };
+    const data = content(merged);
+    // Ce que j'ai changé depuis la dernière version synchronisée : seulement ma trace, regroupée dans l'heure
+    const what = base ? describeChanges(base, mine) : [];
+    if (what.length) {
+      const prev = (server.lastEdit || {})[me.uid];
+      const e = mergeEdit(prev, what, Date.now());
+      const at = fb.serverTimestamp();
+      data.lastEdit = { [me.uid]: { at, since: e.since ? fb.Timestamp.fromMillis(e.since) : at, what: e.what, more: e.more } };
+      merged.lastEdit = { ...(server.lastEdit || {}), [me.uid]: { at: Date.now(), since: e.since || Date.now(), what: e.what, more: e.more } };
+    }
+    tx.set(tripDoc(id), data, { merge: true }); // lastEdit fusionné clé par clé : celles des autres restent
     return merged;
   });
 }
@@ -222,7 +247,7 @@ export const cancelInviteUid = (id, uid) => fb.updateDoc(tripDoc(id), { inviteUi
 
 // Retirer un voyageur (le créateur), ou se retirer soi-même (quitter le voyage)
 export const removeMember = (id, uid) =>
-  fb.updateDoc(tripDoc(id), { members: fb.arrayRemove(uid), [`emails.${uid}`]: fb.deleteField() });
+  fb.updateDoc(tripDoc(id), { members: fb.arrayRemove(uid), [`emails.${uid}`]: fb.deleteField(), [`lastEdit.${uid}`]: fb.deleteField() });
 
 // Invitations en attente : rien n'est rejoint sans mon accord, on choisit « Rejoindre » ou « Refuser ».
 // Deux sortes : par mon adresse (adresse confirmée obligatoire) et par mon compte (inviteUids).
@@ -300,6 +325,7 @@ export async function releaseMyTrips() {
       members: fb.arrayRemove(me.uid),
       [`emails.${me.uid}`]: fb.deleteField(),
       ...(t.joined && me.uid in t.joined ? { [`joined.${me.uid}`]: fb.deleteField() } : {}),
+      ...(t.lastEdit && me.uid in t.lastEdit ? { [`lastEdit.${me.uid}`]: fb.deleteField() } : {}),
     };
     if (t.owner !== me.uid) await fb.updateDoc(d.ref, out);
     else if (others.length) await fb.updateDoc(d.ref, { ...out, owner: others[0] });

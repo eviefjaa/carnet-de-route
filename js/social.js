@@ -439,13 +439,12 @@ async function loadNotifications() {
       .catch(() => [])));
   items.push(...likes.flat());
 
-  // Voyageurs qui ont rejoint mes voyages (toujours dans le voyage)
-  Object.entries(state.trips).forEach(([tripId, t]) => {
-    Object.entries(t.joined || {}).forEach(([u, when]) => {
-      if (u === me() || !(t.members || []).includes(u)) return;
-      items.push({ type: "joined", who: u, at: toMs(when), tripId, tripName: t.name || "Sans titre", email: (t.emails || {})[u] || "" });
-    });
-  });
+  // Noms des voyageurs de mes voyages, pour les notifications des voyages (tripNotifications)
+  const travellers = [...new Set(Object.values(state.trips).flatMap((t) => t.members || []))].filter((u) => u !== me() && !names.has(u));
+  await Promise.all(travellers.map(async (u) => {
+    const p = await getProfile(u).catch(() => null);
+    if (p) names.set(u, { name: p.name, handle: p.handle });
+  }));
 
   // Noms des personnes qui se sont abonnées
   const missing = [...new Set(items.filter((i) => !i.name).map((i) => i.who))];
@@ -457,6 +456,50 @@ async function loadNotifications() {
   });
   return items.sort((a, b) => b.at - a.at).slice(0, 60);
 }
+
+// ---------- Notifications des voyages partagés ----------
+// Calculées à chaque affichage à partir des voyages, déjà synchronisés en direct : une modification
+// apparaît dès que le voyage arrive du serveur, sans attendre le rechargement des autres notifications.
+const names = new Map(); // uid → { name, handle } des voyageurs (leur profil), rempli avec les notifications
+
+// Nom d'un voyageur : son profil, sinon son adresse dans le voyage (en attendant son profil)
+export const travellerName = (t, u) => (names.get(u) || {}).name || ((t && t.emails) || {})[u] || "Quelqu'un";
+
+// Profil d'un voyageur pas encore connu (il vient de rejoindre le voyage) : chargé une fois, puis réaffichage
+const asked = new Set();
+async function loadName(u) {
+  if (names.has(u) || asked.has(u)) return;
+  asked.add(u);
+  const p = await getProfile(u).catch(() => null);
+  if (p) names.set(u, { name: p.name, handle: p.handle });
+}
+export async function travellerNameNow(t, u) {
+  await loadName(u);
+  return travellerName(t, u);
+}
+
+export function tripNotifications() {
+  if (!state.user) return [];
+  const items = [];
+  Object.entries(state.trips).forEach(([tripId, t]) => {
+    const others = (t.members || []).filter((u) => u !== me());
+    others.forEach((u) => { if (!names.has(u) && !asked.has(u)) loadName(u).then(() => names.has(u) && rerender()); });
+    const base = (u) => ({ who: u, tripId, tripName: t.name || "Sans titre", name: travellerName(t, u), handle: (names.get(u) || {}).handle || "" });
+    // Voyageurs qui ont rejoint mes voyages (toujours dans le voyage)
+    Object.entries(t.joined || {}).forEach(([u, when]) => {
+      if (others.includes(u)) items.push({ type: "joined", at: toMs(when), ...base(u) });
+    });
+    // Modifications des autres voyageurs : une ligne par personne et par voyage, jamais les miennes
+    Object.entries(t.lastEdit || {}).forEach(([u, e]) => {
+      if (others.includes(u) && e.at && (e.what || []).length) items.push({ type: "edited", at: e.at, what: e.what, more: e.more || 0, ...base(u) });
+    });
+  });
+  return items;
+}
+
+// Toutes les notifications, les plus récentes d'abord
+export const allNotifications = () =>
+  [...(state.notifs ? state.notifs.list : []), ...tripNotifications()].sort((a, b) => b.at - a.at).slice(0, 60);
 
 // Rechargées à la connexion, à l'ouverture de la page, au retour sur l'onglet et toutes les 3 minutes
 let notifLoading = false;

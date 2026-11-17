@@ -1,6 +1,6 @@
 // Point d'entrée : charge les données, branche les événements, affiche la page, active les comptes
 
-import { replaceTrips, loadLocal, onSyncChange, hasUnsaved, flush } from "./store.js";
+import { replaceTrips, loadLocal, onSyncChange, hasUnsaved, flush, onTripEdited } from "./store.js";
 import { loadPrefs } from "./prefs.js";
 import { bindEvents } from "./events.js";
 import { render, renderSync } from "./views/trip.js";
@@ -10,7 +10,8 @@ import { bindSwipe } from "./swipe.js";
 import { bindInviteSuggest } from "./share.js";
 import { bindDatePicker } from "./datepicker.js";
 import { readHash, bindRouter } from "./router.js";
-import { onSocialLoaded, resetSocial, refreshNotifications } from "./social.js";
+import { onSocialLoaded, resetSocial, refreshNotifications, travellerNameNow } from "./social.js";
+import { toast } from "./toast.js";
 import { renderSidebar } from "./views/sidebar.js";
 import { state } from "./store.js";
 
@@ -39,6 +40,15 @@ const typing = () => {
 onSocialLoaded(() => {
   if (["trip", "feed", "discover", "person", "post", "profile", "notifications", "network", "favorites", "publications", "country"].includes(state.view) && !state.authOpen && !typing()) render();
   else renderSidebar(); // nombre de notifications dans le menu
+});
+// Un autre voyageur modifie le voyage affiché : un petit message, au plus toutes les 2 minutes par personne
+const lastToast = new Map();
+onTripEdited((tripId, uid) => {
+  if (state.view !== "trip" || tripId !== state.currentId) return;
+  const key = `${tripId}:${uid}`;
+  if (Date.now() - (lastToast.get(key) || 0) < 120000) return;
+  lastToast.set(key, Date.now());
+  travellerNameNow(state.trips[tripId], uid).then((name) => toast(`${name} vient de modifier le voyage`));
 });
 // Nouvelles notifications : toutes les 3 minutes, et au retour sur l'onglet
 setInterval(() => document.visibilityState === "visible" && refreshNotifications(), 180000);
