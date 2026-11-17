@@ -34,6 +34,10 @@ export function bindDatePicker() {
     if (cur && cur.id === input.id) return close();
     open(input, false);
   }, true);
+  // Le clic qui suit ne doit pas non plus ouvrir le sélecteur du navigateur (Firefox, Safari)
+  document.addEventListener("click", (e) => {
+    if (e.target instanceof Element && e.target.matches(FIELDS) && finePointer()) e.preventDefault();
+  }, true);
   document.addEventListener("keydown", (e) => {
     const input = e.target instanceof Element && e.target.matches(FIELDS) ? e.target : null;
     if (input && finePointer() && ((e.altKey && e.key === "ArrowDown") || e.key === "F4")) {

@@ -55,6 +55,14 @@ await page.click('.dp-day[data-day="2030-06-02"]');
 await sleep(200);
 check("choisir un jour : valeur dans le champ, calendrier fermé", (await page.$eval("#f-arr-a", (e) => e.value)) === "2030-06-02" && !(await dp()));
 check("le formulaire réagit (nombre de nuits)", (await page.$eval('form[data-form="stop"] [data-nights]', (e) => e.textContent)).includes("1 nuit"));
+// Icône au bout du champ : celle du navigateur est masquée (elle ouvrait son propre calendrier par-dessus)
+check("icône du site au bout du champ", (await page.$eval("#f-arr-a", (e) => getComputedStyle(e).backgroundImage)).startsWith('url("data:image/svg+xml'));
+{ const r = await page.$eval("#f-arr-a", (e) => { const b = e.getBoundingClientRect(); return { x: b.right - 18, y: b.top + b.height / 2 }; });
+  await page.mouse.click(r.x, r.y);
+  await sleep(200);
+  check("clic sur l'icône : notre calendrier", !!(await dp()));
+  if (SHOTS) await page.screenshot({ path: SHOTS + "/calendrier-icone.png", clip: await page.$eval("#f-arr-a", (e) => { const b = e.getBoundingClientRect(); return { x: b.x + scrollX - 10, y: b.y + scrollY - 30, width: b.width + 20, height: 380 }; }) });
+  await page.keyboard.press("Escape"); }
 // Navigation entre les mois
 await page.click("#f-arr-a");
 await page.click('.dp-nav[data-dp="next"]');
