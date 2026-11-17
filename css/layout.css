@@ -24,6 +24,9 @@
 
 .side-head { display: flex; align-items: flex-start; gap: 8px; justify-content: space-between; padding: 0 8px; }
 .side-brand { font-family: var(--display); font-weight: 700; font-size: 18px; }
+/* Logo à gauche du nom et de l'accroche */
+.side-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.side-logo { flex: none; width: 36px; height: 36px; }
 /* Nom et accroche, l'un sous l'autre */
 .side-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .side-tagline { font-size: 12px; line-height: 1.3; color: var(--muted); text-wrap: balance; }
@@ -73,7 +76,7 @@
   body.menu-open { overflow: hidden; }
   .side-close { display: inline-flex; }
   .menu-btn { display: inline-flex; }
-  .top .brand { display: inline; }
+  .top .brand { display: inline-flex; }
 }
 
 /* Suppression du compte (Paramètres) */

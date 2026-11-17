@@ -52,9 +52,12 @@ export function renderSidebar() {
 
   el.innerHTML = `
     <div class="side-head">
-      <div class="side-id">
-        <span class="side-brand">Hippalos</span>
-        <span class="side-tagline">Prenez le bon vent</span>
+      <div class="side-identity">
+        <img class="side-logo" src="img/logo.svg" alt="" width="36" height="36">
+        <div class="side-id">
+          <span class="side-brand">Hippalos</span>
+          <span class="side-tagline">Prenez le bon vent</span>
+        </div>
       </div>
       <button class="btn ghost small side-close" data-act="close-menu" type="button" aria-label="Fermer le menu">✕</button>
     </div>

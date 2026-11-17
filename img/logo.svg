@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Hippalos">
+  <rect width="100" height="100" rx="22" fill="#0f6b5c"/>
+  <path d="M9 41 H23 C 29 41, 31 34, 26.5 32 C 23.5 30.8, 21 33.5, 23 35.5" fill="none" stroke="#fdf6e1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 49 H25" fill="none" stroke="#fdf6e1" stroke-width="3" stroke-linecap="round"/>
+  <path d="M12 77 C 18 74, 24 74, 30 75 C 40 76.5, 54 76.5, 62 75 C 68 74, 71 72, 76 72" fill="none" stroke="#e8a800" stroke-width="4" stroke-linecap="round" stroke-dasharray="0.1 6.8"/>
+  <g transform="translate(17 19) scale(0.8)">
+    <path d="M37 11 C 51 20, 57 37, 53 53 L37 53 Z" fill="#fdf6e1"/>
+    <path d="M33 19 L33 53 L21 53 C 24 41, 28 29, 33 19 Z" fill="#fdf6e1"/>
+    <path d="M16 58 L60 58 C 57 65, 50 68, 38 68 C 27 68, 19 65, 16 58 Z" fill="#e8a800"/>
+  </g>
+  <circle cx="83" cy="72" r="6" fill="#fdf6e1" stroke="#e8a800" stroke-width="3.2"/>
+</svg>
