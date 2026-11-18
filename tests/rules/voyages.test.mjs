@@ -204,6 +204,14 @@ await t("6 phrases", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ wha
 await t("5 phrases de 120 caractères", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: Array(5).fill("y".repeat(120)) }) }), true);
 await t("phrase qui n'est pas du texte", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: [{ html: "<b>" }] }) }), false);
 await t("nombre en plus négatif", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ more: -1 }) }), false);
+await t("trace en codes", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: [{ k: "dates", p: "Porto" }, { k: "todosAdded", p: "Porto", n: 2 }, { k: "order" }, "ancienne phrase"] }) }), true);
+await t("code inconnu", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: [{ k: "html", p: "x" }] }) }), false);
+await t("code sans k", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: [{ p: "Porto" }] }) }), false);
+await t("code avec un champ en plus", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: [{ k: "dates", p: "Porto", html: "<b>" }] }) }), false);
+await t("nom trop long dans un code", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: [{ k: "dates", p: "x".repeat(121) }] }) }), false);
+await t("nom qui n'est pas du texte", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: [{ k: "dates", p: 3 }] }) }), false);
+await t("nombre à virgule dans un code", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: [{ k: "todosAdded", p: "Porto", n: 1.5 }] }) }), false);
+await t("nombre trop grand dans un code", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ what: [{ k: "todosAdded", p: "Porto", n: 1000 }] }) }), false);
 await t("champ en plus dans la trace", updateDoc(T(bob, "trips/v50"), { "lastEdit.bob": edit({ html: "<b>" }) }), false);
 await t("quitter le voyage en effaçant sa trace", updateDoc(T(bob, "trips/v50"), { members: arrayRemove("bob"), "emails.bob": deleteField(), "lastEdit.bob": deleteField() }), true);
 await t("le créateur retire carla et sa trace", updateDoc(T(alice, "trips/v50"), { members: arrayRemove("carla"), "emails.carla": deleteField(), "lastEdit.carla": deleteField() }), true);

@@ -105,7 +105,8 @@ await ana.waitForFunction(() => (document.getElementById("toast") || {}).textCon
 check("voyage ouvert chez Ana : message en direct", (await toastText(ana)) === "Bruno vient de modifier le voyage");
 const doc1 = (await raw("trips/" + tripId)).fields.lastEdit.mapValue.fields;
 check("trace de Bruno enregistrée, seulement la sienne", Object.keys(doc1).join() === brunoUid
-  && JSON.stringify(doc1[brunoUid]).includes("ajout de l'étape Osaka"));
+  && JSON.stringify(doc1[brunoUid]).includes('"stopAdded"') && JSON.stringify(doc1[brunoUid]).includes("Osaka"));
+check("trace enregistrée en codes, sans phrase", !JSON.stringify(doc1[brunoUid]).includes("ajout"));
 await sleep(500);
 check("compteur du menu", await ana.evaluate(() => [...document.querySelectorAll(".nav-count.is-new")].some((e) => +e.textContent > 0)));
 await ana.evaluate(() => (location.hash = "#notifications"));
@@ -121,6 +122,15 @@ await sleep(2500);
 lines = (await notifLines(ana)).filter((l) => l.includes("Bruno a modifié"));
 check("une seule ligne par personne et par voyage", lines.length === 1);
 check("ligne mise à jour", (lines[0] || "").includes("Bruno a modifié « Japon » : ajout de l'étape Osaka, 1 activité ajoutée à Osaka et dates d'Osaka."));
+
+// ---------- La même notification lue en anglais ----------
+await goHash(ana, "parametres");
+await ana.click("#lang-en");
+await goHash(ana, "notifications");
+check("notification en anglais", (await notifLines(ana)).some((l) => l.includes("Bruno edited “Japon”: added the stop Osaka, 1 activity added to Osaka and dates for Osaka.")));
+await goHash(ana, "parametres");
+await ana.click("#lang-fr");
+await goHash(ana, "notifications");
 
 // ---------- Ana modifie à son tour : jamais ses propres modifications ----------
 await change(ana, tripId, "nom");

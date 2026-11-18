@@ -11,8 +11,8 @@ import { invitationsBlock } from "./share.js";
 import { selectButtons, selectAttrs, selectBox, selectBar } from "./select.js";
 import { isEnabled } from "../cloud.js";
 import * as social from "../social.js";
-import { COUNTRIES } from "../data/countries.js";
 import { fmtHour } from "../utils.js";
+import { stopCountry, stopCountryCode } from "../i18n-data.js";
 
 const me = () => (state.user ? state.user.uid : null);
 const loadingNote = () => `<p class="note">${t("common.loading")}</p>`;
@@ -40,8 +40,8 @@ export function postFavButton(p, small = false) {
 function flagsOf(trip) {
   const codes = new Set(trip.country ? [trip.country] : []);
   (trip.items || []).forEach((i) => {
-    const c = i.type === "stop" && COUNTRIES.find((x) => x.name === i.country);
-    if (c) codes.add(c.code);
+    const c = i.type === "stop" && stopCountryCode(i);
+    if (c) codes.add(c);
   });
   return [...codes].filter((c) => /^[A-Z]{2}$/.test(c)).slice(0, 4).join(" · ");
 }
@@ -263,7 +263,7 @@ function readOnlyItem(it, recos = []) {
     <div class="stop-head">
       ${it.day ? `<span class="day">${t("stop.dayBadge", { n: +it.day })}</span>` : ""}
       <h2>${esc(it.place || t("post.stop"))}</h2>
-      ${it.country ? `<span class="stop-country">${esc(it.country)}</span>` : ""}
+      ${it.country ? `<span class="stop-country">${esc(stopCountry(it))}</span>` : ""}
     </div>
     ${it.nights === 0 ? `<div class="dates"><span class="nights is-halt">${t("stop.halt")}</span></div>` : it.nights ? `<div class="dates"><span class="nights">${count(+it.nights, "count.night")}</span></div>` : ""}
     ${(it.program || []).length ? programSection(it.program)

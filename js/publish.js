@@ -12,8 +12,8 @@
 import { MODES, nights, duration, byDate } from "./utils.js";
 import { computeBudget } from "./budget.js";
 import { tripStart, tripEnd } from "./store.js";
-import { COUNTRIES } from "./data/countries.js";
 import { ROAD_MODES, routeKey, decodeLine, encodeLine } from "./routes.js";
+import { stopCountryCode } from "./i18n-data.js";
 
 const round = (x) => Math.round(x * 50) / 50; // 1/50 de degré ≈ 2 km
 const roundGeo = (g) => (g && Number.isFinite(g.lat) && Number.isFinite(g.lng) ? { lat: round(g.lat), lng: round(g.lng) } : null);
@@ -110,7 +110,7 @@ export function publicCopy(trip, { budget = false } = {}) {
   const stops = items.filter((i) => i.type === "stop");
   const country = /^[A-Z]{2}$/.test(trip.country || "") ? trip.country : "";
   // Pays traversés (codes) : le pays choisi à la création et ceux des étapes, pour les fiches pays
-  const countries = [...new Set([country, ...stops.map((s) => COUNTRIES.find((c) => c.name === s.country)?.code)].filter(Boolean))].slice(0, 10);
+  const countries = [...new Set([country, ...trip.items.filter((i) => i.type === "stop").map(stopCountryCode)].filter(Boolean))].slice(0, 10);
   // Pas de nom de voyage : la publication a son propre titre
   return {
     ...(sejour ? { kind: "sejour" } : {}),

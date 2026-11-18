@@ -5,7 +5,7 @@
 
 import { firebaseConfig } from "./firebase-config.js";
 import { mergeTrip } from "./merge.js";
-import { describeChanges, mergeEdit } from "./changes.js";
+import { describeChanges, mergeEdit, EDIT_KINDS } from "./changes.js";
 import { dayOrEmpty, timeOrEmpty } from "./utils.js";
 import { t } from "./i18n.js";
 
@@ -118,7 +118,8 @@ export function errorMessage(e) {
 //   emails   { uid: adresse e-mail } des voyageurs, pour les afficher
 //   joined   { uid: date à laquelle la personne a rejoint le voyage }, pour les notifications
 //   lastEdit { uid: { at, since, what, more } } : dernière série de modifications de chaque voyageur
-//            (ce qu'il a changé, en 5 phrases au plus), pour prévenir les autres. Chacun n'écrit que la sienne.
+//            (ce qu'il a changé, 5 codes { k, p, n } au plus, voir changes.js ; les anciennes traces
+//            sont des phrases), pour prévenir les autres. Chacun n'écrit que la sienne.
 export const SHARING = ["owner", "members", "invites", "inviteUids", "emails", "joined", "lastEdit"];
 
 const tripDoc = (id) => fb.doc(db, "trips", id);
@@ -130,6 +131,13 @@ const STR = ["place", "country", "arrive", "depart", "address", "notes", "mode",
 const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
 const str = (x) => (typeof x === "string" ? x : "");
 
+// Un changement d'une trace : code connu (nom et nombre remis au bon type) ou ancienne phrase
+function editCode(w) {
+  if (typeof w === "string") return w.slice(0, 120);
+  if (!isObj(w) || !EDIT_KINDS.includes(w.k)) return null;
+  return { k: w.k, ...(typeof w.p === "string" ? { p: w.p.slice(0, 120) } : {}), ...(Number.isInteger(w.n) && w.n > 0 ? { n: Math.min(w.n, 999) } : {}) };
+}
+
 function normalize(trip) {
   if (typeof trip.name !== "string") trip.name = t("trip.untitled");
   if (typeof trip.currency !== "string") trip.currency = "EUR";
@@ -140,7 +148,7 @@ function normalize(trip) {
     const ms = (v) => (v && v.toMillis ? v.toMillis() : Number.isFinite(v) ? v : 0);
     trip.lastEdit = Object.fromEntries(Object.entries(isObj(trip.lastEdit) ? trip.lastEdit : {}).filter(([, e]) => isObj(e)).map(([u, e]) => [u, {
       at: ms(e.at), since: ms(e.since),
-      what: (Array.isArray(e.what) ? e.what : []).filter((w) => typeof w === "string").slice(0, 5).map((w) => w.slice(0, 120)),
+      what: (Array.isArray(e.what) ? e.what : []).map(editCode).filter(Boolean).slice(0, 5),
       more: Number.isInteger(e.more) && e.more > 0 ? e.more : 0,
     }]));
   }

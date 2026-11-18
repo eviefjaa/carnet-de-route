@@ -6,6 +6,7 @@ import { prefs } from "../prefs.js";
 import { isEnabled } from "../cloud.js";
 import { socialProfileSection } from "./social.js";
 import { t, count, getLang, LANGS } from "../i18n.js";
+import { stopCountryCode } from "../i18n-data.js";
 
 function stats() {
   const trips = Object.values(state.trips);
@@ -14,7 +15,7 @@ function stats() {
     trips: trips.length,
     stops: stops.length,
     nights: stops.reduce((s, i) => s + (nights(i.arrive, i.depart) || 0), 0),
-    countries: new Set(stops.map((s) => s.country).filter(Boolean)).size,
+    countries: new Set(stops.map((s) => stopCountryCode(s) || s.country).filter(Boolean)).size,
     favorites: prefs.favorites.length,
   };
 }

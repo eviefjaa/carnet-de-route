@@ -38,7 +38,14 @@ function lookup(key) {
   return fr[key];
 }
 
-const fill = (s, params) => String(s).replace(/\{(\w+)\}/g, (_, k) => (params[k] ?? ""));
+// params.elide : en français, « de » devient « d' » devant un nom qui commence par une voyelle
+// (« dates d'Osaka »). Seulement sur demande : les autres textes restent tels quels.
+const VOWEL = /^[aeiouyàâäéèêëîïôöûüœ]/i;
+const fill = (s, params) => {
+  let out = String(s);
+  if (params.elide && lang === "fr") out = out.replace(/(^|\s)de \{(\w+)\}/g, (m, sp, k) => (VOWEL.test(String(params[k] ?? "")) ? `${sp}d'{${k}}` : m));
+  return out.replace(/\{(\w+)\}/g, (_, k) => (params[k] ?? ""));
+};
 
 export function t(key, params = {}) {
   const s = lookup(key);

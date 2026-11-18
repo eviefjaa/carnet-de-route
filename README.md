@@ -18,7 +18,7 @@ Sans compte, les voyages sont enregistrés dans le navigateur (localStorage). Av
 index.html            Page principale
 firebase.json         Configuration Firebase (règles, émulateurs pour les tests)
 tests/                Tests : unitaires, règles Firestore, parcours complet dans Chrome
-404.html              Page « introuvable » (GitHub Pages)
+404.html              Page « introuvable » (GitHub Pages), en français puis en anglais
 fonts/                Polices du site (woff2) et leurs licences SIL OFL
 vendor/leaflet/       Leaflet 1.9.4 (carte), copie de la version publiée et sa licence
 sitemap.xml           Plan du site pour les moteurs de recherche
@@ -110,7 +110,7 @@ Sur la page d'un voyage, la section « Voyageurs » permet d'inviter quelqu'un p
 
 On peut aussi inviter une personne de son réseau (quelqu'un qu'on suit ou qui nous suit, abonnement accepté) sans connaître son adresse : dans le même champ, on tape son nom ou son @pseudo et on la choisit dans les suggestions (accents et majuscules ignorés). Aucun e-mail n'est envoyé : l'invitation vise son compte, et elle la voit dans « Mes voyages » et « Notifications », sans avoir besoin d'une adresse confirmée. Il faut un profil public pour avoir un réseau. Les règles Firestore vérifient l'abonnement au moment de l'invitation, une personne à la fois.
 
-Quand un voyageur modifie un voyage partagé, les autres le voient dans « Notifications » (et au compteur du menu), avec un résumé court : « Marie a modifié « Portugal 2027 » : ajout de l'étape Porto, 2 activités ajoutées à Lisbonne et 3 autres changements. » Si le voyage est ouvert à l'écran, un petit message s'affiche aussi (au plus toutes les 2 minutes par personne). Pour éviter un déluge, chaque voyageur a une seule trace par voyage, complétée tant qu'il continue de modifier dans l'heure (`lastEdit`, voir `js/changes.js`). On ne voit jamais ses propres modifications.
+Quand un voyageur modifie un voyage partagé, les autres le voient dans « Notifications » (et au compteur du menu), avec un résumé court : « Marie a modifié « Portugal 2027 » : ajout de l'étape Porto, 2 activités ajoutées à Lisbonne et 3 autres changements. » Si le voyage est ouvert à l'écran, un petit message s'affiche aussi (au plus toutes les 2 minutes par personne). Pour éviter un déluge, chaque voyageur a une seule trace par voyage, complétée tant qu'il continue de modifier dans l'heure (`lastEdit`, voir `js/changes.js`). La trace enregistre des codes (`{ k: "dates", p: "Porto" }`) et non des phrases : chacun la lit dans sa langue. Les traces plus anciennes, en phrases françaises, s'affichent telles quelles. On ne voit jamais ses propres modifications.
 
 Tous les voyageurs peuvent modifier le voyage et inviter d'autres personnes. Seul le créateur peut supprimer le voyage, annuler une invitation ou retirer quelqu'un ; les autres peuvent quitter le voyage.
 
@@ -144,7 +144,7 @@ Les billets sont stockés dans Firestore (`trips/{id}/files/{idDuBillet}`), enco
 
 ## Rappels par e-mail
 
-Chaque jour, GitHub Actions lance `scripts/reminders/send-reminders.js`. Pour chaque étape qui commence dans 3 jours ou moins et dont le programme contient encore des activités à réserver non cochées, un e-mail est envoyé à chacun des voyageurs (une seule fois par étape). Seules les adresses confirmées reçoivent les rappels : un lien de confirmation est envoyé à la création du compte.
+Chaque jour, GitHub Actions lance `scripts/reminders/send-reminders.js`. Pour chaque étape qui commence dans 3 jours ou moins et dont le programme contient encore des activités à réserver non cochées, un e-mail est envoyé à chacun des voyageurs (une seule fois par étape). Seules les adresses confirmées reçoivent les rappels : un lien de confirmation est envoyé à la création du compte. L'e-mail est écrit dans la langue choisie par le destinataire dans ses Paramètres (français si elle n'a jamais été choisie). L'e-mail d'invitation, lui, part dans la langue de la personne qui invite.
 
 Secrets à créer dans GitHub (Settings → Secrets and variables → Actions) :
 - `FIREBASE_SERVICE_ACCOUNT` : contenu du fichier JSON de la clé de compte de service Firebase

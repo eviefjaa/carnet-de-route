@@ -96,4 +96,9 @@ assert.equal(browserLang(), "fr");
 // Aucune variable t qui masquerait la fonction de traduction
 assert.deepEqual(shadows(), []);
 
+// Page introuvable (sans script) : les deux langues, le français d'abord
+const page404 = readFileSync(root + "/404.html", "utf8");
+assert.ok(page404.includes("<h1>Cette page n'existe pas.</h1>") && /<section[^>]*lang="en"[\s\S]*This page doesn't exist\./.test(page404));
+assert.ok(page404.indexOf("Retour à mes voyages") < page404.indexOf("Back to my trips"));
+
 console.log("Traduction : tout passe.");

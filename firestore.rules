@@ -49,7 +49,15 @@ service cloud.firestore {
       // d'une personne qu'il retire du voyage. Vérifié pour toutes les écritures, créateur compris.
       function editsOld() { return resource.data.get("lastEdit", {}); }
       function editsNew() { return request.resource.data.get("lastEdit", {}); }
-      function phraseOk(w, i) { return w.size() <= i || (w[i] is string && w[i].size() <= 120); }
+      // Un changement : un code (k, nom p, nombre n ; voir js/changes.js), ou une phrase (traces d'avant les codes)
+      function codeOk(c) {
+        return c.keys().hasAll(["k"]) && c.keys().hasOnly(["k", "p", "n"])
+          && c.k in ["stopAdded", "stopRemoved", "legAdded", "legRemoved", "stopRenamed", "dates", "lodging",
+                     "todosAdded", "todos", "tickets", "leg", "order", "tripName", "currency"]
+          && (!("p" in c) || (c.p is string && c.p.size() <= 120))
+          && (!("n" in c) || (c.n is int && c.n > 0 && c.n <= 999));
+      }
+      function phraseOk(w, i) { return w.size() <= i || (w[i] is string && w[i].size() <= 120) || (w[i] is map && codeOk(w[i])); }
       function validEdit(e) {
         return e is map && e.keys().hasOnly(["at", "since", "what", "more"])
           && e.at == request.time && e.since is timestamp && e.since <= e.at

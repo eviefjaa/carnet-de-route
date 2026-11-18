@@ -58,7 +58,7 @@ export function findDueReminders(trips, today, daysBefore = 3, sent = {}) {
       if (inDays < 0 || inDays > daysBefore) continue;
       const key = `${tripId}:${stop.id}:${date}`;
       if (sent[key]) continue;
-      due.push({ key, tripId, tripName: trip.name || "Mon voyage", place: stop.place || "Étape", date, inDays, items: left.map((t) => t.text) });
+      due.push({ key, tripId, tripName: trip.name, place: stop.place, date, inDays, items: left.map((t) => t.text) });
     }
   }
   return due.sort((a, b) => a.date.localeCompare(b.date));
@@ -66,53 +66,82 @@ export function findDueReminders(trips, today, daysBefore = 3, sent = {}) {
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-function when(inDays) {
-  if (inDays === 0) return "aujourd'hui";
-  if (inDays === 1) return "demain";
-  return `dans ${inDays} jours`;
+// Textes de l'e-mail, dans la langue choisie par le destinataire (prefs.lang ; français par défaut)
+const TEXTS = {
+  fr: {
+    locale: "fr-FR",
+    sep: " : ", today: "aujourd'hui", tomorrow: "demain", inDays: (n) => `dans ${n} jours`,
+    subjectOne: (n, place) => `Rappel : ${n} chose${n > 1 ? "s" : ""} à réserver pour ${place}`,
+    subjectMany: (n) => `Rappel : ${n} choses à réserver pour vos prochaines étapes`,
+    hello: "Bonjour,",
+    intro: "Certaines choses ne sont pas encore cochées pour votre voyage sur Hippalos :",
+    open: "Ouvrir le voyage",
+    outro: "Une fois réservées, cochez-les dans le site pour ne plus recevoir ce rappel.",
+    stop: "Pour ne plus recevoir ces e-mails : Paramètres → Rappels par e-mail.",
+    trip: "Mon voyage", place: "Étape",
+  },
+  en: {
+    locale: "en-GB",
+    sep: ": ", today: "today", tomorrow: "tomorrow", inDays: (n) => `in ${n} days`,
+    subjectOne: (n, place) => `Reminder: ${n} thing${n > 1 ? "s" : ""} to book for ${place}`,
+    subjectMany: (n) => `Reminder: ${n} things to book for your next stops`,
+    hello: "Hello,",
+    intro: "A few things aren't ticked yet for your trip on Hippalos:",
+    open: "Open the trip",
+    outro: "Once they're booked, tick them on the site and this reminder will stop.",
+    stop: "To stop receiving these emails: Settings → Email reminders.",
+    trip: "My trip", place: "Unnamed stop",
+  },
+};
+export const emailLang = (prefs) => (prefs && prefs.lang === "en" ? "en" : "fr");
+
+function when(inDays, T) {
+  if (inDays === 0) return T.today;
+  if (inDays === 1) return T.tomorrow;
+  return T.inDays(inDays);
 }
 
-function fmtDate(s) {
-  return new Date(s + "T12:00:00Z").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+function fmtDate(s, T) {
+  return new Date(s + "T12:00:00Z").toLocaleDateString(T.locale, { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 }
 
 // Un seul e-mail par personne, qui regroupe toutes les étapes concernées
-export function buildEmail(reminders, siteUrl) {
+export function buildEmail(due, siteUrl, lang = "fr") {
+  const T = TEXTS[lang] || TEXTS.fr;
+  const reminders = due.map((r) => ({ ...r, tripName: r.tripName || T.trip, place: r.place || T.place }));
   const total = reminders.reduce((n, r) => n + r.items.length, 0);
   const first = reminders[0];
-  const subject = reminders.length === 1
-    ? `Rappel : ${total} chose${total > 1 ? "s" : ""} à réserver pour ${first.place}`
-    : `Rappel : ${total} choses à réserver pour vos prochaines étapes`;
+  const subject = reminders.length === 1 ? T.subjectOne(total, first.place) : T.subjectMany(total);
 
   const text = [
-    "Bonjour,",
+    T.hello,
     "",
-    "Certaines choses ne sont pas encore cochées pour votre voyage sur Hippalos :",
+    T.intro,
     "",
     ...reminders.flatMap((r) => [
-      `${r.place} (${r.tripName}) : ${when(r.inDays)}, ${fmtDate(r.date)}`,
+      `${r.place} (${r.tripName})${T.sep}${when(r.inDays, T)}, ${fmtDate(r.date, T)}`,
       ...r.items.map((i) => `  - ${i}`),
       `  ${siteUrl}#voyage-${r.tripId}`,
       "",
     ]),
-    "Une fois réservées, cochez-les dans le site pour ne plus recevoir ce rappel.",
+    T.outro,
     "",
     "Hippalos",
-    "Pour ne plus recevoir ces e-mails : Paramètres → Rappels par e-mail.",
+    T.stop,
   ].join("\n");
 
-  const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#12302b;max-width:560px">
-    <p>Bonjour,</p>
-    <p>Certaines choses ne sont pas encore cochées pour votre voyage sur Hippalos :</p>
+  const html = `<div lang="${lang}" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#12302b;max-width:560px">
+    <p>${esc(T.hello)}</p>
+    <p>${esc(T.intro)}</p>
     ${reminders.map((r) => `
       <div style="border:1px solid #d3dfdb;border-radius:10px;padding:14px 16px;margin:12px 0">
         <div style="font-size:18px;font-weight:bold">${esc(r.place)}</div>
-        <div style="color:#5d716c;font-size:13px">${esc(r.tripName)} · ${esc(when(r.inDays))}, ${esc(fmtDate(r.date))}</div>
+        <div style="color:#5d716c;font-size:13px">${esc(r.tripName)} · ${esc(when(r.inDays, T))}, ${esc(fmtDate(r.date, T))}</div>
         <ul style="margin:10px 0;padding-left:20px">${r.items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
-        <a href="${esc(siteUrl)}#voyage-${esc(r.tripId)}" style="display:inline-block;background:#0f6b5c;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:14px">Ouvrir le voyage</a>
+        <a href="${esc(siteUrl)}#voyage-${esc(r.tripId)}" style="display:inline-block;background:#0f6b5c;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:14px">${esc(T.open)}</a>
       </div>`).join("")}
-    <p>Une fois réservées, cochez-les dans le site pour ne plus recevoir ce rappel.</p>
-    <p style="color:#5d716c;font-size:12px">Hippalos · Pour ne plus recevoir ces e-mails : Paramètres → Rappels par e-mail.</p>
+    <p>${esc(T.outro)}</p>
+    <p style="color:#5d716c;font-size:12px">Hippalos · ${esc(T.stop)}</p>
   </div>`;
 
   return { subject, text, html };

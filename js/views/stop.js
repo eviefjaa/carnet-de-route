@@ -7,6 +7,7 @@ import { itemActions } from "./actions.js";
 import { pickedPlace } from "../autocomplete.js";
 import { dateRange, bookBox } from "./checklist.js";
 import { programPill, programPanel, stopMoves } from "./program.js";
+import { stopCountry } from "../i18n-data.js";
 
 // sejour : lieu d'un séjour, sans numéro de jour ni programme (affiché à part, toujours déplié)
 export function stopCard(it, trip, idx, { sejour = false } = {}) {
@@ -31,7 +32,7 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
       <div class="stop-head">
         ${dayN ? `<span class="day">${t("stop.dayBadge", { n: dayN })}</span>` : ""}
         <h2><button class="stop-toggle" data-act="toggle-item" data-id="${esc(it.id)}" type="button" aria-expanded="${open}" aria-controls="${detailId}">${esc(it.place || t("stop.unnamed"))}</button></h2>
-        ${it.country ? `<span class="stop-country">${esc(it.country)}</span>` : ""}
+        ${it.country || it.countryCode ? `<span class="stop-country">${esc(stopCountry(it))}</span>` : ""}
         <svg class="stop-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </div>
       <div class="dates">

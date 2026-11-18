@@ -814,4 +814,21 @@ export default {
 
   // ---------- Invitations and social actions ----------
   "edit.more": { one: "{n} other change", other: "{n} other changes" },
+
+  // ---------- Invitations and social actions ----------
+  "edit.unnamed": "unnamed stop",
+  "edit.stopAdded": "added the stop {p}",
+  "edit.stopRemoved": "removed the stop {p}",
+  "edit.legAdded": "added the journey {p}",
+  "edit.legRemoved": "removed the journey {p}",
+  "edit.stopRenamed": "renamed the stop {p}",
+  "edit.dates": "dates for {p}",
+  "edit.lodging": "accommodation in {p}",
+  "edit.todosAdded": { one: "{n} activity added to {p}", other: "{n} activities added to {p}" },
+  "edit.todos": "activities in {p}",
+  "edit.tickets": "tickets for {p}",
+  "edit.leg": "journey {p}",
+  "edit.order": "order of the stops",
+  "edit.tripName": "trip name",
+  "edit.currency": "trip currency",
 };

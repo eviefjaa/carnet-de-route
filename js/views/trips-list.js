@@ -12,6 +12,7 @@ import { isEnabled } from "../cloud.js";
 import { invitationsBlock } from "./share.js";
 import { sejourStats } from "./sejour.js";
 import { selectButtons, selectAttrs, selectBox, selectBar } from "./select.js";
+import { stopCountryCode } from "../i18n-data.js";
 
 // Premier écran d'un nouveau visiteur : ce que fait le site, et de quoi commencer tout de suite
 function welcome() {
@@ -61,8 +62,8 @@ function flagsOf(trip, stops) {
   const codes = new Set();
   if (trip.country) codes.add(trip.country);
   stops.forEach((s) => {
-    const c = COUNTRIES.find((x) => x.name === s.country);
-    if (c) codes.add(c.code);
+    const c = stopCountryCode(s);
+    if (c) codes.add(c);
   });
   return [...codes].filter((c) => /^[A-Z]{2}$/.test(c)).slice(0, 4).join(" · ");
 }

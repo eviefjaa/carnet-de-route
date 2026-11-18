@@ -8,6 +8,7 @@
 
 import { uid, safeUrl, dayOrEmpty, MODES } from "./utils.js";
 import { t } from "./i18n.js";
+import { codeOfName } from "./i18n-data.js";
 
 // Date « AAAA-MM-JJ » décalée de n jours (calcul en UTC : pas de saut à l'heure d'été)
 export function addDays(day, n) {
@@ -39,7 +40,8 @@ export function tripFromPost(post, { name, start = "" } = {}, kinds = {}) {
       ? program.filter((a) => a.text).map((a) => ({ id: uid(), text: text(a.text, 120), done: false, book: false,
           date: dayOf(a.day), time: /^([01]\d|2[0-3]):[0-5]\d$/.test(a.time || "") ? a.time : "", how: text(a.how, 200) }))
       : (it.todos || []).filter(Boolean).map((x) => ({ id: uid(), text: text(x, 120), done: false, book: false }));
-    return { id: uid(), type: "stop", place: text(it.place, 120), country: text(it.country, 60), arrive, depart,
+    const code = codeOfName(it.country);
+    return { id: uid(), type: "stop", place: text(it.place, 120), country: text(it.country, 60), ...(code ? { countryCode: code } : {}), arrive, depart,
       address: "", notes: "", links: [], price: null, todos };
   });
 

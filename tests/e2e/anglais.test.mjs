@@ -56,7 +56,7 @@ await page.evaluate(() => localStorage.setItem("carnet-route-trips", JSON.string
       todos: [{ id: "t1", text: "Tram 28", date: "2030-06-02", time: "10:00", price: 3, book: true, done: false, tickets: [] }] },
     { id: "l", type: "transport", mode: "train", from: "Lisbon", to: "Porto", dep: "2030-06-03T09:00", arr: "2030-06-03T12:05", price: 30, tickets: [] },
     { id: "b", type: "stop", place: "Porto", country: "Portugal", countryCode: "PT", arrive: "2030-06-03", depart: "2030-06-05", todos: [] }] },
-  "v-b": { name: "Kyoto", kind: "sejour", currency: "JPY", createdAt: 1, items: [{ id: "k", type: "stop", place: "Kyoto", arrive: "2030-09-01", depart: "2030-09-08", todos: [] }] } })));
+  "v-b": { name: "Kyoto", kind: "sejour", currency: "JPY", createdAt: 1, items: [{ id: "k", type: "stop", place: "Kyoto", country: "Japon", arrive: "2030-09-01", depart: "2030-09-08", todos: [] }] } })));
 await page.reload({ waitUntil: "networkidle0" });
 await sleep(800);
 
@@ -82,6 +82,7 @@ await noFrench("Formulaire d'étape");
 
 await open("voyage-v-b");
 await noFrench("Séjour");
+check("pays d'une ancienne étape (enregistré en français) affiché en anglais", await page.$eval(".stop-country", (e) => e.textContent.trim()) === "Japan");
 
 for (const [hash, label] of [["destinations", "Destinations"], ["favoris", "Favoris"], ["profil", "Profil"], ["parametres", "Paramètres"],
   ["fil", "Fil"], ["decouvrir", "Découvrir"], ["notifications", "Notifications"], ["mes-publications", "Mes publications"]]) {

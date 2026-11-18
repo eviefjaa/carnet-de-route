@@ -5,7 +5,8 @@ const root = fileURLToPath(new URL("../..", import.meta.url));
 globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 globalThis.document = { getElementById: () => null, documentElement: { dataset: {} } };
 
-const { describeChanges, mergeEdit, editText, SERIES_MS } = await import(root + "/js/changes.js");
+const { describeChanges, mergeEdit, editText, editPhrase, SERIES_MS } = await import(root + "/js/changes.js");
+const { setLang } = await import(root + "/js/i18n.js");
 const { publicCopy } = await import(root + "/js/publish.js");
 const { tripFromPost } = await import(root + "/js/fork.js");
 
@@ -15,7 +16,9 @@ const leg = { id: "l", type: "transport", mode: "train", from: "Lisbonne", to: "
 const por = { id: "b", type: "stop", place: "Porto", arrive: "2030-06-03", depart: "2030-06-05", price: null, todos: [] };
 const base = { name: "Portugal", currency: "EUR", items: [lis, leg, por] };
 const clone = (x) => JSON.parse(JSON.stringify(x));
-const after = (fn) => { const t = clone(base); fn(t); return describeChanges(base, t); };
+const raw = (fn) => { const t = clone(base); fn(t); return describeChanges(base, t); };
+// En phrases françaises : les mêmes qu'avant les codes, au mot près
+const after = (fn) => raw(fn).map(editPhrase);
 
 assert.deepEqual(describeChanges(base, clone(base)), [], "aucun changement");
 assert.deepEqual(after((t) => { t.items[0].geo = { q: "Lisbonne", lat: 1, lng: 2 }; t.items[1].route = { key: "y", line: "zzz", km: 300 }; t.items[1].fromGeo = { lat: 1, lng: 1 }; }), [], "positions et tracés : rien");
@@ -42,9 +45,22 @@ assert.deepEqual(after((t) => { t.name = "P"; t.items[2].todos.push({ id: "x", t
   ["ajout de l'étape Braga", "dates de Porto", "1 activité ajoutée à Porto", "nom du voyage"]);
 // Seulement mes changements : ceux des autres arrivés entre-temps ne comptent pas (comparaison avec la base)
 { const mine = clone(base); mine.items[2].depart = "2030-06-06";
-  assert.deepEqual(describeChanges(base, mine), ["dates de Porto"]); }
+  assert.deepEqual(describeChanges(base, mine).map(editPhrase), ["dates de Porto"]); }
 assert.equal(describeChanges(null, base).length, 0);
-assert.ok(after((t) => { t.items.push({ id: "c", type: "stop", place: "x".repeat(300), todos: [] }); })[0].length <= 120, "120 caractères au plus");
+assert.ok(raw((t) => { t.items.push({ id: "c", type: "stop", place: "x".repeat(300), todos: [] }); })[0].p.length <= 120, "nom de 120 caractères au plus");
+
+// Enregistré en codes, sans phrase : chacun lit dans sa langue
+assert.deepEqual(raw((t) => { t.items[2].todos.push({ id: "x", text: "Cave" }, { id: "y", text: "Livraria" }); t.items[2].depart = "2030-06-06"; t.name = "P"; }),
+  [{ k: "dates", p: "Porto" }, { k: "todosAdded", p: "Porto", n: 2 }, { k: "tripName" }]);
+assert.deepEqual(after((t) => { t.items.push({ id: "c", type: "stop", place: "", todos: [] }); }), ["ajout de l'étape étape sans nom"]);
+setLang("en");
+assert.deepEqual(after((t) => { t.items[2].place = "Osaka"; t.items[2].depart = "2030-06-06"; t.items[2].notes = "x"; }), ["dates for Osaka", "accommodation in Osaka", "renamed the stop Osaka"]);
+assert.deepEqual(after((t) => { t.items[2].todos.push({ id: "x", text: "Cave" }); t.items.splice(1, 1); }), ["removed the journey Lisbonne → Porto", "1 activity added to Porto"]);
+assert.equal(editText([{ k: "stopAdded", p: "Braga" }, { k: "todosAdded", p: "Porto", n: 2 }], 3), "added the stop Braga, 2 activities added to Porto and 3 other changes");
+assert.equal(editText(["dates de Porto", { k: "order" }], 0), "dates de Porto and order of the stops", "ancienne trace en phrase : affichée telle quelle");
+setLang("fr");
+assert.equal(editText([{ k: "inconnu", p: "x" }, { k: "currency" }], 0), "devise du voyage", "code inconnu ignoré");
+assert.equal(editPhrase({ k: "dates", p: "Évora" }), "dates d'Évora");
 
 // Regroupement : dans l'heure on complète, sans doublon ; au-delà de 5, « more » ; après une heure, nouvelle série
 const now = 10 * SERIES_MS;

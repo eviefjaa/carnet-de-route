@@ -815,4 +815,21 @@ export default {
 
   // ---------- Invitations et actions sociales ----------
   "edit.more": { one: "{n} autre changement", other: "{n} autres changements" },
+
+  // ---------- Invitations et actions sociales ----------
+  "edit.unnamed": "étape sans nom",
+  "edit.stopAdded": "ajout de l'étape {p}",
+  "edit.stopRemoved": "suppression de l'étape {p}",
+  "edit.legAdded": "ajout du trajet {p}",
+  "edit.legRemoved": "suppression du trajet {p}",
+  "edit.stopRenamed": "nom de l'étape {p}",
+  "edit.dates": "dates de {p}",
+  "edit.lodging": "hébergement de {p}",
+  "edit.todosAdded": { one: "{n} activité ajoutée à {p}", other: "{n} activités ajoutées à {p}" },
+  "edit.todos": "activités de {p}",
+  "edit.tickets": "billets de {p}",
+  "edit.leg": "trajet {p}",
+  "edit.order": "ordre des étapes",
+  "edit.tripName": "nom du voyage",
+  "edit.currency": "devise du voyage",
 };

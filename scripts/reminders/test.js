@@ -1,7 +1,7 @@
 // Vérifie la logique des rappels sans Firebase ni e-mail : node test.js
 
 import assert from "node:assert/strict";
-import { findDueReminders, buildEmail, daysBetween } from "./reminders.js";
+import { findDueReminders, buildEmail, emailLang, daysBetween } from "./reminders.js";
 
 const trips = {
   "v-1": {
@@ -47,5 +47,25 @@ const mail = buildEmail(due, "https://exemple.github.io/carnet-de-route/");
 assert.match(mail.subject, /2 choses à réserver pour Rio de Janeiro/);
 assert.doesNotMatch(mail.text, /Copacabana/);
 assert.match(mail.text, /dans 3 jours/);
+assert.match(mail.text, /Rio de Janeiro \(Brésil\) : dans 3 jours, samedi 19 décembre/);
+assert.match(mail.html, /Ouvrir le voyage/);
+
+// Dans la langue du destinataire : anglais si choisi, français sinon (et par défaut)
+assert.equal(emailLang({ lang: "en" }), "en");
+assert.equal(emailLang({ lang: "fr" }), "fr");
+assert.equal(emailLang({}), "fr");
+assert.equal(emailLang({ lang: "<b>" }), "fr");
+const en = buildEmail(due, "https://exemple.github.io/carnet-de-route/", "en");
+assert.equal(en.subject, "Reminder: 2 things to book for Rio de Janeiro");
+assert.match(en.text, /^Hello,/);
+assert.match(en.text, /Rio de Janeiro \(Brésil\): in 3 days, Saturday 19 December/);
+assert.match(en.text, /Settings → Email reminders/);
+assert.match(en.html, /Open the trip/);
+assert.doesNotMatch(en.text + en.html, /Bonjour|Rappel|réserver|cochez|Ouvrir/);
+assert.equal(buildEmail([{ ...due[0], items: ["x"], inDays: 1, place: "" }], "https://s/", "en").subject, "Reminder: 1 thing to book for Unnamed stop");
+assert.match(buildEmail([{ ...due[0], inDays: 0 }], "https://s/", "en").text, /: today,/);
+// Nom piégé : échappé dans la version HTML, quelle que soit la langue
+assert.doesNotMatch(buildEmail([{ ...due[0], place: "<img src=x>" }], "https://s/", "en").html, /<img/);
 console.log("Tous les tests passent.\n");
 console.log(mail.subject + "\n\n" + mail.text);
+console.log("\n" + en.subject + "\n\n" + en.text);

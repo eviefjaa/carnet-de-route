@@ -17,7 +17,7 @@ import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import nodemailer from "nodemailer";
-import { findDueReminders, buildEmail, todayIn, daysBetween, stopDate, cleanTrip } from "./reminders.js";
+import { findDueReminders, buildEmail, emailLang, todayIn, daysBetween, stopDate, cleanTrip } from "./reminders.js";
 
 const SITE_URL = process.env.SITE_URL || "https://eviefjaa.github.io/carnet-de-route/";
 const DAYS_BEFORE = Number(process.env.DAYS_BEFORE || 3);
@@ -134,7 +134,7 @@ async function remindAccount(uid, label) {
   }
   const email = user.email;
 
-  const { subject, text, html } = buildEmail(due, SITE_URL);
+  const { subject, text, html } = buildEmail(due, SITE_URL, emailLang(prefs)); // dans la langue choisie par la personne
   if (DRY_RUN) {
     console.log(`${label} : e-mail prêt (${due.length} étape(s)), non envoyé car c'est un essai`);
     return;
