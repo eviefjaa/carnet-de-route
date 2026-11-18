@@ -84,11 +84,10 @@
 @media (pointer: coarse) { .pg-pill::before { content: ""; position: absolute; inset: -4px 0; } }
 @media (prefers-reduced-motion: reduce) { .pg-arrow { transition: none; } }
 
-.program { display: flex; flex-direction: column; gap: 14px; }
+.program { display: flex; flex-direction: column; gap: 8px; }
 .pg-meta { margin: 0; font-size: 13px; color: var(--muted); }
-/* Un jour : son titre (« Jour 1 · lun. 10 mai ») et son « + », puis ses activités ; pas de cadre,
-   les jours sont séparés par de l'espace */
-.program .sj-day { margin: 0; padding: 0; background: none; border: 0; border-radius: 0; gap: 4px; }
+/* Un jour = une petite carte (titre « Jour 1 · lun. 10 mai » et son « + », puis ses activités) */
+.program .sj-day { margin: 0; padding: 10px 12px; background: var(--bg); }
 .program .sj-day::before { display: none; } /* pas de point sur la ligne du trajet : on est dans la carte de l'étape */
-.program .sj-day.is-loose { border: 0; }
+.program .sj-time { background: var(--surface); }
 .pg-empty { margin: 0; }

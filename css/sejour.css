@@ -25,10 +25,6 @@
 .sj-day-head h3 { font-size: 17px; font-weight: 700; }
 .sj-day-head h3 span { font-family: var(--body); font-size: 14px; font-weight: 500; color: var(--muted); margin-left: 4px; }
 .sj-day .note { margin: 0; }
-/* Séjour : mêmes jours allégés (titre et « + », puis les activités), sans cadre, sur la ligne de route */
-.route.sejour .sj-day { background: none; border: 0; border-radius: 0; padding: 4px 0 8px; margin: 8px 0 0; gap: 4px; }
-.route.sejour .sj-day::before { left: -27px; top: 12px; }
-.route.sejour .sj-day.is-loose::before { background: var(--bg); border: 2px solid var(--route); box-sizing: border-box; }
 .route.sejour > .pg-empty { margin: 4px 0 0; }
 
 /* Activités */
