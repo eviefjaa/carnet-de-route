@@ -1,6 +1,7 @@
 // Affichage et formulaire d'une étape (lieu, dates, hébergement, liens de réservation)
 
-import { esc, uid, safeUrl, dayOrEmpty, timeOrEmpty, byDate, needsBooking, fmtHour, source, fmtDay, nights, plural, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
+import { esc, uid, safeUrl, dayOrEmpty, timeOrEmpty, byDate, needsBooking, fmtHour, source, fmtDay, nights, fmtMoney, priceInput, parsePrice, hasPrice } from "../utils.js";
+import { t, count } from "../i18n.js";
 import { state, tripStart } from "../store.js";
 import { itemActions } from "./actions.js";
 import { pickedPlace } from "../autocomplete.js";
@@ -17,7 +18,7 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
   const maps = where ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(where)}` : "";
   const cur = trip.currency || "EUR";
   const price = hasPrice(it.price)
-    ? `<div><span class="price">${esc(fmtMoney(it.price, cur))}</span>${n ? ` <span class="price-sub">soit ${esc(fmtMoney(Math.round((it.price / n) * 100) / 100, cur))} / nuit</span>` : ""}</div>`
+    ? `<div><span class="price">${esc(fmtMoney(it.price, cur))}</span>${n ? ` <span class="price-sub">${esc(t("stop.perNight", { price: fmtMoney(Math.round((it.price / n) * 100) / 100, cur) }))}</span>` : ""}</div>`
     : "";
 
   // Carte repliée : l'essentiel, et la pastille du programme (avec ce qui reste à réserver).
@@ -28,14 +29,14 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
   return `<article class="item stop${open ? " open" : ""}">
     <div class="stop-summary">
       <div class="stop-head">
-        ${dayN ? `<span class="day">JOUR ${dayN}</span>` : ""}
-        <h2><button class="stop-toggle" data-act="toggle-item" data-id="${esc(it.id)}" type="button" aria-expanded="${open}" aria-controls="${detailId}">${esc(it.place || "Étape sans nom")}</button></h2>
+        ${dayN ? `<span class="day">${t("stop.dayBadge", { n: dayN })}</span>` : ""}
+        <h2><button class="stop-toggle" data-act="toggle-item" data-id="${esc(it.id)}" type="button" aria-expanded="${open}" aria-controls="${detailId}">${esc(it.place || t("stop.unnamed"))}</button></h2>
         ${it.country ? `<span class="stop-country">${esc(it.country)}</span>` : ""}
         <svg class="stop-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </div>
       <div class="dates">
         ${datesLine(it)}
-        ${n === 0 ? `<span class="nights is-halt">Arrêt</span>` : n ? `<span class="nights">${plural(n, "nuit")}</span>` : ""}
+        ${n === 0 ? `<span class="nights is-halt">${t("stop.halt")}</span>` : n ? `<span class="nights">${count(n, "count.night")}</span>` : ""}
       </div>
       ${sejour ? "" : `<div class="pg-pill-row">${programPill(it)}</div>`}
     </div>
@@ -45,7 +46,7 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
     ${it.address ? `<div class="addr">${esc(it.address)}</div>` : ""}
     ${links.length ? `<div class="links">${links.map(linkCard).join("")}</div>` : ""}
     ${it.notes ? `<div class="notes">${esc(it.notes)}</div>` : ""}
-    ${maps ? `<div class="leg-extra"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Ouvrir dans Google Maps ↗</a></div>` : ""}
+    ${maps ? `<div class="leg-extra"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">${t("stop.openMaps")}</a></div>` : ""}
     ${itemActions(it, idx, trip)}
     </div>` : ""}
   </article>`;
@@ -54,9 +55,9 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
 // Dates de l'étape ; celles qui manquent sont signalées en rouge
 function datesLine(it) {
   const todo = (txt) => `<span class="to-define">${txt}</span>`;
-  if (!it.arrive && !it.depart) return todo("Dates à définir");
-  const at = (t) => (t ? `, ${esc(fmtHour(t))}` : "");
-  return `${it.arrive ? esc(fmtDay(it.arrive)) + at(it.arriveTime) : todo("Arrivée à définir")} → ${it.depart ? esc(fmtDay(it.depart)) + at(it.departTime) : todo("départ à définir")}`;
+  if (!it.arrive && !it.depart) return todo(t("status.nodate"));
+  const at = (h) => (h ? `, ${esc(fmtHour(h))}` : "");
+  return `${it.arrive ? esc(fmtDay(it.arrive)) + at(it.arriveTime) : todo(t("stop.arriveToDefine"))} → ${it.depart ? esc(fmtDay(it.depart)) + at(it.departTime) : todo(t("stop.departToDefine"))}`;
 }
 
 function linkCard(l) {
@@ -71,57 +72,57 @@ function linkCard(l) {
 export function stopForm(it, isNew, { sejour = false } = {}) {
   const links = it.links && it.links.length ? it.links : [{ id: uid(), label: "", url: "" }];
   return `<form class="form" data-form="stop" data-id="${esc(it.id)}" data-new="${isNew ? 1 : 0}"${sejour ? ` data-sejour="1"` : ""}>
-    <h3>${sejour ? (isNew ? "Où allez-vous ?" : "Modifier le lieu") : isNew ? "Nouvelle étape" : "Modifier l'étape"}</h3>
+    <h3>${sejour ? (isNew ? t("stop.formWhere") : t("stop.formEditPlace")) : isNew ? t("stop.formNew") : t("stop.formEdit")}</h3>
     <div class="grid">
-      <label class="f full">Lieu<span class="ac"><input name="place" id="f-place-${esc(it.id)}" value="${esc(it.place)}" placeholder="Tapez une ville, une région ou un pays" required data-place="place" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
-      <label class="f">Arrivée<input type="date" name="arrive" id="f-arr-${esc(it.id)}" value="${esc(it.arrive)}"></label>
-      ${sejour ? `<label class="f">Heure d'arrivée<input type="time" name="arriveTime" id="f-arrt-${esc(it.id)}" value="${esc(it.arriveTime || "")}"></label>` : ""}
-      <label class="f">Départ<input type="date" name="depart" id="f-dep-${esc(it.id)}" value="${esc(it.depart)}" min="${esc(it.arrive)}"></label>
-      ${sejour ? `<label class="f">Heure de départ<input type="time" name="departTime" id="f-dept-${esc(it.id)}" value="${esc(it.departTime || "")}"></label>` : ""}
-      <label class="f">Prix de l'hébergement (séjour complet)<input name="price" id="f-price-${esc(it.id)}" value="${esc(priceInput(it.price))}" inputmode="decimal" placeholder="Ex. 450"></label>
-      <label class="f">Adresse de l'hébergement<input name="address" id="f-addr-${esc(it.id)}" value="${esc(it.address)}" placeholder="Optionnel : sert aussi à placer l'étape sur la carte"></label>
+      <label class="f full">${t("stop.place")}<span class="ac"><input name="place" id="f-place-${esc(it.id)}" value="${esc(it.place)}" placeholder="${t("stop.placeHint")}" required data-place="place" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></span></label>
+      <label class="f">${t("stop.arrive")}<input type="date" name="arrive" id="f-arr-${esc(it.id)}" value="${esc(it.arrive)}"></label>
+      ${sejour ? `<label class="f">${t("stop.arriveTime")}<input type="time" name="arriveTime" id="f-arrt-${esc(it.id)}" value="${esc(it.arriveTime || "")}"></label>` : ""}
+      <label class="f">${t("stop.depart")}<input type="date" name="depart" id="f-dep-${esc(it.id)}" value="${esc(it.depart)}" min="${esc(it.arrive)}"></label>
+      ${sejour ? `<label class="f">${t("stop.departTime")}<input type="time" name="departTime" id="f-dept-${esc(it.id)}" value="${esc(it.departTime || "")}"></label>` : ""}
+      <label class="f">${t("stop.price")}<input name="price" id="f-price-${esc(it.id)}" value="${esc(priceInput(it.price))}" inputmode="decimal" placeholder="${t("stop.priceHint")}"></label>
+      <label class="f">${t("stop.address")}<input name="address" id="f-addr-${esc(it.id)}" value="${esc(it.address)}" placeholder="${t("stop.addressHint")}"></label>
     </div>
     <div class="computed" data-nights></div>
     <div class="f-label">
-      Liens de réservation (hôtel, Airbnb…)
+      ${t("stop.links")}
       <div class="links-edit" data-links>${links.map(linkRow).join("")}</div>
     </div>
-    <div><button class="btn small" data-act="add-link" type="button">+ Ajouter un lien</button></div>
+    <div><button class="btn small" data-act="add-link" type="button">${t("stop.addLink")}</button></div>
     ${sejour ? "" : `<div class="f-label">
-      Programme (cochez ce qui est déjà réservé)
-      <div class="todos-edit" data-todos>${byDate(it.todos).map((t) => todoRow(t, it)).join("")}</div>
+      ${t("stop.programLabel")}
+      <div class="todos-edit" data-todos>${byDate(it.todos).map((x) => todoRow(x, it)).join("")}</div>
     </div>
-    <div><button class="btn small" data-act="add-todo-row" type="button">+ Ajouter une activité</button></div>`}
-    <label class="f">Notes<textarea name="notes" id="f-notes-${esc(it.id)}" placeholder="Code d'accès, heure de check-in, idées de visites…">${esc(it.notes)}</textarea></label>
+    <div><button class="btn small" data-act="add-todo-row" type="button">${t("stop.addActivity")}</button></div>`}
+    <label class="f">${t("stop.notes")}<textarea name="notes" id="f-notes-${esc(it.id)}" placeholder="${t("stop.notesHint")}">${esc(it.notes)}</textarea></label>
     <div class="form-actions">
-      ${sejour && isNew ? "" : `<button class="btn" data-act="cancel" type="button">Annuler</button>`}
-      <button class="btn primary" type="submit">Enregistrer</button>
+      ${sejour && isNew ? "" : `<button class="btn" data-act="cancel" type="button">${t("common.cancel")}</button>`}
+      <button class="btn primary" type="submit">${t("common.save")}</button>
     </div>
   </form>`;
 }
 
 export function linkRow(l) {
   return `<div class="link-edit" data-link="${esc(l.id)}">
-    <input name="lbl" id="l-lbl-${esc(l.id)}" value="${esc(l.label)}" placeholder="Nom (ex. Pousada Azul)" aria-label="Nom du lien">
-    <input name="url" id="l-url-${esc(l.id)}" value="${esc(l.url)}" placeholder="https://www.airbnb.fr/rooms/…" aria-label="Adresse du lien" inputmode="url">
-    <button class="btn ghost small" data-act="rm-link" type="button" aria-label="Retirer ce lien">✕</button>
+    <input name="lbl" id="l-lbl-${esc(l.id)}" value="${esc(l.label)}" placeholder="${t("stop.linkNameHint")}" aria-label="${t("stop.linkName")}">
+    <input name="url" id="l-url-${esc(l.id)}" value="${esc(l.url)}" placeholder="https://www.airbnb.fr/rooms/…" aria-label="${t("stop.linkUrl")}" inputmode="url">
+    <button class="btn ghost small" data-act="rm-link" type="button" aria-label="${t("stop.removeLink")}">✕</button>
   </div>`;
 }
 
 // Une activité dans le formulaire : case « réservé », texte, retrait
-export function todoRow(t, stop = {}) {
-  const n = (t.tickets || []).length;
-  return `<div class="todo-edit" data-todo-row="${esc(t.id)}">
-    <input type="checkbox" name="todoDone" id="td-done-${esc(t.id)}"${t.done ? " checked" : ""} aria-label="Déjà réservé">
-    <input name="todoText" id="td-text-${esc(t.id)}" value="${esc(t.text)}" placeholder="Ex. Visite du Christ Rédempteur, réserver le restaurant…" maxlength="120" autocomplete="off" aria-label="Activité">
-    ${n ? `<span class="todo-tk" title="Billets gérés depuis la checklist de l'étape">${n} billet${n > 1 ? "s" : ""}</span>` : "<span></span>"}
-    <button class="btn ghost small" data-act="rm-todo-row" type="button" aria-label="Retirer cette activité">✕</button>
+export function todoRow(x, stop = {}) {
+  const n = (x.tickets || []).length;
+  return `<div class="todo-edit" data-todo-row="${esc(x.id)}">
+    <input type="checkbox" name="todoDone" id="td-done-${esc(x.id)}"${x.done ? " checked" : ""} aria-label="${t("stop.alreadyBooked")}">
+    <input name="todoText" id="td-text-${esc(x.id)}" value="${esc(x.text)}" placeholder="${t("stop.activityHint")}" maxlength="120" autocomplete="off" aria-label="${t("act.activity")}">
+    ${n ? `<span class="todo-tk" title="${t("stop.ticketsHere")}">${count(n, "count.ticket")}</span>` : "<span></span>"}
+    <button class="btn ghost small" data-act="rm-todo-row" type="button" aria-label="${t("stop.removeActivity")}">✕</button>
     <div class="todo-extra">
-      <label class="todo-date">Date<input type="date" name="todoDate" id="td-date-${esc(t.id)}" value="${esc(t.date || "")}"${dateRange(stop)}></label>
-      <label class="todo-date">Heure<input type="time" name="todoTime" id="td-time-${esc(t.id)}" value="${esc(t.time || "")}"></label>
-      <label class="todo-date">Prix<input name="todoPrice" id="td-price-${esc(t.id)}" value="${esc(priceInput(t.price))}" inputmode="decimal" placeholder="Ex. 25" autocomplete="off"></label>
-      ${bookBox("todoBook", "td-book-" + t.id, needsBooking(t))}
-      <input name="todoMaps" id="td-maps-${esc(t.id)}" value="${esc(t.maps || "")}" placeholder="Lien Google Maps du lieu (facultatif)" inputmode="url" autocomplete="off" aria-label="Lien Google Maps du lieu">
+      <label class="todo-date">${t("act.date")}<input type="date" name="todoDate" id="td-date-${esc(x.id)}" value="${esc(x.date || "")}"${dateRange(stop)}></label>
+      <label class="todo-date">${t("act.time")}<input type="time" name="todoTime" id="td-time-${esc(x.id)}" value="${esc(x.time || "")}"></label>
+      <label class="todo-date">${t("act.priceShort")}<input name="todoPrice" id="td-price-${esc(x.id)}" value="${esc(priceInput(x.price))}" inputmode="decimal" placeholder="${t("act.priceHint")}" autocomplete="off"></label>
+      ${bookBox("todoBook", "td-book-" + x.id, needsBooking(x))}
+      <input name="todoMaps" id="td-maps-${esc(x.id)}" value="${esc(x.maps || "")}" placeholder="${t("stop.mapsHint")}" inputmode="url" autocomplete="off" aria-label="${t("stop.mapsLabel")}">
     </div>
   </div>`;
 }
@@ -138,6 +139,7 @@ export function readStopForm(f) {
   const picked = pickedPlace(f.place);
   if (picked) {
     o.country = picked.country;
+    if (picked.countryCode) o.countryCode = picked.countryCode; // fiches pays, quelle que soit la langue du nom
     o.geo = { q: [o.address, o.place].filter(Boolean).join(" | "), lat: picked.lat, lng: picked.lng };
   }
   o.links = [...f.querySelectorAll("[data-link]")]
@@ -159,7 +161,7 @@ export function readStopForm(f) {
       time: timeOrEmpty(r.querySelector('[name="todoTime"]').value),
       price: parsePrice(r.querySelector('[name="todoPrice"]').value),
     }))
-    .filter((t) => t.text);
+    .filter((x) => x.text);
   return o;
 }
 

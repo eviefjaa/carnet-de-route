@@ -1,13 +1,10 @@
 // Fonctions utilitaires : identifiants, échappement HTML, liens, dates et durées
+// Dates, heures et prix dans la langue choisie (i18n.js)
 
-export const MODES = {
-  bus: "Bus",
-  train: "Train",
-  avion: "Avion",
-  voiture: "Voiture",
-  bateau: "Bateau",
-  autre: "Autre",
-};
+import { t, labels, locale, getLang } from "./i18n.js";
+
+// Moyens de transport : clés enregistrées dans les voyages (fixes), libellés traduits
+export const MODES = labels("mode", ["bus", "train", "avion", "voiture", "bateau", "autre"]);
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -40,7 +37,7 @@ export function source(u) {
     if (h.includes("google")) return "Google";
     return h.split(".").slice(-2, -1)[0] || h;
   } catch {
-    return "Lien";
+    return t("link.generic");
   }
 }
 
@@ -57,23 +54,24 @@ export const timeOrEmpty = (s) => (typeof s === "string" && /^([01]\d|2[0-3]):[0
 export const byDate = (todos) =>
   [...(todos || [])].sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999") || (a.time || "99").localeCompare(b.time || "99"));
 // Activité à réserver ? book: false = rien à réserver ; absent (activités d'avant l'option) = à réserver
-export const needsBooking = (t) => t.book !== false;
-export const fmtHour = (s) => s.replace(":", " h ");
+export const needsBooking = (x) => x.book !== false;
+// « 14 h 30 » en français, « 14:30 » en anglais
+export const fmtHour = (s) => (getLang() === "en" ? s : s.replace(":", " h "));
 
 export function fmtDay(s) {
   const d = toDate(s);
-  return valid(d) ? d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) : "";
+  return valid(d) ? d.toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short" }) : "";
 }
 
 export function fmtTime(s) {
   const d = toDate(s);
-  return valid(d) && s.length > 10 ? d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
+  return valid(d) && s.length > 10 ? d.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
 }
 
 export function fmtDateTime(s) {
-  if (!s) return "à définir";
-  const t = fmtTime(s);
-  return fmtDay(s) + (t ? " " + t : "");
+  if (!s) return t("date.toDefine");
+  const hm = fmtTime(s);
+  return fmtDay(s) + (hm ? " " + hm : "");
 }
 
 export function nights(a, b) {
@@ -90,59 +88,28 @@ export function duration(a, b) {
   if (m <= 0) return "";
   const h = Math.floor(m / 60);
   m = m % 60;
-  return h ? `${h} h${m ? " " + String(m).padStart(2, "0") : ""}` : `${m} min`;
-}
-
-// Le nombre est forcé en vrai nombre : une valeur venue d'un autre compte ne s'insère jamais telle quelle
-export function plural(n, word) {
-  const x = Number(n);
-  const v = Number.isFinite(x) ? x : 0;
-  return `${v} ${word}${v > 1 ? "s" : ""}`;
+  const mm = String(m).padStart(2, "0");
+  // « 3 h 05 » en français, « 3h 05 » en anglais
+  if (getLang() === "en") return h ? `${h}h${m ? " " + mm : ""}` : `${m} min`;
+  return h ? `${h} h${m ? " " + mm : ""}` : `${m} min`;
 }
 
 // Nombre fini, sinon la valeur par défaut (données d'un autre compte : jamais du texte)
 export const num = (v, fallback = null) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 
 // ---------- Prix ----------
-export const CURRENCIES = {
-  EUR: "Euro (€)",
-  BRL: "Real brésilien (R$)",
-  USD: "Dollar américain ($)",
-  GBP: "Livre sterling (£)",
-  CHF: "Franc suisse (CHF)",
-  CAD: "Dollar canadien ($ CA)",
-  AUD: "Dollar australien",
-  NZD: "Dollar néo-zélandais",
-  JPY: "Yen japonais",
-  THB: "Baht thaïlandais",
-  MAD: "Dirham marocain",
-  MXN: "Peso mexicain",
-  ARS: "Peso argentin",
-  CLP: "Peso chilien",
-  PEN: "Sol péruvien",
-  COP: "Peso colombien",
-  ZAR: "Rand sud-africain",
-  INR: "Roupie indienne",
-  IDR: "Roupie indonésienne",
-  VND: "Dong vietnamien",
-  TRY: "Livre turque",
-  NOK: "Couronne norvégienne",
-  SEK: "Couronne suédoise",
-  DKK: "Couronne danoise",
-  ISK: "Couronne islandaise",
-  CZK: "Couronne tchèque",
-  HUF: "Forint hongrois",
-  PLN: "Zloty polonais",
-  AED: "Dirham des Émirats",
-  XOF: "Franc CFA (Afrique de l'Ouest)",
-  XPF: "Franc pacifique",
-};
+// Devises proposées : codes ISO, noms traduits (« Euro (€) », « Brazilian real (R$) »…)
+export const CURRENCIES = labels("currency", ["EUR", "BRL", "USD", "GBP", "CHF", "CAD", "AUD", "NZD", "JPY", "THB", "MAD", "MXN", "ARS", "CLP", "PEN", "COP",
+  "ZAR", "INR", "IDR", "VND", "TRY", "NOK", "SEK", "DKK", "ISK", "CZK", "HUF", "PLN", "AED", "XOF", "XPF"]);
 
 // Accepte "120", "120,50", "1 200.5" ; renvoie un nombre ou null si vide / invalide
+// Avec virgule et point (« 1.200,50 » ou « 1,200.50 ») : le dernier des deux sépare les décimales
 export function parsePrice(s) {
-  const t = String(s ?? "").replace(/\s/g, "").replace(",", ".");
-  if (!t) return null;
-  const n = Number(t);
+  let v = String(s ?? "").replace(/\s/g, "");
+  if (v.includes(",") && v.includes(".")) v = v.lastIndexOf(",") > v.lastIndexOf(".") ? v.replace(/\./g, "").replace(",", ".") : v.replace(/,/g, "");
+  else v = v.replace(",", ".");
+  if (!v) return null;
+  const n = Number(v);
   return isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
 }
 
@@ -151,7 +118,7 @@ export const hasPrice = (n) => typeof n === "number" && isFinite(n);
 export function fmtMoney(n, currency = "EUR") {
   if (!hasPrice(n)) return "";
   try {
-    return new Intl.NumberFormat("fr-FR", {
+    return new Intl.NumberFormat(locale(), {
       style: "currency",
       currency,
       maximumFractionDigits: Number.isInteger(n) ? 0 : 2,
@@ -161,5 +128,5 @@ export function fmtMoney(n, currency = "EUR") {
   }
 }
 
-// Valeur affichée dans un champ prix (virgule à la française)
-export const priceInput = (n) => (hasPrice(n) ? String(n).replace(".", ",") : "");
+// Valeur affichée dans un champ prix (virgule en français, point en anglais ; parsePrice lit les deux)
+export const priceInput = (n) => (hasPrice(n) ? (getLang() === "en" ? String(n) : String(n).replace(".", ",")) : "");

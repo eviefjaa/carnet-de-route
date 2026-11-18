@@ -1,7 +1,9 @@
 // Page « Mes voyages » : une carte par voyage avec un récapitulatif
 // Un clic sur la carte ouvre le voyage (#voyage-<id>).
 
-import { esc, nights, plural, fmtMoney, toDate } from "../utils.js";
+import { esc, nights, fmtMoney, toDate } from "../utils.js";
+import { t, count, locale } from "../i18n.js";
+import { countryName } from "../i18n-data.js";
 import { state, tripStart, tripEnd, isOwner } from "../store.js";
 import { computeBudget } from "../budget.js";
 import { COUNTRIES } from "../data/countries.js";
@@ -15,16 +17,14 @@ import { selectButtons, selectAttrs, selectBox, selectBar } from "./select.js";
 function welcome() {
   return `<section class="page welcome">
     ${invitationsBlock()}
-    <h1>Préparez votre road trip, étape par étape.</h1>
-    <p class="lead">Ajoutez vos villes et vos trajets : le site les place sur une carte et calcule le budget au fur et à mesure.
-      Vos compagnons de route peuvent le préparer avec vous.</p>
+    <h1>${t("welcome.title")}</h1>
+    <p class="lead">${t("welcome.lead")}</p>
     <div class="row-btns">
-      <button class="btn primary big" data-act="new-trip" type="button">Créer mon premier voyage</button>
-      <a class="btn big" href="#destinations">Trouver une destination</a>
+      <button class="btn primary big" data-act="new-trip" type="button">${t("welcome.firstTrip")}</button>
+      <a class="btn big" href="#destinations">${t("welcome.findDestination")}</a>
     </div>
     ${isEnabled() && !state.user
-      ? `<p class="note">Sans compte, vos voyages restent dans ce navigateur.
-          <button class="link-btn" data-act="open-auth" data-mode="signup" type="button">Créez un compte</button> pour les retrouver sur tous vos appareils.</p>`
+      ? `<p class="note">${t("welcome.noAccount", { link: `<button class="link-btn" data-act="open-auth" data-mode="signup" type="button">${t("welcome.createAccount")}</button>` })}</p>`
       : ""}
   </section>`;
 }
@@ -37,22 +37,22 @@ const todayStr = () => {
 
 // État du voyage, affiché en pastille : en cours, à venir, terminé, sans dates
 function status(start, end) {
-  if (!start) return { key: "nodate", label: "Dates à définir", order: 2 };
+  if (!start) return { key: "nodate", label: t("status.nodate"), order: 2 };
   const today = todayStr();
   if (today < start) {
     const n = Math.round((toDate(start) - toDate(today)) / DAY);
-    return { key: "upcoming", label: n === 1 ? "Demain" : `Dans ${n} jours`, order: 1, sort: start };
+    return { key: "upcoming", label: n === 1 ? t("status.tomorrow") : count(n, "status.inDays"), order: 1, sort: start };
   }
-  if (today <= end) return { key: "now", label: "En cours", order: 0, sort: start };
-  return { key: "past", label: "Terminé", order: 3, sort: end };
+  if (today <= end) return { key: "now", label: t("status.now"), order: 0, sort: start };
+  return { key: "past", label: t("status.past"), order: 3, sort: end };
 }
 
 function fmtRange(start, end) {
   const opts = { day: "numeric", month: "short" };
   const a = toDate(start), b = toDate(end);
   const sameYear = a.getFullYear() === b.getFullYear();
-  const left = a.toLocaleDateString("fr-FR", sameYear ? opts : { ...opts, year: "numeric" });
-  const right = b.toLocaleDateString("fr-FR", { ...opts, year: "numeric" });
+  const left = a.toLocaleDateString(locale(), sameYear ? opts : { ...opts, year: "numeric" });
+  const right = b.toLocaleDateString(locale(), { ...opts, year: "numeric" });
   return start === end ? right : `${left} → ${right}`;
 }
 
@@ -85,14 +85,14 @@ export const tripCard = (id) => (state.trips[id] ? card(summary(id, state.trips[
 function card(s) {
   const { id, trip } = s;
   const owner = isOwner(trip);
-  const name = trip.name || "Sans titre";
+  const name = trip.name || t("trip.untitled");
   // Confirmation après la poubelle (une suppression efface aussi les billets, sans retour possible)
   if (state.confirm === "swipe:" + id) {
-    return `<div class="swipe is-confirm"><div class="trip-card swipe-confirm" role="group" aria-label="Confirmation">
-      <p>${owner ? `Supprimer « ${esc(name)} » et tout son contenu ?` : `Quitter « ${esc(name)} » ? Il disparaîtra de vos voyages.`}</p>
+    return `<div class="swipe is-confirm"><div class="trip-card swipe-confirm" role="group" aria-label="${t("common.confirmation")}">
+      <p>${esc(owner ? t("trip.deleteAsk", { name }) : t("trip.leaveAsk", { name }))}</p>
       <div class="row-btns">
-        <button class="btn danger-solid" data-act="swipe-delete-yes" data-trip="${esc(id)}" type="button">${owner ? "Supprimer" : "Quitter"}</button>
-        <button class="btn" data-act="swipe-cancel" type="button">Annuler</button>
+        <button class="btn danger-solid" data-act="swipe-delete-yes" data-trip="${esc(id)}" type="button">${owner ? t("common.delete") : t("common.leave")}</button>
+        <button class="btn" data-act="swipe-cancel" type="button">${t("common.cancel")}</button>
       </div>
     </div></div>`;
   }
@@ -112,9 +112,9 @@ function card(s) {
     <article class="trip-card is-${s.status.key}">
     ${cardBody(s, `<a class="tc-link" href="#voyage-${esc(id)}">${esc(name)}</a>`)}
   </article>
-    <button class="swipe-action" data-act="swipe-delete" data-trip="${esc(id)}" type="button" aria-label="${owner ? "Supprimer" : "Quitter"} le voyage « ${esc(name)} »">
+    <button class="swipe-action" data-act="swipe-delete" data-trip="${esc(id)}" type="button" aria-label="${esc(owner ? t("trip.deleteNamed", { name }) : t("trip.leaveNamed", { name }))}">
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
-      <span>${owner ? "Supprimer" : "Quitter"}</span>
+      <span>${owner ? t("common.delete") : t("common.leave")}</span>
     </button>
   </div>`;
 }
@@ -127,25 +127,25 @@ function cardBody(s, title) {
   const dots = stops.slice(0, 12).map(() => "<i></i>").join("");
   return `<div class="tc-top">
       <span class="tc-status">${esc(s.status.label)}</span>
-      ${(trip.members || []).length > 1 ? `<span class="tc-shared">Partagé · ${trip.members.length}</span>` : ""}
+      ${(trip.members || []).length > 1 ? `<span class="tc-shared">${t("trips.shared", { n: trip.members.length })}</span>` : ""}
       <span class="tc-flags" aria-hidden="true">${flagsOf(trip, stops)}</span>
     </div>
     <h2>${title}</h2>
-    <p class="tc-dates">${s.start ? esc(fmtRange(s.start, s.end)) : "Pas encore de dates"}</p>
-    ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : `<p class="tc-route empty-route">Aucune étape pour l'instant</p>`}
-    ${tripPending(trip) ? `<span class="todo-alert">${tripPending(trip)} à réserver</span>` : ""}
+    <p class="tc-dates">${s.start ? esc(fmtRange(s.start, s.end)) : t("trips.noDates")}</p>
+    ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : `<p class="tc-route empty-route">${t("trips.noStops")}</p>`}
+    ${tripPending(trip) ? `<span class="todo-alert">${esc(t("trips.toBook", { n: tripPending(trip) }))}</span>` : ""}
     ${dots ? `<div class="tc-dots" aria-hidden="true">${dots}</div>` : ""}
     <dl class="tc-stats">
       ${trip.kind === "sejour"
-        ? `<div><dt>Séjour</dt><dd>${plural(sejourStats(trip).activities, "activité")}</dd></div>`
-        : `<div><dt>Étapes</dt><dd>${stops.length}</dd></div>`}
-      <div><dt>Nuits</dt><dd>${s.nights}</dd></div>
-      <div><dt>Budget</dt><dd>${s.budget ? esc(fmtMoney(s.budget, trip.currency || "EUR")) : "–"}</dd></div>
+        ? `<div><dt>${t("trips.statSejour")}</dt><dd>${count(sejourStats(trip).activities, "count.activity")}</dd></div>`
+        : `<div><dt>${t("trips.statStops")}</dt><dd>${stops.length}</dd></div>`}
+      <div><dt>${t("trips.statNights")}</dt><dd>${s.nights}</dd></div>
+      <div><dt>${t("trips.statBudget")}</dt><dd>${s.budget ? esc(fmtMoney(s.budget, trip.currency || "EUR")) : "–"}</dd></div>
     </dl>`;
 }
 
 export function tripsListView() {
-  const all = Object.entries(state.trips).map(([id, t]) => summary(id, t));
+  const all = Object.entries(state.trips).map(([id, trip]) => summary(id, trip));
   all.sort((a, b) => {
     if (a.status.order !== b.status.order) return a.status.order - b.status.order;
     if (a.status.key === "past") return b.status.sort.localeCompare(a.status.sort); // plus récent d'abord
@@ -159,10 +159,10 @@ export function tripsListView() {
   return `<section class="page${sel ? " is-selecting" : ""}">
     <header class="page-head trips-head">
       <div>
-        <h1>Mes voyages</h1>
-        <p class="lead">${plural(all.length, "voyage")}</p>
+        <h1>${t("page.trips")}</h1>
+        <p class="lead">${count(all.length, "count.trip")}</p>
       </div>
-      ${selectButtons(all.map((s) => s.id), `<button class="btn primary" data-act="new-trip" type="button">+ Nouveau voyage</button>`)}
+      ${selectButtons(all.map((s) => s.id), `<button class="btn primary" data-act="new-trip" type="button">${t("trips.new")}</button>`)}
     </header>
     ${sel ? "" : invitationsBlock()}
     <div class="trip-grid">
@@ -170,9 +170,9 @@ export function tripsListView() {
       ${sel ? "" : `<div class="trip-card new-card">
         <button class="new-card-btn" data-act="new-trip" type="button">
           <span class="plus" aria-hidden="true">+</span>
-          <b>Nouveau voyage</b>
+          <b>${t("trips.newShort")}</b>
         </button>
-        <span class="note">Ou <a href="#destinations">inspirez-vous des destinations</a></span>
+        <span class="note">${t("trips.orInspire", { link: `<a href="#destinations">${t("trips.inspireLink")}</a>` })}</span>
       </div>`}
     </div>
     ${sel ? selectionBar(all) : ""}
@@ -186,15 +186,15 @@ function selectionBar(all) {
   const del = picked.filter((s) => isOwner(s.trip)).length;
   const leave = picked.length - del;
   const parts = [];
-  if (del) parts.push(`supprimer ${plural(del, "voyage")} et tout ${del > 1 ? "leur" : "son"} contenu (billets compris)`);
-  if (leave) parts.push(`quitter ${leave} ${leave > 1 ? "voyages partagés" : "voyage partagé"}`);
-  const question = parts.join(" et ");
+  if (del) parts.push(count(del, "trips.selDelete"));
+  if (leave) parts.push(count(leave, "trips.selLeave"));
+  const question = parts.join(t("common.and"));
   return selectBar(picked.length, {
-    word: "voyage",
-    hint: "Touchez les voyages à supprimer",
-    question: `${question.charAt(0).toUpperCase() + question.slice(1)} ? C'est définitif.`,
+    picked: "trips.picked",
+    hint: t("trips.selHint"),
+    question: esc(t("trips.selQuestion", { what: question.charAt(0).toUpperCase() + question.slice(1) })),
     yesAct: "select-delete-yes",
-    yesLabel: del ? "Supprimer" : "Quitter",
+    yesLabel: del ? t("common.delete") : t("common.leave"),
   });
 }
 
@@ -207,17 +207,17 @@ export function newTripView(code) {
       <span>${text}</span>
     </button>`;
   return `<section class="page new-trip">
-    <a class="trip-back" href="#voyages">← Mes voyages</a>
+    <a class="trip-back" href="#voyages">${t("trips.back")}</a>
     <header class="page-head">
-      <h1>Nouveau voyage${c ? ` : ${esc(c.name)}` : ""}</h1>
-      <p class="lead">Quel genre de voyage préparez-vous ?</p>
+      <h1>${c ? esc(t("newTrip.titleIn", { country: countryName(c.code) })) : t("newTrip.title")}</h1>
+      <p class="lead">${t("newTrip.lead")}</p>
     </header>
     <div class="kind-grid">
-      ${choice("road", "Road trip", "Plusieurs étapes reliées par des trajets, placées sur une carte, avec le budget de chaque étape.",
+      ${choice("road", t("newTrip.road"), t("newTrip.roadText"),
         `<path d="M8 22 C20 6, 30 28, 44 12 S58 14, 58 14" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 4"/><circle cx="8" cy="22" r="4"/><circle cx="31" cy="17" r="4"/><circle cx="56" cy="12" r="4"/>`)}
-      ${choice("sejour", "Séjour", "Un seul lieu : l'aller, l'hébergement, puis vos activités jour par jour avec l'heure, les billets et comment y aller.",
+      ${choice("sejour", t("newTrip.sejour"), t("newTrip.sejourText"),
         `<path d="M13 4a9 9 0 0 1 9 9c0 7-9 15-9 15s-9-8-9-15a9 9 0 0 1 9-9z" fill="currentColor"/><circle cx="13" cy="13" r="3" fill="var(--surface)"/>`)}
     </div>
-    <p class="note">Vous pourrez changer plus tard tant que le voyage n'a qu'une étape.</p>
+    <p class="note">${t("newTrip.note")}</p>
   </section>`;
 }

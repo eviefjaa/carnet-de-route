@@ -4,7 +4,8 @@
 // Un bloc par jour, de l'arrivée au départ ; les activités sans date, ou hors des dates, dans
 // « Pas encore de jour » ; une étape sans dates n'a qu'un bloc « Activités ».
 
-import { esc, safeUrl, fmtDay, fmtHour, toDate, needsBooking, plural, parsePrice, priceInput, hasPrice, fmtMoney } from "../utils.js";
+import { esc, safeUrl, fmtDay, fmtHour, toDate, needsBooking, parsePrice, priceInput, hasPrice, fmtMoney } from "../utils.js";
+import { t, count } from "../i18n.js";
 import { state, currentTrip } from "../store.js";
 import { todoTickets, todoTicketButton } from "./tickets.js";
 import { dateRange, bookBox, bookMark, markClass, pending } from "./checklist.js";
@@ -52,14 +53,14 @@ export function programDays(stop, { firstDay = 1, moves = {} } = {}) {
   const loose = todos.filter((x) => !inDays.has(x.date)).sort(byTime);
   const a = moves.arrive || {}, d = moves.depart || {};
   const out = days.map((day, i) => ({
-    title: `Jour ${firstDay + i}`, sub: fmtDay(day), date: day,
+    title: t("program.day", { n: firstDay + i }), sub: fmtDay(day), date: day,
     list: todos.filter((x) => x.date === day).sort(byTime),
     moves: {
       arrive: i === 0 && a.time && a.date === day ? a.time : "",
       depart: i === days.length - 1 && d.time && d.date === day ? d.time : "",
     },
   }));
-  if (loose.length || !days.length) out.push({ title: days.length ? "Pas encore de jour" : "Activités", sub: "", date: "", list: loose, moves: {} });
+  if (loose.length || !days.length) out.push({ title: days.length ? t("program.noDay") : t("program.activities"), sub: "", date: "", list: loose, moves: {} });
   return out;
 }
 
@@ -68,8 +69,8 @@ const daysHtml = (stop, opts) => programDays(stop, opts).map((x) => dayBlock(sto
 // Séjour : toujours déplié, sous son titre
 export function sejourProgram(stop) {
   const days = stopDays(stop);
-  return `<h2 class="sj-title">Programme jour par jour</h2>
-    ${days.length ? "" : `<p class="note">Ajoutez les dates d'arrivée et de départ dans « Le lieu » pour avoir un programme par jour.</p>`}
+  return `<h2 class="sj-title">${t("program.sejourTitle")}</h2>
+    ${days.length ? "" : `<p class="note">${t("program.sejourNoDates")}</p>`}
     ${daysHtml(stop, { moves: { arrive: { date: days[0], time: stop.arriveTime }, depart: { date: stop.depart, time: stop.departTime } } })}`;
 }
 
@@ -81,17 +82,18 @@ const ARROW = `<svg class="pg-arrow" viewBox="0 0 24 24" width="14" height="14" 
 export function programPill(stop) {
   const n = (stop.todos || []).length;
   const open = state.programOpen.has(stop.id);
-  const place = esc(stop.place || "l'étape");
+  const place = stop.place || t("program.theStop");
   // Rien de prévu : « + Programme » ouvre directement l'ajout d'une activité, au premier jour
   if (!n && !open) {
-    return `<button class="pg-pill is-empty" data-act="act-add" data-stop="${esc(stop.id)}" data-date="${esc(stop.arrive || "")}" type="button" aria-label="Ajouter une activité au programme de ${place}">
-      <span aria-hidden="true">+</span> <b>Programme</b></button>`;
+    return `<button class="pg-pill is-empty" data-act="act-add" data-stop="${esc(stop.id)}" data-date="${esc(stop.arrive || "")}" type="button" aria-label="${esc(t("program.addTo", { place }))}">
+      <span aria-hidden="true">+</span> <b>${t("program.title")}</b></button>`;
   }
   const left = pending(stop);
-  const label = `Programme de ${place} : ${n ? plural(n, "activité") : "rien de prévu"}${left ? `, ${left} à réserver` : ""}`;
-  return `<button class="pg-pill" data-act="program-toggle" data-stop="${esc(stop.id)}" type="button" aria-expanded="${open}" aria-controls="pg-${esc(stop.id)}" aria-label="${label}">
-      ${CALENDAR} <b>Programme</b>${n ? ` <span>· ${plural(n, "activité")}</span>` : ""}
-      <span class="pg-end">${left ? `<span class="pg-pending">· ${left} à réserver</span> ` : ""}${ARROW}</span></button>`;
+  const what = n ? count(n, "count.activity") : t("program.nothing");
+  const label = left ? t("program.labelLeft", { place, what, left }) : t("program.label", { place, what });
+  return `<button class="pg-pill" data-act="program-toggle" data-stop="${esc(stop.id)}" type="button" aria-expanded="${open}" aria-controls="pg-${esc(stop.id)}" aria-label="${esc(label)}">
+      ${CALENDAR} <b>${t("program.title")}</b>${n ? ` <span>· ${count(n, "count.activity")}</span>` : ""}
+      <span class="pg-end">${left ? `<span class="pg-pending">· ${t("trips.toBook", { n: left })}</span> ` : ""}${ARROW}</span></button>`;
 }
 
 // Programme déplié, sous le résumé de l'étape : jours et prix en une ligne discrète, puis les jours
@@ -100,8 +102,9 @@ export function programPanel(stop, opts) {
   if (!state.programOpen.has(stop.id)) return `<section class="program" id="${id}" hidden></section>`;
   const days = stopDays(stop).length;
   const cost = activitiesTotal(stop);
-  const meta = [days ? `Sur ${plural(days, "jour")}` : "", cost ? `${esc(money(cost))} d'activités` : ""].filter(Boolean).join(" · ");
-  return `<section class="program" id="${id}" aria-label="Programme de ${esc(stop.place || "l'étape")}">
+  // Textes du dictionnaire (sûrs) : seul le montant est échappé
+  const meta = [days ? t("program.overDays", { days: count(days, "count.day") }) : "", cost ? t("program.cost", { price: esc(money(cost)) }) : ""].filter(Boolean).join(" · ");
+  return `<section class="program" id="${id}" aria-label="${esc(t("program.of", { place: stop.place || t("program.theStop") }))}">
     ${meta ? `<p class="pg-meta">${meta}</p>` : ""}
     ${daysHtml(stop, opts)}
   </section>`;
@@ -112,14 +115,14 @@ function dayBlock(stop, { title, sub, date, list, moves = {} }) {
   const f = state.actForm;
   const adding = f && !f.todo && f.stop === stop.id && f.date === date;
   const move = (time, label) => ({ move: true, time, text: label });
-  const rows = [...list, ...(moves.arrive ? [move(moves.arrive, "Arrivée")] : []), ...(moves.depart ? [move(moves.depart, "Départ")] : [])].sort(byTime);
+  const rows = [...list, ...(moves.arrive ? [move(moves.arrive, t("stop.arrive"))] : []), ...(moves.depart ? [move(moves.depart, t("stop.depart"))] : [])].sort(byTime);
   return `<section class="sj-day${date ? "" : " is-loose"}" aria-label="${esc(title)}${sub ? " " + esc(sub) : ""}">
     <div class="sj-day-head">
       <h3>${esc(title)}${sub ? ` <span>${esc(sub)}</span>` : ""}</h3>
-      ${adding ? "" : `<button class="cl-add" data-act="act-add" data-stop="${esc(stop.id)}" data-date="${esc(date)}" type="button" aria-label="Ajouter une activité${sub ? " le " + esc(sub) : ""}" title="Ajouter une activité">+</button>`}
+      ${adding ? "" : `<button class="cl-add" data-act="act-add" data-stop="${esc(stop.id)}" data-date="${esc(date)}" type="button" aria-label="${esc(sub ? t("program.addOn", { day: sub }) : t("program.add"))}" title="${t("program.add")}">+</button>`}
     </div>
     ${rows.length ? `<ul class="sj-acts">${rows.map((x) => x.move ? moveRow(x) : f && f.todo === x.id ? `<li>${activityForm(stop, x)}</li>` : activity(stop, x)).join("")}</ul>` : ""}
-    ${list.length || adding || !date ? "" : `<p class="note">Rien de prévu pour l'instant.</p>`}
+    ${list.length || adding || !date ? "" : `<p class="note">${t("program.nothingYet")}</p>`}
     ${adding ? activityForm(stop, { date }) : ""}
   </section>`;
 }
@@ -137,12 +140,12 @@ function activity(stop, x) {
         <span class="sj-text">${esc(x.text)}</span>
         ${hasPrice(x.price) ? `<span class="price sj-price">${esc(money(x.price))}</span>` : ""}
       </label>
-      <button class="cl-del" data-act="act-edit" data-stop="${esc(stop.id)}" data-todo="${esc(x.id)}" type="button" aria-label="Modifier « ${esc(x.text)} »" title="Modifier">
+      <button class="cl-del" data-act="act-edit" data-stop="${esc(stop.id)}" data-todo="${esc(x.id)}" type="button" aria-label="${esc(t("program.editNamed", { name: x.text }))}" title="${t("common.edit")}">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
-      <button class="cl-del" data-act="todo-del" data-todo="${esc(x.id)}" data-stop="${esc(stop.id)}" type="button" aria-label="Supprimer « ${esc(x.text)} »" title="Supprimer">✕</button>
+      <button class="cl-del" data-act="todo-del" data-todo="${esc(x.id)}" data-stop="${esc(stop.id)}" type="button" aria-label="${esc(t("program.deleteNamed", { name: x.text }))}" title="${t("common.delete")}">✕</button>
     </div>
-    ${x.how || maps ? `<p class="sj-how">${x.how ? `<span><b>Y aller :</b> ${esc(x.how)}</span>` : ""}
-      ${maps ? `<a class="cl-map" href="${esc(maps)}" target="_blank" rel="noopener noreferrer" aria-label="Voir « ${esc(x.text)} » sur la carte">Carte ↗</a>` : ""}</p>` : ""}
+    ${x.how || maps ? `<p class="sj-how">${x.how ? `<span><b>${t("program.getThere")}</b> ${esc(x.how)}</span>` : ""}
+      ${maps ? `<a class="cl-map" href="${esc(maps)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(t("program.seeOnMap", { name: x.text }))}">${t("program.map")}</a>` : ""}</p>` : ""}
     <div class="sj-tk">${todoTicketButton(stop, x)}${todoTickets(stop, x)}</div>
   </li>`;
 }
@@ -151,16 +154,16 @@ function activity(stop, x) {
 function activityForm(stop, x) {
   const id = x.id || "new";
   return `<form class="sj-form" data-act-form="${esc(stop.id)}"${x.id ? ` data-todo="${esc(x.id)}"` : ""}>
-    <label class="f full">Activité<input name="text" id="act-text-${esc(id)}" value="${esc(x.text || "")}" placeholder="Ex. Musée du Louvre, dîner chez Chartier…" maxlength="120" autocomplete="off" required></label>
-    <label class="f">Jour<input type="date" name="date" id="act-date-${esc(id)}" value="${esc(x.date || "")}"${dateRange(stop)}></label>
-    <label class="f">Heure<input type="time" name="time" id="act-time-${esc(id)}" value="${esc(x.time || "")}"></label>
+    <label class="f full">${t("act.activity")}<input name="text" id="act-text-${esc(id)}" value="${esc(x.text || "")}" placeholder="${t("act.textHint")}" maxlength="120" autocomplete="off" required></label>
+    <label class="f">${t("act.day")}<input type="date" name="date" id="act-date-${esc(id)}" value="${esc(x.date || "")}"${dateRange(stop)}></label>
+    <label class="f">${t("act.time")}<input type="time" name="time" id="act-time-${esc(id)}" value="${esc(x.time || "")}"></label>
     <div class="f sj-book">${bookBox("book", "act-book-" + id, x.id ? needsBooking(x) : false)}</div>
-    <label class="f">Prix (facultatif)<input name="price" id="act-price-${esc(id)}" value="${esc(priceInput(x.price))}" inputmode="decimal" placeholder="Ex. 25" autocomplete="off"></label>
-    <label class="f full">Comment y aller<input name="how" id="act-how-${esc(id)}" value="${esc(x.how || "")}" placeholder="Ex. Métro 1, arrêt Palais-Royal, puis 5 min à pied" maxlength="200" autocomplete="off"></label>
-    <label class="f full">Lien Google Maps<input name="maps" id="act-maps-${esc(id)}" value="${esc(x.maps || "")}" placeholder="Facultatif" inputmode="url" autocomplete="off"></label>
+    <label class="f">${t("act.price")}<input name="price" id="act-price-${esc(id)}" value="${esc(priceInput(x.price))}" inputmode="decimal" placeholder="${t("act.priceHint")}" autocomplete="off"></label>
+    <label class="f full">${t("act.how")}<input name="how" id="act-how-${esc(id)}" value="${esc(x.how || "")}" placeholder="${t("act.howHint")}" maxlength="200" autocomplete="off"></label>
+    <label class="f full">${t("act.maps")}<input name="maps" id="act-maps-${esc(id)}" value="${esc(x.maps || "")}" placeholder="${t("act.optional")}" inputmode="url" autocomplete="off"></label>
     <div class="form-actions">
-      <button class="btn" data-act="act-cancel" type="button">Annuler</button>
-      <button class="btn primary" type="submit">${x.id ? "Enregistrer" : "Ajouter"}</button>
+      <button class="btn" data-act="act-cancel" type="button">${t("common.cancel")}</button>
+      <button class="btn primary" type="submit">${x.id ? t("common.save") : t("common.add")}</button>
     </div>
   </form>`;
 }

@@ -14,6 +14,7 @@ import { onSocialLoaded, resetSocial, refreshNotifications, travellerNameNow } f
 import { toast } from "./toast.js";
 import { renderSidebar } from "./views/sidebar.js";
 import { state } from "./store.js";
+import { t } from "./i18n.js";
 
 loadPrefs();
 replaceTrips(loadLocal());
@@ -48,7 +49,7 @@ onTripEdited((tripId, uid) => {
   const key = `${tripId}:${uid}`;
   if (Date.now() - (lastToast.get(key) || 0) < 120000) return;
   lastToast.set(key, Date.now());
-  travellerNameNow(state.trips[tripId], uid).then((name) => toast(`${name} vient de modifier le voyage`));
+  travellerNameNow(state.trips[tripId], uid).then((name) => toast(t("toast.tripEditedBy", { name })));
 });
 // Nouvelles notifications : toutes les 3 minutes, et au retour sur l'onglet
 setInterval(() => document.visibilityState === "visible" && refreshNotifications(), 180000);

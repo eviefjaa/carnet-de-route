@@ -5,19 +5,13 @@
 // accroche, présentation, histoire et lieux à ne pas manquer.
 // Pour ajouter un pays : copiez une ligne c(...) et adaptez-la.
 
+import { labels } from "../i18n.js";
+
+// Continents : clés fixes (filtres), libellés traduits à l'affichage (clés continent.*)
 export const CONTINENTS = ["Europe", "Afrique", "Moyen-Orient", "Asie", "Amériques", "Océanie"];
 
-export const TAGS = {
-  plage: "Plage",
-  montagne: "Montagne",
-  nature: "Nature",
-  culture: "Culture",
-  ville: "Villes",
-  gastronomie: "Gastronomie",
-  aventure: "Aventure",
-  desert: "Désert",
-  faune: "Faune",
-};
+// Envies : clés fixes (filtres, données des pays), libellés traduits (« Plage », « Beach »…)
+export const TAGS = labels("tag", ["plage", "montagne", "nature", "culture", "ville", "gastronomie", "aventure", "desert", "faune"]);
 
 
 const c = (code, name, continent, capital, language, currency, best, budget, tags, tagline, description, history, highlights) =>

@@ -7,6 +7,7 @@
 // commentaires, favoris, auteur.
 
 import { uid, safeUrl, dayOrEmpty, MODES } from "./utils.js";
+import { t } from "./i18n.js";
 
 // Date « AAAA-MM-JJ » décalée de n jours (calcul en UTC : pas de saut à l'heure d'été)
 export function addDays(day, n) {
@@ -37,7 +38,7 @@ export function tripFromPost(post, { name, start = "" } = {}, kinds = {}) {
     const todos = program
       ? program.filter((a) => a.text).map((a) => ({ id: uid(), text: text(a.text, 120), done: false, book: false,
           date: dayOf(a.day), time: /^([01]\d|2[0-3]):[0-5]\d$/.test(a.time || "") ? a.time : "", how: text(a.how, 200) }))
-      : (it.todos || []).filter(Boolean).map((t) => ({ id: uid(), text: text(t, 120), done: false, book: false }));
+      : (it.todos || []).filter(Boolean).map((x) => ({ id: uid(), text: text(x, 120), done: false, book: false }));
     return { id: uid(), type: "stop", place: text(it.place, 120), country: text(it.country, 60), arrive, depart,
       address: "", notes: "", links: [], price: null, todos };
   });
@@ -56,7 +57,7 @@ export function tripFromPost(post, { name, start = "" } = {}, kinds = {}) {
   });
 
   return {
-    name: text(name || post.title, 200) || "Nouveau voyage",
+    name: text(name || post.title, 200) || t("trips.newShort"),
     country: /^[A-Z]{2}$/.test(trip.country || "") ? trip.country : "",
     kind: sejour ? "sejour" : "",
     items,

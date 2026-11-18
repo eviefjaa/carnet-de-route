@@ -4,6 +4,7 @@ import * as cloud from "./cloud.js";
 import { state, setCloud, replaceTrips, loadLocal, clearLocal, applyRemote, hasPendingChanges, hasUnsaved, save, flush, resetUi, setSync, syncError, onTripsMerged } from "./store.js";
 import { render } from "./views/trip.js";
 import { toast } from "./toast.js";
+import { t, count } from "./i18n.js";
 import { prefs, usePrefsCloud, resetPrefs } from "./prefs.js";
 import { loadMyProfile, resetSocial, refreshNotifications, deleteMySocialData } from "./social.js";
 
@@ -14,7 +15,7 @@ export async function startAccounts() {
     const ok = await cloud.init(onUserChange);
     if (!ok) return;
   } catch {
-    toast("Les comptes sont indisponibles pour le moment : vos voyages restent sur cet appareil.");
+    toast(t("err.accountsDown"));
   }
 }
 
@@ -66,7 +67,7 @@ async function onUserChange(user) {
       if (!state.trips[state.currentId]) state.currentId = imported[0];
       save();
       await flush();
-      if (!hasUnsaved()) toast(imported.length > 1 ? `${imported.length} voyages de cet appareil ajoutés à votre compte` : "Le voyage de cet appareil a été ajouté à votre compte");
+      if (!hasUnsaved()) toast(count(imported.length, "toast.imported"));
     }
     // La copie de l'appareil n'est effacée qu'une fois tout enregistré dans le compte
     if (!hasUnsaved()) clearLocal();
@@ -74,7 +75,7 @@ async function onUserChange(user) {
     resetSocial();
     await loadMyProfile();
     refreshNotifications();
-    if (state.invitations.length) toast(state.invitations.length > 1 ? `${state.invitations.length} invitations à des voyages vous attendent dans Mes voyages` : `Une invitation au voyage « ${state.invitations[0].name} » vous attend dans Mes voyages`);
+    if (state.invitations.length) toast(state.invitations.length > 1 ? t("toast.invitesWaiting", { n: state.invitations.length }) : t("toast.inviteWaiting", { name: state.invitations[0].name }));
 
     stopWatching = cloud.watchTrips(user.uid, (id, trip) => {
       // Pendant une saisie ou un envoi, la version reçue est gardée de côté : elle sera
@@ -86,13 +87,13 @@ async function onUserChange(user) {
       deferred.delete(id);
       applyRemote(id, trip);
       render();
-    }, (err) => setSync("error", "La synchronisation en direct s'est arrêtée. " + syncError(err) + " Rechargez la page."));
+    }, (err) => setSync("error", t("err.liveStopped", { why: syncError(err) })));
   } catch (err) {
     // On reste sur les voyages de cet appareil, enregistrés sur l'appareil seulement :
     // ils seront ajoutés au compte à la prochaine connexion réussie
     setCloud(null);
-    setSync("error", "Vos voyages n'ont pas pu être chargés depuis votre compte. " + syncError(err) + " Les modifications restent sur cet appareil.");
-    toast("Impossible de charger vos voyages depuis votre compte.");
+    setSync("error", t("err.loadFailed", { why: syncError(err) }));
+    toast(t("err.loadFailedShort"));
   }
   state.loading = false;
   render();
@@ -116,7 +117,7 @@ export async function deleteAccount(password) {
     await cloud.deleteAuthUser(); // la déconnexion suit (onUserChange)
   } catch (err) {
     console.error(err);
-    return "La suppression s'est arrêtée en cours de route. Rechargez la page, reconnectez-vous et recommencez : ce qui reste sera supprimé.";
+    return t("account.deleteStopped");
   }
   replaceTrips({});
   clearLocal(); // rien ne reste non plus sur cet appareil

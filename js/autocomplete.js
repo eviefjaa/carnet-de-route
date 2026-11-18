@@ -7,6 +7,7 @@
 
 import { esc } from "./utils.js";
 import { searchPlaces } from "./places.js";
+import { t } from "./i18n.js";
 
 let input = null;      // champ en cours
 let list = null;       // liste de suggestions affichée
@@ -32,6 +33,7 @@ function onInput(e) {
   delete el.dataset.lat;
   delete el.dataset.lng;
   delete el.dataset.country;
+  delete el.dataset.countryCode;
 
   input = el;
   clearTimeout(timer);
@@ -78,13 +80,13 @@ function show(el) {
     ? items.map((r, i) => `<li role="option" data-i="${i}" id="${list.id}-${i}" aria-selected="${i === active}" class="${i === active ? "on" : ""}">
         <span class="ac-main"><b>${esc(r.name)}</b>${r.sub ? `<span class="ac-sub">${esc(r.sub)}</span>` : ""}</span>
         <span class="ac-kind">${esc(r.kind)}</span>
-      </li>`).join("") + (closeMatch(el.value, items) ? "" : `<li class="ac-empty">${HINT}</li>`)
-    : `<li class="ac-empty">Aucun lieu trouvé. ${HINT} Vous pouvez aussi garder votre saisie.</li>`;
+      </li>`).join("") + (closeMatch(el.value, items) ? "" : `<li class="ac-empty">${HINT()}</li>`)
+    : `<li class="ac-empty">${t("place.none", { hint: HINT() })}</li>`;
 }
 
 // Le service cherche les noms locaux et tolère mal les fautes : un conseil quand aucune
 // suggestion ne contient ce qui a été tapé (accents et majuscules ignorés)
-const HINT = "Pas le bon lieu ? Essayez le nom local, sans faute de frappe (ex. Foz do Iguaçu).";
+const HINT = () => t("place.hint");
 const plain = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 const closeMatch = (q, results) => results.some((r) => plain(r.name + " " + (r.sub || "")).includes(plain(q)));
 
@@ -112,6 +114,7 @@ function pick(i) {
   input.dataset.lat = r.lat;
   input.dataset.lng = r.lng;
   input.dataset.country = r.country;
+  input.dataset.countryCode = r.countryCode || "";
   close();
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
@@ -130,5 +133,5 @@ function close() {
 // Lieu choisi dans les suggestions pour ce champ (ou null si saisi à la main)
 export function pickedPlace(el) {
   if (!el || el.dataset.picked !== el.value || !el.dataset.lat) return null;
-  return { lat: +el.dataset.lat, lng: +el.dataset.lng, country: el.dataset.country || "" };
+  return { lat: +el.dataset.lat, lng: +el.dataset.lng, country: el.dataset.country || "", countryCode: el.dataset.countryCode || "" };
 }

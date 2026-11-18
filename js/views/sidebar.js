@@ -5,6 +5,7 @@ import { state } from "../store.js";
 import { prefs } from "../prefs.js";
 import { PAGES } from "../router.js";
 import { unreadNotifications } from "./social.js";
+import { t, count } from "../i18n.js";
 
 const ICONS = {
   trips: '<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h8a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h8"/>',
@@ -33,12 +34,12 @@ export function renderSidebar() {
   const links = Object.entries(PAGES).map(([key, p]) => `
     <a class="nav-link${key === current ? " on" : ""}" href="#${p.hash}"${key === current ? ' aria-current="page"' : ""}>
       ${icon(key)}<span>${esc(p.label)}</span>
-      ${counts[key] ? `<span class="nav-count${key === "notifications" ? " is-new" : ""}"${key === "notifications" ? ` aria-label="${counts[key]} nouvelle${counts[key] > 1 ? "s" : ""}"` : ""}>${counts[key]}</span>` : ""}
+      ${counts[key] ? `<span class="nav-count${key === "notifications" ? " is-new" : ""}"${key === "notifications" ? ` aria-label="${esc(count(counts[key], "nav.newCount"))}"` : ""}>${counts[key]}</span>` : ""}
     </a>`).join("");
 
   const who = state.user
     ? `<a class="side-user" href="#profil"><span class="avatar">${esc((prefs.name || state.user.email || "?")[0].toUpperCase())}</span>
-        <span class="side-user-text"><b>${esc(prefs.name || "Mon compte")}</b><span>${esc(state.user.email)}</span></span></a>`
+        <span class="side-user-text"><b>${esc(prefs.name || t("nav.myAccount"))}</b><span>${esc(state.user.email)}</span></span></a>`
     : "";
 
   // Sur téléphone, le menu est caché : le nombre de notifications s'affiche aussi sur le bouton du menu
@@ -47,20 +48,21 @@ export function renderSidebar() {
     const n = counts.notifications;
     btn.classList.toggle("has-new", n > 0);
     btn.dataset.count = n > 9 ? "9+" : String(n);
-    btn.setAttribute("aria-label", n ? `Ouvrir le menu (${n} notification${n > 1 ? "s" : ""})` : "Ouvrir le menu");
+    btn.setAttribute("aria-label", n ? t("nav.openMenuWith", { notifs: count(n, "count.notification") }) : t("nav.openMenu"));
   }
 
+  el.setAttribute("aria-label", t("nav.mainMenu"));
   el.innerHTML = `
     <div class="side-head">
       <div class="side-identity">
         <img class="side-logo" src="img/logo.svg" alt="" width="36" height="36">
         <div class="side-id">
-          <span class="side-brand">Hippalos</span>
-          <span class="side-tagline">Prenez le bon vent</span>
+          <span class="side-brand">${t("app.name")}</span>
+          <span class="side-tagline">${t("app.tagline")}</span>
         </div>
       </div>
-      <button class="btn ghost small side-close" data-act="close-menu" type="button" aria-label="Fermer le menu">✕</button>
+      <button class="btn ghost small side-close" data-act="close-menu" type="button" aria-label="${t("nav.closeMenu")}">✕</button>
     </div>
-    <nav class="side-nav" aria-label="Pages">${links}</nav>
+    <nav class="side-nav" aria-label="${t("nav.pages")}">${links}</nav>
     <div class="side-foot">${who}</div>`;
 }

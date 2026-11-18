@@ -6,6 +6,8 @@
 // mergeEdit regroupe les modifications d'une même série (moins d'une heure d'écart) : une seule
 // trace par voyageur et par voyage, jamais une par enregistrement.
 
+import { count, locale } from "./i18n.js";
+
 export const MAX_WHAT = 5;       // phrases gardées ; au-delà, « more » compte le reste
 export const MAX_LEN = 120;      // caractères par phrase
 export const SERIES_MS = 3600000; // une série de modifications : moins d'une heure d'écart
@@ -86,7 +88,6 @@ export function mergeEdit(prev, what, now) {
 // « ajout de l'étape Porto, 2 activités ajoutées à Lisbonne et 3 autres changements »
 export function editText(what, more) {
   const parts = [...(what || [])];
-  if (more) parts.push(`${more} autre${more > 1 ? "s" : ""} changement${more > 1 ? "s" : ""}`);
-  if (!parts.length) return "";
-  return parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}`;
+  if (more) parts.push(count(more, "edit.more"));
+  return new Intl.ListFormat(locale(), { type: "conjunction" }).format(parts);
 }

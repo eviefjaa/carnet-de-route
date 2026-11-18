@@ -17,25 +17,15 @@ import * as cloud from "./cloud.js";
 import { state } from "./store.js";
 import { uid, safeUrl } from "./utils.js";
 import { publicCopy } from "./publish.js";
+import { t, labels } from "./i18n.js";
 
 const F = () => cloud.firestore();
 const me = () => (state.user ? state.user.uid : null);
 
 export const HANDLE_RE = /^[a-z0-9_.]{3,20}$/;
-// Types de recommandations
-export const RECO_KINDS = {
-  resto: "Restaurant",
-  logement: "Hébergement",
-  adresse: "Adresse",
-  activite: "Activité",
-  autre: "Autre",
-};
-
-export const VISIBILITIES = {
-  public: "Tout le monde",
-  followers: "Mes abonnés",
-  private: "Moi seul(e)",
-};
+// Types de recommandations et visibilités : clés enregistrées (fixes), libellés traduits
+export const RECO_KINDS = labels("recoKind", ["resto", "logement", "adresse", "activite", "autre"]);
+export const VISIBILITIES = labels("visibility", ["public", "followers", "private"]);
 
 // ---------- Données chargées pour les pages (rechargées après chaque changement) ----------
 const cache = new Map();
@@ -145,7 +135,7 @@ export async function myNetwork() {
     fb.getDocs(fb.query(col, fb.where("followed", "==", me()))),
   ]);
   const withProfile = (list, key) =>
-    Promise.all(list.map(async (f) => ({ ...f, profile: (await getProfile(f[key]).catch(() => null)) || { uid: f[key], name: "Compte supprimé", handle: "" } })));
+    Promise.all(list.map(async (f) => ({ ...f, profile: (await getProfile(f[key]).catch(() => null)) || { uid: f[key], name: t("share.deletedAccount"), handle: "" } })));
   const following = mine.docs.map((d) => d.data());
   const followers = theirs.docs.map((d) => d.data());
   return {
@@ -187,14 +177,14 @@ function normalizePost(id, p) {
         line: typeof i.line === "string" && i.line.length <= 20000 && /^[\x3f-\x7e]*$/.test(i.line) ? i.line : "", km: intOrNull(i.km) }
     : { type: "stop", place: text(i.place, 120), country: text(i.country, 60), day: intOrNull(i.day), nights: intOrNull(i.nights),
         geo: geoOrNull(i.geo),
-        todos: (Array.isArray(i.todos) ? i.todos : []).map((t) => text(t, 120)).filter(Boolean),
+        todos: (Array.isArray(i.todos) ? i.todos : []).map((x) => text(x, 120)).filter(Boolean),
         // Programme de l'étape (séjour ou road trip) : jour (entier), heure (HH:MM), activité, comment y aller
         program: (Array.isArray(i.program) ? i.program : []).filter(isObj).slice(0, 60).map((a) => ({
           text: text(a.text, 120), day: intOrNull(a.day), time: /^([01]\d|2[0-3]):[0-5]\d$/.test(a.time) ? a.time : "", how: text(a.how, 200),
         })).filter((a) => a.text) });
   return {
     id, owner: text(p.owner, 128), ownerName: text(p.ownerName, 40), ownerHandle: text(p.ownerHandle, 20),
-    title: text(p.title, 200) || "Sans titre",
+    title: text(p.title, 200) || t("trip.untitled"),
     visibility: VISIBILITIES[p.visibility] ? p.visibility : "private",
     publishedAt: toMs(p.publishedAt),
     favCount: Number.isInteger(p.favCount) && p.favCount > 0 ? p.favCount : 0, // nombre de mises en favori (public)
@@ -434,13 +424,13 @@ async function loadNotifications() {
     fb.getDocs(fb.collection(db, "posts", p.id, "likes"))
       .then((snap) => snap.docs.map((d) => {
         const l = d.data();
-        return { type: "favorite", who: d.id, name: text(l.name, 40) || "Quelqu'un", handle: text(l.handle, 20), at: toMs(l.at), postId: p.id, postTitle: p.title };
+        return { type: "favorite", who: d.id, name: text(l.name, 40) || t("social.someone"), handle: text(l.handle, 20), at: toMs(l.at), postId: p.id, postTitle: p.title };
       }))
       .catch(() => [])));
   items.push(...likes.flat());
 
   // Noms des voyageurs de mes voyages, pour les notifications des voyages (tripNotifications)
-  const travellers = [...new Set(Object.values(state.trips).flatMap((t) => t.members || []))].filter((u) => u !== me() && !names.has(u));
+  const travellers = [...new Set(Object.values(state.trips).flatMap((trip) => trip.members || []))].filter((u) => u !== me() && !names.has(u));
   await Promise.all(travellers.map(async (u) => {
     const p = await getProfile(u).catch(() => null);
     if (p) names.set(u, { name: p.name, handle: p.handle });
@@ -451,7 +441,7 @@ async function loadNotifications() {
   const profiles = Object.fromEntries(await Promise.all(missing.map(async (u) => [u, await getProfile(u).catch(() => null)])));
   items.forEach((i) => {
     if (i.name) return;
-    i.name = profiles[i.who] ? profiles[i.who].name : i.email || "Quelqu'un";
+    i.name = profiles[i.who] ? profiles[i.who].name : i.email || t("social.someone");
     i.handle = profiles[i.who] ? profiles[i.who].handle : "";
   });
   return items.sort((a, b) => b.at - a.at).slice(0, 60);
@@ -463,7 +453,7 @@ async function loadNotifications() {
 const names = new Map(); // uid → { name, handle } des voyageurs (leur profil), rempli avec les notifications
 
 // Nom d'un voyageur : son profil, sinon son adresse dans le voyage (en attendant son profil)
-export const travellerName = (t, u) => (names.get(u) || {}).name || ((t && t.emails) || {})[u] || "Quelqu'un";
+export const travellerName = (trip, u) => (names.get(u) || {}).name || ((trip && trip.emails) || {})[u] || t("social.someone");
 
 // Profil d'un voyageur pas encore connu (il vient de rejoindre le voyage) : chargé une fois, puis réaffichage
 const asked = new Set();
@@ -473,24 +463,24 @@ async function loadName(u) {
   const p = await getProfile(u).catch(() => null);
   if (p) names.set(u, { name: p.name, handle: p.handle });
 }
-export async function travellerNameNow(t, u) {
+export async function travellerNameNow(trip, u) {
   await loadName(u);
-  return travellerName(t, u);
+  return travellerName(trip, u);
 }
 
 export function tripNotifications() {
   if (!state.user) return [];
   const items = [];
-  Object.entries(state.trips).forEach(([tripId, t]) => {
-    const others = (t.members || []).filter((u) => u !== me());
+  Object.entries(state.trips).forEach(([tripId, trip]) => {
+    const others = (trip.members || []).filter((u) => u !== me());
     others.forEach((u) => { if (!names.has(u) && !asked.has(u)) loadName(u).then(() => names.has(u) && rerender()); });
-    const base = (u) => ({ who: u, tripId, tripName: t.name || "Sans titre", name: travellerName(t, u), handle: (names.get(u) || {}).handle || "" });
+    const base = (u) => ({ who: u, tripId, tripName: trip.name || t("trip.untitled"), name: travellerName(trip, u), handle: (names.get(u) || {}).handle || "" });
     // Voyageurs qui ont rejoint mes voyages (toujours dans le voyage)
-    Object.entries(t.joined || {}).forEach(([u, when]) => {
+    Object.entries(trip.joined || {}).forEach(([u, when]) => {
       if (others.includes(u)) items.push({ type: "joined", at: toMs(when), ...base(u) });
     });
     // Modifications des autres voyageurs : une ligne par personne et par voyage, jamais les miennes
-    Object.entries(t.lastEdit || {}).forEach(([u, e]) => {
+    Object.entries(trip.lastEdit || {}).forEach(([u, e]) => {
       if (others.includes(u) && e.at && (e.what || []).length) items.push({ type: "edited", at: e.at, what: e.what, more: e.more || 0, ...base(u) });
     });
   });

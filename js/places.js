@@ -4,31 +4,14 @@
 // officiel (Guarulhos s'appelle « Governador André Franco Montoro ») : pour les trajets, on
 // ajoute en tête les aéroports d'une liste locale (data/airports.js, chargée à la demande).
 
+import { t, labels, getLang, locale } from "./i18n.js";
+
 const API = "https://photon.komoot.io/api/";
 
-// Types de lieux affichés, avec leur nom en français
-const KINDS = {
-  city: "Ville",
-  town: "Ville",
-  village: "Village",
-  hamlet: "Hameau",
-  municipality: "Commune",
-  suburb: "Quartier",
-  quarter: "Quartier",
-  neighbourhood: "Quartier",
-  island: "Île",
-  archipelago: "Archipel",
-  state: "Région",
-  region: "Région",
-  province: "Province",
-  country: "Pays",
-  aerodrome: "Aéroport",
-  airport: "Aéroport",
-  station: "Gare",
-  bus_station: "Gare routière",
-  ferry_terminal: "Port",
-  halt: "Gare",
-};
+// Types de lieux affichés (clés OpenStreetMap), avec leur nom traduit (clés place.*)
+const KINDS = labels("place", ["city", "town", "village", "hamlet", "municipality", "suburb", "quarter", "neighbourhood", "island",
+  "archipelago", "state", "region", "province", "country", "aerodrome", "airport", "station", "bus_station", "ferry_terminal", "halt"]);
+const AIRPORT_TYPES = new Set(["aerodrome", "airport"]);
 
 // Lieux habités et zones (pour les étapes)
 const PLACE_TYPES = new Set(["city", "town", "village", "hamlet", "municipality", "suburb", "quarter", "neighbourhood", "island", "archipelago", "state", "region", "province", "country"]);
@@ -39,11 +22,12 @@ const cache = new Map();
 export async function searchPlaces(q, mode = "place", signal) {
   q = q.trim();
   if (q.length < 2) return [];
-  const key = mode + "|" + q.toLowerCase();
+  const key = getLang() + "|" + mode + "|" + q.toLowerCase();
   if (cache.has(key)) return cache.get(key);
 
   const airports = mode === "place" ? [] : await airportMatches(q);
-  const params = new URLSearchParams({ q, limit: mode === "place" ? "10" : "12", lang: "fr" });
+  // Noms dans la langue choisie (Photon : fr ou en)
+  const params = new URLSearchParams({ q, limit: mode === "place" ? "10" : "12", lang: getLang() });
   if (mode === "place") params.append("osm_tag", "place");
   let data;
   try {
@@ -70,12 +54,15 @@ export async function searchPlaces(q, mode = "place", signal) {
     seen.add(id);
 
     const [lng, lat] = f.geometry.coordinates;
-    if (KINDS[type] === "Aéroport" && airports.some((a) => Math.abs(a.lat - lat) + Math.abs(a.lng - lng) < 0.05)) continue; // déjà en tête
+    if (AIRPORT_TYPES.has(type) && airports.some((a) => Math.abs(a.lat - lat) + Math.abs(a.lng - lng) < 0.05)) continue; // déjà en tête
+    // Pays : son nom dans la langue choisie, et son code (fiches pays, quelle que soit la langue)
+    const code = /^[A-Z]{2}$/i.test(p.countrycode || "") ? p.countrycode.toUpperCase() : "";
     results.push({
       name: p.name,
       sub,
-      kind: KINDS[type] || "Lieu",
+      kind: KINDS[type] || t("place.generic"),
       country: type === "country" ? "" : p.country || "",
+      countryCode: type === "country" ? "" : code,
       lat,
       lng,
     });
@@ -92,7 +79,7 @@ export async function searchPlaces(q, mode = "place", signal) {
 // ---------- Aéroports par code IATA, nom ou ville ----------
 const plain = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 let airportList = null;
-let countryNames = null;
+let countryNames = null, namesLocale = "";
 
 async function airportMatches(q) {
   const words = plain(q).split(/[^a-z0-9]+/).filter(Boolean);
@@ -115,11 +102,12 @@ async function airportMatches(q) {
     .filter((a) => a.iata === code || (asked.length && asked.every((w) => a.words.some((x) => x.startsWith(w)))))
     .sort((a, b) => (b.iata === code) - (a.iata === code) || b.big - a.big)
     .slice(0, 3);
-  if (hits.length && !countryNames) {
-    try { countryNames = new Intl.DisplayNames(["fr"], { type: "region" }); } catch { countryNames = { of: (c) => c }; }
+  if (hits.length && (!countryNames || namesLocale !== locale())) {
+    namesLocale = locale();
+    try { countryNames = new Intl.DisplayNames([locale()], { type: "region" }); } catch { countryNames = { of: (c) => c }; }
   }
   return hits.map((a) => {
     const country = countryNames.of(a.cc) || a.cc;
-    return { name: `${a.city || a.name} (${a.iata})`, sub: `${a.name}, ${country}`, kind: "Aéroport", country, lat: a.lat, lng: a.lng, ...(a.iata === code ? { code: true } : {}) };
+    return { name: `${a.city || a.name} (${a.iata})`, sub: `${a.name}, ${country}`, kind: KINDS.airport, country, countryCode: a.cc, lat: a.lat, lng: a.lng, ...(a.iata === code ? { code: true } : {}) };
   });
 }

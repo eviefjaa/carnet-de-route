@@ -4,6 +4,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { forceLang } from "./langue.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const PORT = 8766;
@@ -20,7 +21,7 @@ const server = http.createServer((req, res) => {
 let ok = 0, ko = 0;
 const check = (label, cond) => { if (cond) ok++; else { ko++; console.log("ÉCHEC :", label); } };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox"] });
+const browser = forceLang(await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox"] }), "fr-FR");
 const page = await browser.newPage();
 await page.setViewport({ width: 375, height: 760, isMobile: true, hasTouch: true });
 page.on("pageerror", (e) => check(`erreur JS : ${e.message}`, false));

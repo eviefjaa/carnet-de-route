@@ -15,22 +15,23 @@ import { render } from "./views/trip.js";
 import { inviteSuggestions } from "./views/share.js";
 import { toast } from "./toast.js";
 import { esc } from "./utils.js";
+import { t } from "./i18n.js";
 
 const isEmail = (s) => /^[^\s@?&]+@[^\s@?&]+\.[^\s@?&]+$/.test(s);
 
 // Suggestions pour le texte du champ (réseau déjà chargé, sinon rien)
 const suggestionsFor = (q) => {
   const net = social.peek("network");
-  const t = currentTrip();
-  return net.status === "ok" && t && state.user ? inviteSuggestions(net.data, q, t, state.user.uid) : [];
+  const trip = currentTrip();
+  return net.status === "ok" && trip && state.user ? inviteSuggestions(net.data, q, trip, state.user.uid) : [];
 };
 
 export async function inviteFromForm(f) {
   const id = state.currentId;
-  const t = currentTrip();
+  const trip = currentTrip();
   const typed = f.who.value.trim();
   const email = typed.toLowerCase();
-  if (!t || !state.user) return;
+  if (!trip || !state.user) return;
   if (!isEmail(email)) {
     // « Inviter » avec un nom ou un pseudo : la personne si elle est la seule à correspondre,
     // ou si son pseudo est exactement celui tapé
@@ -38,44 +39,44 @@ export async function inviteFromForm(f) {
     const exact = list.find((p) => p.handle === email.replace(/^@/, ""));
     const p = exact || (list.length === 1 ? list[0] : null);
     if (p) return inviteAccount(p);
-    return toast(/.@/.test(typed) ? "Adresse e-mail invalide." : "Choisissez une personne dans la liste, ou tapez une adresse e-mail complète.");
+    return toast(/.@/.test(typed) ? t("err.invalidEmail") : t("share.pickOrEmail"));
   }
-  if (Object.values(t.emails || {}).some((e) => e.toLowerCase() === email)) return toast("Cette personne fait déjà partie du voyage.");
+  if (Object.values(trip.emails || {}).some((e) => e.toLowerCase() === email)) return toast(t("share.alreadyIn"));
 
-  if (!(t.invites || []).includes(email)) {
+  if (!(trip.invites || []).includes(email)) {
     try {
       await flush(); // le voyage doit exister dans le compte avant d'inviter
       await cloud.invite(id, email);
     } catch {
-      return toast("Invitation impossible pour le moment. Vérifiez votre connexion.");
+      return toast(t("err.invite"));
     }
     patchTrip(id, { invites: [...(currentTrip()?.invites || []), email] });
   }
   state.inviteOpen = false;
   render();
-  openInviteMail(email, t, id);
+  openInviteMail(email, trip, id);
 }
 
 // Inviter une personne de mon réseau (les règles vérifient l'abonnement)
 let inviting = false;
 export async function inviteAccount(p) {
   const id = state.currentId;
-  const t = currentTrip();
-  if (!t || !state.user || inviting) return;
-  if ((t.inviteUids || []).includes(p.uid)) return toast(`@${p.handle} est déjà invité(e).`);
+  const trip = currentTrip();
+  if (!trip || !state.user || inviting) return;
+  if ((trip.inviteUids || []).includes(p.uid)) return toast(t("share.alreadyInvited", { handle: p.handle }));
   inviting = true;
   try {
     await flush(); // le voyage doit exister dans le compte avant d'inviter
     await cloud.inviteUid(id, p.uid);
   } catch {
-    return toast("Invitation impossible pour le moment. Vérifiez votre connexion.");
+    return toast(t("err.invite"));
   } finally {
     inviting = false;
   }
   patchTrip(id, { inviteUids: [...(currentTrip()?.inviteUids || []), p.uid] });
   state.inviteOpen = false;
   render();
-  toast(`Invitation envoyée à @${p.handle} : elle la verra dans Mes voyages et ses notifications.`);
+  toast(t("share.sent", { handle: p.handle }));
 }
 
 // Le créateur annule une invitation par compte
@@ -84,10 +85,10 @@ export async function cancelInviteUid(uid) {
   try {
     await cloud.cancelInviteUid(id, uid);
   } catch {
-    return toast("Impossible d'annuler l'invitation. Vérifiez votre connexion.");
+    return toast(t("err.cancelInvite"));
   }
   patchTrip(id, { inviteUids: (currentTrip()?.inviteUids || []).filter((u) => u !== uid) });
-  toast("Invitation annulée");
+  toast(t("share.cancelled"));
   render();
 }
 
@@ -150,14 +151,14 @@ function show() {
       class="${[i === active ? "on" : "", p.invited ? "is-invited" : ""].join(" ").trim()}">
       <span class="avatar">${esc((p.name || "?")[0].toUpperCase())}</span>
       <span class="ac-main"><b>${esc(p.name)}</b><span class="ac-sub">@${esc(p.handle)}</span></span>
-      ${p.invited ? `<span class="ac-kind">Déjà invité(e)</span>` : ""}
+      ${p.invited ? `<span class="ac-kind">${t("share.alreadyInvitedShort")}</span>` : ""}
     </li>`).join("");
 }
 
 function pick(i) {
   const p = items[i];
   if (!p) return;
-  if (p.invited) return toast(`@${p.handle} est déjà invité(e).`);
+  if (p.invited) return toast(t("share.alreadyInvited", { handle: p.handle }));
   close();
   inviteAccount(p);
 }
@@ -174,31 +175,20 @@ function close() {
 }
 
 export function resendInvite(email) {
-  const t = currentTrip();
-  if (t) openInviteMail(email, t, state.currentId);
+  const trip = currentTrip();
+  if (trip) openInviteMail(email, trip, state.currentId);
 }
 
 // Ouvre la messagerie avec l'e-mail d'invitation déjà rempli
-function openInviteMail(email, t, id) {
+function openInviteMail(email, trip, id) {
   const link = location.origin + location.pathname + "#voyage-" + encodeURIComponent(id);
   const who = prefs.name || state.user.email;
-  const name = t.name || "Sans titre";
-  const subject = `Invitation au voyage « ${name} »`;
-  const body = [
-    "Bonjour,",
-    "",
-    `${who} vous invite à préparer le voyage « ${name} » sur Hippalos.`,
-    "",
-    "Pour le rejoindre :",
-    `1. Ouvrez ce lien : ${link}`,
-    `2. Créez un compte (ou connectez-vous) avec cette adresse : ${email}`,
-    "3. Confirmez votre adresse avec le lien reçu par e-mail.",
-    "4. Dans Mes voyages, acceptez l'invitation avec « Rejoindre ».",
-    "",
-    "À bientôt !",
-  ].join("\n");
+  // Dans la langue de la personne qui invite
+  const name = trip.name || t("trip.untitled");
+  const subject = t("mail.subject", { name });
+  const body = t("mail.body", { who, name, link, email });
   location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  toast("Votre messagerie s'ouvre : il ne reste qu'à envoyer l'e-mail.");
+  toast(t("share.mailOpens"));
 }
 
 // Le créateur annule une invitation
@@ -207,10 +197,10 @@ export async function cancelInvite(email) {
   try {
     await cloud.cancelInvite(id, email);
   } catch {
-    return toast("Impossible d'annuler l'invitation. Vérifiez votre connexion.");
+    return toast(t("err.cancelInvite"));
   }
   patchTrip(id, { invites: (currentTrip()?.invites || []).filter((e) => e !== email) });
-  toast("Invitation annulée");
+  toast(t("share.cancelled"));
   render();
 }
 
@@ -220,15 +210,15 @@ export async function removeMember(uid) {
   try {
     await cloud.removeMember(id, uid);
   } catch {
-    return toast("Impossible de retirer cette personne. Vérifiez votre connexion.");
+    return toast(t("err.removePerson"));
   }
-  const t = currentTrip();
-  if (t) {
-    const emails = { ...t.emails };
+  const trip = currentTrip();
+  if (trip) {
+    const emails = { ...trip.emails };
     delete emails[uid];
-    patchTrip(id, { members: t.members.filter((m) => m !== uid), emails });
+    patchTrip(id, { members: trip.members.filter((m) => m !== uid), emails });
   }
-  toast("Personne retirée du voyage");
+  toast(t("share.removed"));
   render();
 }
 
@@ -239,11 +229,11 @@ export async function leaveTrip(id, quiet = false) {
     await flush();
     await cloud.removeMember(id, state.user.uid);
   } catch {
-    if (!quiet) toast("Impossible de quitter le voyage. Vérifiez votre connexion.");
+    if (!quiet) toast(t("err.leave"));
     return false;
   }
   forgetTrip(id);
-  if (!quiet) toast("Vous avez quitté le voyage");
+  if (!quiet) toast(t("share.left"));
   render();
   return true;
 }
@@ -255,14 +245,14 @@ export async function answerInvitation(tripId, join) {
     if (join) await cloud.joinTrip(tripId, inv);
     else await cloud.declineInvite(tripId, inv);
   } catch {
-    return toast("Réponse impossible pour le moment. Vérifiez votre connexion.");
+    return toast(t("err.answer"));
   }
   state.invitations = state.invitations.filter((i) => i.id !== tripId);
   if (join) {
-    toast(`Vous avez rejoint « ${inv ? inv.name : "le voyage"} »`);
+    toast(inv ? t("share.joinedNamed", { name: inv.name }) : t("share.joined"));
     go("voyage-" + tripId); // le voyage arrive par la synchronisation en direct
   } else {
-    toast("Invitation refusée");
+    toast(t("share.declined"));
   }
   render();
 }

@@ -6,15 +6,15 @@ globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} }
 globalThis.document = { getElementById: () => null, documentElement: { dataset: {} } };
 
 const TRAP = '<iframe srcdoc="<script src=https://unpkg.com/piege/x.js></script>">';
-const { plural } = await import(root + "/js/utils.js");
+const { count } = await import(root + "/js/i18n.js");
 const { fmtSize } = await import(root + "/js/views/tickets.js");
 const { normalizeTrip } = await import(root + "/js/cloud.js");
 const { normalizePost, normalizeComment } = await import(root + "/js/social.js");
 const { postCard } = await import(root + "/js/views/social.js");
 
 // Nombres : toujours de vrais nombres
-assert.equal(plural(TRAP, "jour"), "0 jour");
-assert.equal(plural(3, "nuit"), "3 nuits");
+assert.equal(count(TRAP, "count.day"), "0 jour", "valeur piégée : jamais insérée telle quelle");
+assert.equal(count(3, "count.night"), "3 nuits");
 assert.doesNotMatch(fmtSize(TRAP), /</);
 
 // Voyage reçu : chaque champ au bon type, rien qui fasse planter l'affichage

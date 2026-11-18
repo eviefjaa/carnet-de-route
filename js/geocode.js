@@ -5,6 +5,7 @@
 
 import { state, currentTrip, save } from "./store.js";
 import { drawMap } from "./map.js";
+import { t } from "./i18n.js";
 
 const queue = new Set();
 const notFound = {};
@@ -28,9 +29,9 @@ export function geoFields(items) {
 }
 
 export function scheduleGeo() {
-  const t = currentTrip();
-  if (!t) return;
-  geoFields(t.items).forEach(([it, field]) => {
+  const trip = currentTrip();
+  if (!trip) return;
+  geoFields(trip.items).forEach(([it, field]) => {
     const k = keyOf(it, field);
     if (!isPlaced(it, field) && !notFound[k]) queue.add(`${state.currentId}::${it.id}::${field}`);
   });
@@ -83,12 +84,12 @@ async function search(q) {
 
 export function renderGeoNote() {
   const el = document.getElementById("geoNote");
-  const t = currentTrip();
-  if (!el || !t) return;
-  const fields = geoFields(t.items);
+  const trip = currentTrip();
+  if (!el || !trip) return;
+  const fields = geoFields(trip.items);
   const missing = fields.filter(([i, f]) => notFound[keyOf(i, f)]).map(([i, f]) => queries(i, f).pop());
   const pending = fields.some(([i, f]) => !isPlaced(i, f) && !notFound[keyOf(i, f)]);
   el.textContent = missing.length
-    ? `Introuvable sur la carte : ${missing.join(", ")}. Précisez le lieu, par exemple « Morretes, Paraná, Brésil ».`
-    : pending ? "Placement des lieux sur la carte…" : "";
+    ? t("map.notFound", { places: missing.join(", ") })
+    : pending ? t("map.placing") : "";
 }

@@ -5,17 +5,19 @@
 // ce calendrier à la place de celui du navigateur ; Alt + ↓ (ou F4) l'ouvre au clavier.
 // Téléphone et tablette gardent le sélecteur du système, plus pratique au doigt.
 
-import { esc } from "./utils.js";
+import { esc, fmtHour } from "./utils.js";
+import { t, locale } from "./i18n.js";
 
 const FIELDS = 'input[type="date"], input[type="time"], input[type="datetime-local"]';
-const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
-const DAYS = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."];
+// Noms des mois et des jours dans la langue choisie ; la semaine commence le lundi dans les deux langues
+const monthName = (d) => d.toLocaleDateString(locale(), { month: "long", year: "numeric" });
+const dayNames = () => Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(locale(), { weekday: "short" })); // 1er janvier 2024 : un lundi
 const STEP = 30; // minutes entre deux heures de la liste (une autre heure se tape dans le champ)
 
 const pad = (n) => String(n).padStart(2, "0");
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parse = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) : null);
-const longDay = (s) => parse(s).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+const longDay = (s) => parse(s).toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 const finePointer = () => matchMedia("(hover: hover) and (pointer: fine)").matches;
 
 let box = null; // calendrier ouvert
@@ -78,7 +80,7 @@ function open(input, byKeyboard) {
     document.body.appendChild(box);
   }
   box.setAttribute("role", "dialog");
-  box.setAttribute("aria-label", kind === "time" ? "Choisir une heure" : kind === "datetime" ? "Choisir une date et une heure" : "Choisir une date");
+  box.setAttribute("aria-label", kind === "time" ? t("dp.pickTime") : kind === "datetime" ? t("dp.pickDateTime") : t("dp.pickDate"));
   draw();
   place(input);
   if (byKeyboard) (box.querySelector('.dp-day[tabindex="0"], .dp-time[tabindex="0"]') || box).focus();
@@ -109,8 +111,8 @@ function draw() {
   if (kind !== "date") parts.push(times());
   box.innerHTML = `<div class="dp-body">${parts.join("")}</div>
     <div class="dp-foot">
-      ${kind !== "time" && inRange(iso(new Date())) ? `<button class="dp-link" data-dp="today" type="button">Aujourd'hui</button>` : ""}
-      <button class="dp-link" data-dp="clear" type="button">Effacer</button>
+      ${kind !== "time" && inRange(iso(new Date())) ? `<button class="dp-link" data-dp="today" type="button">${t("dp.today")}</button>` : ""}
+      <button class="dp-link" data-dp="clear" type="button">${t("dp.clear")}</button>
     </div>`;
   const sel = box.querySelector(".dp-time.is-sel") || box.querySelector('.dp-time[data-time="09:00"]');
   if (sel) sel.parentElement.scrollTop = sel.offsetTop - 60;
@@ -135,25 +137,25 @@ function calendar() {
   }
   return `<div class="dp-cal">
     <div class="dp-head">
-      <button class="dp-nav" data-dp="prev" type="button" aria-label="Mois précédent">‹</button>
-      <b aria-live="polite">${MONTHS[m.getMonth()]} ${m.getFullYear()}</b>
-      <button class="dp-nav" data-dp="next" type="button" aria-label="Mois suivant">›</button>
+      <button class="dp-nav" data-dp="prev" type="button" aria-label="${t("dp.prev")}">‹</button>
+      <b aria-live="polite">${esc(monthName(m))}</b>
+      <button class="dp-nav" data-dp="next" type="button" aria-label="${t("dp.next")}">›</button>
     </div>
-    <div class="dp-week" aria-hidden="true">${DAYS.map((d) => `<span>${d}</span>`).join("")}</div>
+    <div class="dp-week" aria-hidden="true">${dayNames().map((d) => `<span>${esc(d)}</span>`).join("")}</div>
     <div class="dp-grid">${cells.join("")}</div>
   </div>`;
 }
 
 function times() {
   const list = [];
-  for (let t = 0; t < 24 * 60; t += STEP) list.push(`${pad(Math.floor(t / 60))}:${pad(t % 60)}`);
+  for (let m = 0; m < 24 * 60; m += STEP) list.push(`${pad(Math.floor(m / 60))}:${pad(m % 60)}`);
   if (cur.time && !list.includes(cur.time)) list.push(cur.time); // heure tapée à la main : dans la liste aussi
   list.sort();
   const ask = cur.kind === "datetime" && cur.date && !cur.time;
   const tab = cur.time || "09:00"; // une seule heure joignable par Tab
   return `<div class="dp-times-box">
-    <b class="dp-times-title${ask ? " is-ask" : ""}">${ask ? "Choisissez l'heure" : "Heure"}</b>
-    <div class="dp-times" role="listbox" aria-label="Heures">${list.map((t) => `<button class="dp-time${t === cur.time ? " is-sel" : ""}" data-time="${t}" type="button" role="option" aria-selected="${t === cur.time}" tabindex="${t === tab ? 0 : -1}">${t.replace(":", " h ")}</button>`).join("")}</div>
+    <b class="dp-times-title${ask ? " is-ask" : ""}">${ask ? t("dp.askTime") : t("act.time")}</b>
+    <div class="dp-times" role="listbox" aria-label="${t("dp.times")}">${list.map((h) => `<button class="dp-time${h === cur.time ? " is-sel" : ""}" data-time="${h}" type="button" role="option" aria-selected="${h === cur.time}" tabindex="${h === tab ? 0 : -1}">${fmtHour(h)}</button>`).join("")}</div>
   </div>`;
 }
 
@@ -205,10 +207,10 @@ function commit(value) {
 
 // Clavier : flèches d'un jour (ou d'une heure) à l'autre, Page ↑ / ↓ d'un mois, Entrée pour choisir
 function onKey(e) {
-  const t = e.target;
-  if (t.classList.contains("dp-day")) {
+  const el = e.target;
+  if (el.classList.contains("dp-day")) {
     const moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
-    let d = parse(t.dataset.day);
+    let d = parse(el.dataset.day);
     if (e.key in moves) d.setDate(d.getDate() + moves[e.key]);
     else if (e.key === "PageUp" || e.key === "PageDown") d.setMonth(d.getMonth() + (e.key === "PageDown" ? 1 : -1));
     else if (e.key === "Home") d = new Date(cur.month);
@@ -219,8 +221,8 @@ function onKey(e) {
       draw();
     }
     box.querySelector(`.dp-day[data-day="${iso(d)}"]`)?.focus();
-  } else if (t.classList.contains("dp-time") && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+  } else if (el.classList.contains("dp-time") && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
     e.preventDefault();
-    (e.key === "ArrowDown" ? t.nextElementSibling : t.previousElementSibling)?.focus();
+    (e.key === "ArrowDown" ? el.nextElementSibling : el.previousElementSibling)?.focus();
   }
 }

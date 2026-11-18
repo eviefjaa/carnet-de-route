@@ -2,6 +2,7 @@
 
 import { esc, fmtMoney, CURRENCIES } from "../utils.js";
 import { computeBudget } from "../budget.js";
+import { t, count } from "../i18n.js";
 
 export function budgetSection(trip) {
   const cur = /^[A-Z]{3}$/.test(trip.currency || "") ? trip.currency : "EUR";
@@ -21,26 +22,26 @@ export function budgetSection(trip) {
         <td>${r.activities ? m(r.activities) : "–"}</td>
         <td class="b-total">${m(r.total)}</td>
       </tr>`).join("")
-    : `<tr><td colspan="5" class="note">Ajoutez des étapes et des trajets pour voir le budget.</td></tr>`;
+    : `<tr><td colspan="5" class="note">${t("budget.empty")}</td></tr>`;
 
-  return `<section class="budget" aria-label="Budget">
+  return `<section class="budget" aria-label="${t("budget.title")}">
     <div class="budget-head">
-      <h2>Budget</h2>
-      <label class="currency">Devise
+      <h2>${t("budget.title")}</h2>
+      <label class="currency">${t("budget.currency")}
         <select id="tripCurrency">${options}</select>
       </label>
     </div>
     <div class="budget-total">
       <span class="b-big">${m(total.total)}</span>
-      <span class="note">dont ${m(total.lodging)} d'hébergement, ${m(total.transport)} de transport et ${m(total.activities)} d'activités</span>
+      <span class="note">${t("budget.split", { lodging: m(total.lodging), transport: m(total.transport), activities: m(total.activities) })}</span>
     </div>
     <div class="table-scroll">
       <table class="budget-table">
-        <thead><tr><th scope="col">Destination</th><th scope="col">Hébergement</th><th scope="col">Transport</th><th scope="col">Activités</th><th scope="col">Total</th></tr></thead>
+        <thead><tr><th scope="col">${t("budget.colPlace")}</th><th scope="col">${t("budget.colLodging")}</th><th scope="col">${t("budget.colTransport")}</th><th scope="col">${t("budget.colActivities")}</th><th scope="col">${t("budget.colTotal")}</th></tr></thead>
         <tbody>${body}</tbody>
-        <tfoot><tr><th scope="row">Total du voyage</th><td>${m(total.lodging)}</td><td>${m(total.transport)}</td><td>${m(total.activities)}</td><td class="b-total">${m(total.total)}</td></tr></tfoot>
+        <tfoot><tr><th scope="row">${t("budget.tripTotal")}</th><td>${m(total.lodging)}</td><td>${m(total.transport)}</td><td>${m(total.activities)}</td><td class="b-total">${m(total.total)}</td></tr></tfoot>
       </table>
     </div>
-    <p class="note">Chaque trajet est compté dans la destination vers laquelle il mène. Une activité sans prix n'est pas comptée.${total.missing ? ` ${total.missing} prix pas encore renseigné${total.missing > 1 ? "s" : ""}.` : ""}</p>
+    <p class="note">${t("budget.rule")}${total.missing ? ` ${count(total.missing, "budget.missing")}` : ""}</p>
   </section>`;
 }

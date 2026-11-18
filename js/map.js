@@ -5,7 +5,8 @@
 // son bouton et le bandeau des étapes sont dans un même conteneur, créé une fois et déplacé
 // dans la page à chaque affichage : un redessin ne ferme donc ni le plein écran ni le bandeau.
 
-import { esc, MODES, duration, fmtDay, nights, plural } from "./utils.js";
+import { esc, MODES, duration, fmtDay, nights } from "./utils.js";
+import { t, count, locale } from "./i18n.js";
 import { state, currentTrip, tripStart } from "./store.js";
 import { renderGeoNote } from "./geocode.js";
 import { ROAD_MODES, roadRoute, decodeLine, onRouteReady } from "./routes.js";
@@ -33,7 +34,7 @@ function ensureMap() {
   if (!map) {
     wrap = document.createElement("div");
     wrap.className = "map-wrap";
-    wrap.innerHTML = `<div class="map-stage" aria-label="Carte du voyage">
+    wrap.innerHTML = `<div class="map-stage" aria-label="${t("trip.mapLabel")}">
       <button class="map-btn map-full-btn" type="button"></button>
       <button class="map-btn map-strip-btn" type="button"></button>
       <div class="map-strip-box"></div>
@@ -59,14 +60,14 @@ function ensureMap() {
 
 // Carte d'un voyage (par défaut le voyage affiché) ; une publication est dessinée avec le
 // tracé publié (raccourci aux deux bouts), sans placement automatique (positions déjà arrondies)
-export function drawMap(t = currentTrip(), { published = false } = {}) {
-  if (!t) return;
+export function drawMap(trip = currentTrip(), { published = false } = {}) {
+  if (!trip) return;
 
   // La carte est créée une seule fois puis déplacée dans la page à chaque affichage
   const slot = document.getElementById("mapSlot");
   if (slot) {
     if (!ensureMap()) {
-      slot.innerHTML = `<p class="note">Carte indisponible : vérifiez votre connexion internet.</p>`;
+      slot.innerHTML = `<p class="note">${t("map.unavailable")}</p>`;
       return;
     }
     slot.replaceWith(wrap);
@@ -78,7 +79,7 @@ export function drawMap(t = currentTrip(), { published = false } = {}) {
   layer.clearLayers();
   markers = new Map();
   const strip = []; // étapes du bandeau
-  const start = published ? null : tripStart(t);
+  const start = published ? null : tripStart(trip);
   const color = cssVar("--route") || "#e8a800";
   const points = [];
   const tripId = published ? null : state.currentId;
@@ -94,7 +95,7 @@ export function drawMap(t = currentTrip(), { published = false } = {}) {
   const stopPts = []; // cadrage : sur les étapes (un vol depuis l'Europe ne réduit pas le Brésil à un point)
   const closeLeg = (to) => { if (cur && to) layer.addLayer(segment(cur, to, leg, color, tripId)); };
 
-  t.items.forEach((it) => {
+  trip.items.forEach((it) => {
     if (it.type === "transport") {
       // Deux trajets de suite : le premier s'arrête à son lieu d'arrivée (ou au départ du suivant)
       if (leg) {
@@ -170,7 +171,7 @@ function fit() {
 function stopLine(it, start) {
   const day = it.day || (it.arrive && start ? nights(start, it.arrive) + 1 : null);
   const nb = it.nights ?? nights(it.arrive, it.depart);
-  return [day ? `Jour ${+day}` : "", nb === 0 ? "arrêt" : nb ? plural(nb, "nuit") : ""].filter(Boolean).join(" · ");
+  return [day ? t("program.day", { n: +day }) : "", nb === 0 ? t("map.halt") : nb ? count(nb, "count.night") : ""].filter(Boolean).join(" · ");
 }
 
 // ---------- Plein écran ----------
@@ -187,13 +188,13 @@ function showFull() {
     stage.removeAttribute("aria-modal");
   }
   fullBtn.innerHTML = full ? ICON_CLOSE : ICON_OPEN;
-  fullBtn.setAttribute("aria-label", full ? "Quitter le plein écran" : "Afficher la carte en plein écran");
+  fullBtn.setAttribute("aria-label", full ? t("map.exitFull") : t("map.full"));
   fullBtn.title = fullBtn.getAttribute("aria-label");
   const hidden = !!state.mapStripHidden;
   wrap.classList.toggle("strip-hidden", hidden);
   stripBtn.innerHTML = chevron(!hidden);
   stripBtn.setAttribute("aria-expanded", String(!hidden));
-  stripBtn.setAttribute("aria-label", hidden ? "Afficher les étapes" : "Masquer les étapes");
+  stripBtn.setAttribute("aria-label", hidden ? t("map.showStops") : t("map.hideStops"));
   stripBtn.title = stripBtn.getAttribute("aria-label");
   stripBox.hidden = hidden;
   // Hauteur du bandeau : les boutons et l'attribution de la carte se placent au-dessus
@@ -302,8 +303,8 @@ function bindFull() {
 function marker(it, n, ll) {
   const nb = it.nights ?? nights(it.arrive, it.depart);
   // Publication : « Jour 3 » au lieu des dates
-  const dates = it.day ? `Jour ${+it.day}` : `${it.arrive ? esc(fmtDay(it.arrive)) : ""}${it.depart ? " → " + esc(fmtDay(it.depart)) : ""}`;
-  const popup = `<b>${n}. ${esc(it.place)}</b><br>${dates}${nb === 0 ? " · arrêt" : nb ? " · " + plural(nb, "nuit") : ""}`;
+  const dates = it.day ? t("program.day", { n: +it.day }) : `${it.arrive ? esc(fmtDay(it.arrive)) : ""}${it.depart ? " → " + esc(fmtDay(it.depart)) : ""}`;
+  const popup = `<b>${n}. ${esc(it.place)}</b><br>${dates}${nb === 0 ? ` · ${t("map.halt")}` : nb ? " · " + count(nb, "count.night") : ""}`;
   return L.marker(ll, {
     title: it.place,
     icon: L.divIcon({ className: "pin", html: `<span>${n}</span>`, iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14] }),
@@ -325,8 +326,8 @@ function segment(from, to, leg, color, tripId) {
   if (leg) {
     const d = leg.duration ?? duration(leg.dep, leg.arr);
     const dist = route ? route.km : published ? leg.km : null;
-    const km = dist != null && Number.isFinite(+dist) ? ` · ${(+dist).toLocaleString("fr-FR")} km par la route` : "";
-    line.bindTooltip(`${esc(MODES[leg.mode] || "Trajet")}${d ? " · " + esc(d) : ""}${esc(km)}`, { sticky: true });
+    const km = dist != null && Number.isFinite(+dist) ? ` · ${t("map.byRoad", { km: (+dist).toLocaleString(locale()) })}` : "";
+    line.bindTooltip(`${esc(MODES[leg.mode] || t("leg.generic"))}${d ? " · " + esc(d) : ""}${esc(km)}`, { sticky: true });
   }
   return line;
 }

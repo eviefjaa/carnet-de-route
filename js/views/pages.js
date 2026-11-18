@@ -5,10 +5,11 @@ import { state } from "../store.js";
 import { prefs } from "../prefs.js";
 import { isEnabled } from "../cloud.js";
 import { socialProfileSection } from "./social.js";
+import { t, count, getLang, LANGS } from "../i18n.js";
 
 function stats() {
   const trips = Object.values(state.trips);
-  const stops = trips.flatMap((t) => t.items.filter((i) => i.type === "stop"));
+  const stops = trips.flatMap((trip) => trip.items.filter((i) => i.type === "stop"));
   return {
     trips: trips.length,
     stops: stops.length,
@@ -20,107 +21,107 @@ function stats() {
 
 export function profileView() {
   const s = stats();
-  const tiles = [
-    [s.trips, "voyage", "voyages"],
-    [s.stops, "étape", "étapes"],
-    [s.nights, "nuit", "nuits"],
-    [s.countries, "pays", "pays"],
-    [s.favorites, "favori", "favoris"],
-  ];
+  // Chiffre en gros, mot en dessous (« 3 » / « voyages ») : clés profile.tile.*
+  const tiles = [[s.trips, "trips"], [s.stops, "stops"], [s.nights, "nights"], [s.countries, "countries"], [s.favorites, "favorites"]];
 
   const account = state.user
     ? `<div class="panel profile-card">
         <span class="avatar big">${esc((prefs.name || state.user.email)[0].toUpperCase())}</span>
         <div class="profile-id">
-          <label class="f">Nom affiché<input id="profileName" value="${esc(prefs.name)}" placeholder="Votre prénom" maxlength="40"></label>
+          <label class="f">${t("profile.displayName")}<input id="profileName" value="${esc(prefs.name)}" placeholder="${t("profile.displayNameHint")}" maxlength="40"></label>
           <p class="note">${esc(state.user.email)}</p>
         </div>
-        <button class="btn" data-act="sign-out" type="button">Se déconnecter</button>
+        <button class="btn" data-act="sign-out" type="button">${t("auth.signOut")}</button>
       </div>`
     : isEnabled()
       ? `<div class="panel">
-          <h2>Vous n'êtes pas connecté(e)</h2>
-          <p class="note">Créez un compte pour retrouver vos voyages et vos favoris sur tous vos appareils.</p>
+          <h2>${t("profile.notSignedIn")}</h2>
+          <p class="note">${t("profile.signInWhy")}</p>
           <div class="row-btns">
-            <button class="btn primary" data-act="open-auth" data-mode="signup" type="button">Créer un compte</button>
-            <button class="btn" data-act="open-auth" data-mode="signin" type="button">Se connecter</button>
+            <button class="btn primary" data-act="open-auth" data-mode="signup" type="button">${t("auth.signUp")}</button>
+            <button class="btn" data-act="open-auth" data-mode="signin" type="button">${t("auth.signIn")}</button>
           </div>
         </div>`
       : "";
 
   return `<section class="page">
-    <header class="page-head"><h1>Mon profil</h1></header>
+    <header class="page-head"><h1>${t("page.profile")}</h1></header>
     ${account}
     ${socialProfileSection()}
-    <h2 class="section-title">Mes statistiques</h2>
-    <div class="stat-tiles">${tiles.map(([n, one, many]) => `<div class="stat-tile"><b>${n}</b><span>${n > 1 ? many : one}</span></div>`).join("")}</div>
-    <p class="note">Les pays sont comptés à partir des étapes choisies dans les suggestions de lieux.</p>
+    <h2 class="section-title">${t("profile.stats")}</h2>
+    <div class="stat-tiles">${tiles.map(([n, k]) => `<div class="stat-tile"><b>${n}</b><span>${count(n, `profile.tile.${k}`)}</span></div>`).join("")}</div>
+    <p class="note">${t("profile.countriesNote")}</p>
   </section>`;
 }
 
 // Suppression du compte : ce qui part, ce qui reste aux autres, puis le mot de passe pour confirmer
 function deleteAccountBlock() {
   if (!state.deleteAccount) {
-    return `<div class="row-btns"><button class="btn ghost small danger" data-act="delete-account-open" type="button">Supprimer mon compte</button></div>`;
+    return `<div class="row-btns"><button class="btn ghost small danger" data-act="delete-account-open" type="button">${t("account.delete")}</button></div>`;
   }
   const busy = state.deleteAccount === "busy";
   return `<form class="delete-account" data-delete-account>
-    <h3>Supprimer mon compte</h3>
-    <p>Tout est supprimé définitivement : vos voyages et leurs billets, vos publications avec leurs commentaires, vos commentaires et réponses chez les autres, vos favoris, vos abonnements et abonnés, votre profil, vos préférences et votre compte.</p>
-    <p>Un voyage que vous partagez n'est pas supprimé pour vos co-voyageurs : vous en êtes retiré(e), et s'il est à vous, il est confié au voyageur suivant. Téléchargez vos voyages avant si vous voulez les garder.</p>
-    <label class="f">Votre mot de passe, pour confirmer<input type="password" name="password" id="deletePassword" autocomplete="current-password" required${busy ? " disabled" : ""}></label>
+    <h3>${t("account.delete")}</h3>
+    <p>${t("account.deleteAll")}</p>
+    <p>${t("account.deleteShared")}</p>
+    <label class="f">${t("account.passwordConfirm")}<input type="password" name="password" id="deletePassword" autocomplete="current-password" required${busy ? " disabled" : ""}></label>
     <div class="row-btns">
-      <button class="btn danger" type="submit"${busy ? " disabled" : ""}>${busy ? "Suppression en cours…" : "Supprimer définitivement"}</button>
-      ${busy ? "" : `<button class="btn" data-act="delete-account-cancel" type="button">Annuler</button>`}
+      <button class="btn danger" type="submit"${busy ? " disabled" : ""}>${busy ? t("account.deleting") : t("account.deleteForGood")}</button>
+      ${busy ? "" : `<button class="btn" data-act="delete-account-cancel" type="button">${t("common.cancel")}</button>`}
     </div>
   </form>`;
 }
 
 export function settingsView() {
-  const themes = [["auto", "Automatique (comme l'appareil)"], ["light", "Clair"], ["dark", "Sombre"]];
+  const themes = [["auto", t("settings.themeAuto")], ["light", t("settings.themeLight")], ["dark", t("settings.themeDark")]];
   const currencies = Object.entries(CURRENCIES)
     .map(([k, v]) => `<option value="${k}"${k === prefs.currency ? " selected" : ""}>${esc(v)}</option>`)
     .join("");
 
   return `<section class="page">
-    <header class="page-head"><h1>Paramètres</h1></header>
+    <header class="page-head"><h1>${t("page.settings")}</h1></header>
 
     <div class="panel">
-      <h2>Apparence</h2>
+      <h2>${t("settings.language")}</h2>
+      <fieldset class="radios" aria-label="${t("settings.language")}">
+        ${Object.entries(LANGS).map(([v, l]) => `<label class="radio"><input type="radio" name="lang" id="lang-${v}" value="${v}"${getLang() === v ? " checked" : ""}> <span lang="${v}">${l}</span></label>`).join("")}
+      </fieldset>
+    </div>
+
+    <div class="panel">
+      <h2>${t("settings.appearance")}</h2>
       <fieldset class="radios">
-        <legend>Thème</legend>
+        <legend>${t("settings.theme")}</legend>
         ${themes.map(([v, l]) => `<label class="radio"><input type="radio" name="theme" id="theme-${v}" value="${v}"${prefs.theme === v ? " checked" : ""}> ${l}</label>`).join("")}
       </fieldset>
     </div>
 
     <div class="panel">
-      <h2>Voyages</h2>
-      <label class="f">Devise par défaut des nouveaux voyages<select id="defaultCurrency">${currencies}</select></label>
+      <h2>${t("settings.trips")}</h2>
+      <label class="f">${t("settings.defaultCurrency")}<select id="defaultCurrency">${currencies}</select></label>
     </div>
 
     <div class="panel">
-      <h2>Rappels par e-mail</h2>
-      <label class="radio"><input type="checkbox" id="emailReminders"${prefs.emailReminders !== false ? " checked" : ""}> Me prévenir par e-mail 3 jours avant une étape s'il reste des choses à réserver</label>
-      <p class="note">${!state.user
-        ? "Les rappels nécessitent un compte : connectez-vous pour les recevoir."
-        : state.user.emailVerified
-          ? `Les rappels sont envoyés à ${esc(state.user.email)}.`
-          : `Confirmez d'abord votre adresse ${esc(state.user.email)} avec le lien reçu par e-mail : les rappels ne partent que vers une adresse confirmée.`}</p>
-      ${state.user && !state.user.emailVerified ? `<div class="row-btns"><button class="btn" data-act="resend-verification" type="button">Renvoyer l'e-mail de confirmation</button></div>` : ""}
+      <h2>${t("settings.reminders")}</h2>
+      <label class="radio"><input type="checkbox" id="emailReminders"${prefs.emailReminders !== false ? " checked" : ""}> ${t("settings.remindersBox")}</label>
+      <p class="note">${!state.user ? t("settings.remindersNeedAccount")
+        : state.user.emailVerified ? esc(t("settings.remindersTo", { email: state.user.email }))
+          : esc(t("settings.remindersVerify", { email: state.user.email }))}</p>
+      ${state.user && !state.user.emailVerified ? `<div class="row-btns"><button class="btn" data-act="resend-verification" type="button">${t("settings.resendVerify")}</button></div>` : ""}
     </div>
 
     <div class="panel">
-      <h2>Mes données</h2>
-      <p class="note">${state.user ? "Vos voyages sont enregistrés dans votre compte." : "Vos voyages sont enregistrés uniquement dans ce navigateur."} Vous pouvez en télécharger une copie à tout moment.</p>
-      <div class="row-btns"><button class="btn" data-act="export" type="button">Télécharger mes voyages (fichier JSON)</button></div>
+      <h2>${t("settings.data")}</h2>
+      <p class="note">${state.user ? t("settings.dataAccount") : t("settings.dataLocal")} ${t("settings.dataCopy")}</p>
+      <div class="row-btns"><button class="btn" data-act="export" type="button">${t("settings.export")}</button></div>
     </div>
 
     ${isEnabled() ? `<div class="panel">
-      <h2>Compte</h2>
+      <h2>${t("settings.account")}</h2>
       ${state.user
-        ? `<p class="note">Connecté(e) avec ${esc(state.user.email)}.</p><div class="row-btns"><button class="btn" data-act="sign-out" type="button">Se déconnecter</button></div>
+        ? `<p class="note">${esc(t("settings.signedInAs", { email: state.user.email }))}</p><div class="row-btns"><button class="btn" data-act="sign-out" type="button">${t("auth.signOut")}</button></div>
           ${deleteAccountBlock()}`
-        : `<p class="note">Vous n'êtes pas connecté(e).</p><div class="row-btns"><button class="btn primary" data-act="open-auth" data-mode="signin" type="button">Se connecter</button></div>`}
+        : `<p class="note">${t("settings.notSignedIn")}</p><div class="row-btns"><button class="btn primary" data-act="open-auth" data-mode="signin" type="button">${t("auth.signIn")}</button></div>`}
     </div>` : ""}
   </section>`;
 }

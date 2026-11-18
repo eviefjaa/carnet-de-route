@@ -12,6 +12,7 @@ import { uid } from "./utils.js";
 import { render } from "./views/trip.js";
 import { fmtSize, formTicketsList } from "./views/tickets.js";
 import { toast } from "./toast.js";
+import { t } from "./i18n.js";
 
 const MAX = 700 * 1024;
 // Types ouverts dans le navigateur. Tout autre type (ex. une page HTML glissée par un autre
@@ -23,7 +24,7 @@ const cache = new Map(); // billets déjà ouverts ou envoyés : id → Blob
 function findHolder(tripId, itemId, todoId) {
   const item = state.trips[tripId]?.items.find((i) => i.id === itemId);
   if (!item) return null;
-  return todoId ? (item.todos || []).find((t) => t.id === todoId) || null : item;
+  return todoId ? (item.todos || []).find((x) => x.id === todoId) || null : item;
 }
 
 const isPdf = (file) => file.type === "application/pdf";
@@ -32,11 +33,11 @@ const isImage = (file) => file.type.startsWith("image/");
 // Fichier refusé d'avance (mauvais type, PDF trop lourd) : message, et false
 function acceptable(file) {
   if (!isPdf(file) && !isImage(file)) {
-    toast(`« ${file.name} » n'est ni un PDF ni une image.`);
+    toast(t("ticket.badType", { name: file.name }));
     return false;
   }
   if (isPdf(file) && file.size > MAX) {
-    toast(`« ${file.name} » est trop lourd (${fmtSize(file.size)}, 700 Ko maximum). Essayez une capture d'écran du billet.`);
+    toast(t("ticket.tooBig", { name: file.name, size: fmtSize(file.size) }));
     return false;
   }
   return true;
@@ -49,14 +50,14 @@ export async function addTickets(itemId, todoId, files, tripId = state.currentId
 
   for (const file of files) {
     if (!acceptable(file)) continue;
-    toast(`Envoi de « ${file.name} »…`);
+    toast(t("ticket.sending", { name: file.name }));
 
     let blob = file;
     if (isImage(file)) {
       try {
         blob = await shrinkImage(file);
       } catch {
-        toast(`L'image « ${file.name} » n'a pas pu être réduite sous 700 Ko.`);
+        toast(t("ticket.cantShrink", { name: file.name }));
         continue;
       }
     }
@@ -67,7 +68,7 @@ export async function addTickets(itemId, todoId, files, tripId = state.currentId
       const data = await toBase64(blob);
       await cloud.saveFile(tripId, ticket.id, { name, type: ticket.type, size: ticket.size, itemId, todoId: todoId || null, data });
     } catch {
-      toast(`« ${file.name} » n'a pas pu être enregistré. Vérifiez votre connexion.`);
+      toast(t("ticket.saveFailed", { name: file.name }));
       continue;
     }
     cache.set(ticket.id, blob);
@@ -77,7 +78,7 @@ export async function addTickets(itemId, todoId, files, tripId = state.currentId
     if (holder) {
       holder.tickets = [...(holder.tickets || []), ticket];
       save();
-      toast(`Billet « ${name} » ajouté`);
+      toast(t("ticket.added", { name }));
       render();
     } else {
       cloud.deleteFile(tripId, ticket.id).catch(() => {}); // supprimé pendant l'envoi
@@ -100,7 +101,7 @@ export async function openTicket(itemId, todoId, fileId) {
       cache.set(fileId, blob);
     } catch {
       if (win) win.close();
-      return toast("Impossible d'ouvrir ce billet. Vérifiez votre connexion.");
+      return toast(t("ticket.openFailed"));
     }
   }
   const url = URL.createObjectURL(blob);
@@ -126,7 +127,7 @@ export async function deleteTicket(itemId, todoId, fileId) {
     await cloud.deleteFile(tripId, fileId);
   } catch {
     render();
-    return toast("Impossible de supprimer ce billet. Vérifiez votre connexion.");
+    return toast(t("ticket.deleteFailed"));
   }
   cache.delete(fileId);
   const holder = findHolder(tripId, itemId, todoId);
@@ -134,7 +135,7 @@ export async function deleteTicket(itemId, todoId, fileId) {
     holder.tickets = (holder.tickets || []).filter((f) => f.id !== fileId);
     save();
   }
-  toast("Billet supprimé");
+  toast(t("ticket.deleted"));
   render();
 }
 
@@ -148,7 +149,7 @@ export function deleteTicketFiles(tickets) {
     cloud.deleteFile(tripId, f.id).catch(() => {});
   });
 }
-export const allTickets = (item) => [...(item.tickets || []), ...(item.todos || []).flatMap((t) => t.tickets || [])];
+export const allTickets = (item) => [...(item.tickets || []), ...(item.todos || []).flatMap((x) => x.tickets || [])];
 
 // ---------- Formulaire d'un trajet ----------
 export const resetFormTickets = () => (state.formTickets = { pending: [], removed: [] });

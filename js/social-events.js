@@ -9,6 +9,7 @@ import { peopleList, recoRow } from "./views/social.js";
 import * as social from "./social.js";
 import { toast } from "./toast.js";
 import { go } from "./router.js";
+import { t, count } from "./i18n.js";
 
 // Exécute une action en ligne, avec un message clair si elle échoue
 async function attempt(fn, failure) {
@@ -44,23 +45,23 @@ export function onSocialClick(act, b) {
       return true;
     case "follow":
       if (!state.profile) {
-        toast("Créez d'abord votre profil (un nom et un pseudo) pour vous abonner.");
+        toast(t("toast.profileToFollow"));
         go("profil");
         return true;
       }
       attempt(async () => {
         const status = await social.follow({ uid: b.dataset.uid, visibility: b.dataset.visibility });
-        toast(status === "accepted" ? "Abonnement ajouté" : "Demande d'abonnement envoyée");
-      }, "Abonnement impossible pour le moment. Vérifiez votre connexion.");
+        toast(status === "accepted" ? t("toast.followed") : t("toast.followRequested"));
+      }, t("err.follow"));
       return true;
     case "unfollow":
-      attempt(() => social.unfollow(b.dataset.uid), "Impossible de se désabonner. Vérifiez votre connexion.");
+      attempt(() => social.unfollow(b.dataset.uid), t("err.unfollow"));
       return true;
     case "accept-follower":
-      attempt(() => social.acceptFollower(b.dataset.uid), "Impossible d'accepter. Vérifiez votre connexion.");
+      attempt(() => social.acceptFollower(b.dataset.uid), t("err.accept"));
       return true;
     case "remove-follower":
-      attempt(() => social.removeFollower(b.dataset.uid), "Impossible de retirer cette personne. Vérifiez votre connexion.");
+      attempt(() => social.removeFollower(b.dataset.uid), t("err.removePerson"));
       return true;
     case "delete-post":
       state.confirm = "post:" + b.dataset.post;
@@ -70,9 +71,9 @@ export function onSocialClick(act, b) {
       state.confirm = null;
       attempt(async () => {
         await social.deletePost(b.dataset.post);
-        toast("Publication supprimée");
+        toast(t("toast.postDeleted"));
         go("mes-publications");
-      }, "Impossible de supprimer la publication. Vérifiez votre connexion.");
+      }, t("err.deletePost"));
       return true;
     // Mes publications, mode sélection : suppression des publications cochées
     case "select-delete-posts-yes": {
@@ -86,16 +87,16 @@ export function onSocialClick(act, b) {
         social.resetSocial(); // la liste est relue, sans les publications supprimées
         render();
         toast(failed
-          ? `${done ? `${done} supprimée${done > 1 ? "s" : ""}. ` : ""}Impossible de supprimer ${failed > 1 ? `${failed} publications` : "une publication"} : vérifiez votre connexion.`
-          : `${ids.length > 1 ? `${ids.length} publications supprimées` : "Publication supprimée"}`);
+          ? `${done ? `${count(done, "toast.postsDeletedShort")}. ` : ""}${count(failed, "err.deletePosts")}`
+          : count(ids.length, "toast.postsDeleted"));
       });
       return true;
     }
     case "add-reco-row": {
       const box = b.closest("form").querySelector("[data-recos]");
-      const t = currentTrip();
-      if (!box || !t) return true;
-      box.insertAdjacentHTML("beforeend", recoRow(t));
+      const trip = currentTrip();
+      if (!box || !trip) return true;
+      box.insertAdjacentHTML("beforeend", recoRow(trip));
       box.lastElementChild.querySelector('[name="recoName"]').focus();
       return true;
     }
@@ -107,7 +108,7 @@ export function onSocialClick(act, b) {
       const on = btn.getAttribute("aria-pressed") !== "true";
       btn.disabled = true;
       attempt(() => social.likeComment(btn.dataset.post, btn.dataset.comment, on),
-        "Impossible d'enregistrer votre j'aime. Vérifiez votre connexion.");
+        t("err.like"));
       return true;
     }
     case "reply-comment":
@@ -127,12 +128,12 @@ export function onSocialClick(act, b) {
       state.confirm = null;
       attempt(async () => {
         await social.deleteComment(b.dataset.post, b.dataset.comment);
-        toast("Commentaire supprimé");
-      }, "Impossible de supprimer le commentaire. Vérifiez votre connexion.");
+        toast(t("toast.commentDeleted"));
+      }, t("err.deleteComment"));
       return true;
     case "fav-post": {
       const on = toggleFavoritePost(b.dataset.post);
-      toast(on ? "Itinéraire ajouté aux favoris" : "Itinéraire retiré des favoris");
+      toast(on ? t("toast.postFavAdded") : t("toast.postFavRemoved"));
       // L'auteur est prévenu (si j'ai un profil) ; un échec n'empêche pas le favori
       (on ? social.likePost(b.dataset.post) : social.unlikePost(b.dataset.post)).catch(() => {});
       render();
@@ -140,13 +141,13 @@ export function onSocialClick(act, b) {
     }
     case "forget-missing-posts":
       forgetFavoritePosts(b.dataset.posts.split(","));
-      toast("Itinéraires indisponibles retirés des favoris");
+      toast(t("toast.missingRemoved"));
       render();
       return true;
     case "copy-link":
       navigator.clipboard.writeText(location.href).then(
-        () => toast("Lien copié : vous pouvez le partager"),
-        () => toast("Copiez l'adresse de la page pour la partager.")
+        () => toast(t("toast.linkCopied")),
+        () => toast(t("toast.copyAddress"))
       );
       return true;
   }
@@ -166,12 +167,12 @@ async function forkPost(f) {
     if (!post || !(post.trip && (post.trip.items || []).some((i) => i.type === "stop"))) {
       state.forkOpen = false;
       render();
-      return toast("Cet itinéraire n'est plus disponible : aucun voyage n'a été créé.");
+      return toast(t("err.postGone"));
     }
-    const t = tripFromPost(post, { name: f.elements.name.value.trim(), start: f.elements.start.value }, social.RECO_KINDS);
-    const c = countryByCode(t.country);
-    const id = createTrip({ ...t, currency: (c && c.currency) || prefs.currency || "EUR" });
-    toast(`Voyage créé à partir de l'itinéraire de @${post.ownerHandle} : à vous de l'adapter`);
+    const trip = tripFromPost(post, { name: f.elements.name.value.trim(), start: f.elements.start.value }, social.RECO_KINDS);
+    const c = countryByCode(trip.country);
+    const id = createTrip({ ...trip, currency: (c && c.currency) || prefs.currency || "EUR" });
+    toast(t("toast.forked", { handle: post.ownerHandle }));
     go("voyage-" + id);
   } finally {
     forking = false;
@@ -187,9 +188,9 @@ export function onSocialSubmit(e) {
   }
   if (f.matches("[data-publish-form]")) {
     e.preventDefault();
-    const t = currentTrip();
+    const trip = currentTrip();
     const title = f.elements.title.value.trim();
-    if (!t || !title) return true;
+    if (!trip || !title) return true;
     // Recommandations remplies (les lignes sans nom sont ignorées)
     const recos = [...f.querySelectorAll("[data-reco-row]")].map((r) => ({
       kind: r.querySelector('[name="recoKind"]').value,
@@ -200,17 +201,17 @@ export function onSocialSubmit(e) {
       stop: r.querySelector('[name="recoStop"]').value === "" ? null : +r.querySelector('[name="recoStop"]').value,
     }));
     attempt(async () => {
-      await social.publish(t, { title, visibility: f.elements.visibility.value, recos, budget: !!(f.elements.budget && f.elements.budget.checked) });
+      await social.publish(trip, { title, visibility: f.elements.visibility.value, recos, budget: !!(f.elements.budget && f.elements.budget.checked) });
       state.publishOpen = false;
-      toast("Itinéraire publié : il est dans Mes publications");
+      toast(t("toast.published"));
       go("mes-publications");
-    }, "Publication impossible pour le moment. Vérifiez votre connexion.");
+    }, t("err.publish"));
     return true;
   }
   if (f.matches("[data-comment-form]")) {
     e.preventDefault();
     const text = f.elements.text.value.trim();
-    if (!text) return toast("Écrivez votre commentaire."), true;
+    if (!text) return toast(t("toast.writeComment")), true;
     const btn = f.querySelector("button[type=submit]");
     btn.disabled = true;
     // En cas d'échec, la page n'est pas réaffichée : le texte tapé reste dans le champ
@@ -218,12 +219,12 @@ export function onSocialSubmit(e) {
     social.addComment(f.dataset.commentForm, text.slice(0, 1000), reply)
       .then(() => {
         if (reply) state.replyTo = null;
-        toast(reply ? "Réponse publiée" : "Commentaire publié");
+        toast(reply ? t("toast.replyPosted") : t("toast.commentPosted"));
         render();
       })
       .catch(() => {
         btn.disabled = false;
-        toast("Commentaire non publié. Vérifiez votre connexion.");
+        toast(t("err.comment"));
       });
     return true;
   }
@@ -232,11 +233,11 @@ export function onSocialSubmit(e) {
     const name = f.elements.name.value.trim();
     const handle = f.elements.handle.value.trim().toLowerCase().replace(/^@/, "");
     const bio = f.elements.bio.value.trim();
-    if (!name) return toast("Indiquez votre nom."), true;
-    if (!social.HANDLE_RE.test(handle)) return toast("Pseudo : 3 à 20 caractères parmi les lettres minuscules, chiffres, point et tiret bas."), true;
+    if (!name) return toast(t("toast.needName")), true;
+    if (!social.HANDLE_RE.test(handle)) return toast(t("toast.badHandle")), true;
     social.saveProfile({ name, handle, bio, visibility: f.elements.visibility.value })
-      .then(() => toast("Profil enregistré"))
-      .catch((err) => toast(err.code === "handle-taken" ? "Ce pseudo est déjà pris : choisissez-en un autre." : "Enregistrement impossible. Vérifiez votre connexion."))
+      .then(() => toast(t("toast.profileSaved")))
+      .catch((err) => toast(err.code === "handle-taken" ? t("err.handleTaken") : t("err.saveFailed")))
       .finally(render);
     return true;
   }
@@ -247,8 +248,8 @@ export function onSocialChange(el) {
   if (el.dataset && el.dataset.postVisibility) {
     attempt(async () => {
       await social.setPostVisibility(el.dataset.postVisibility, el.value);
-      toast(`Visible par : ${social.VISIBILITIES[el.value]}`);
-    }, "Impossible de changer la visibilité. Vérifiez votre connexion.");
+      toast(t("toast.visibleTo", { who: social.VISIBILITIES[el.value] }));
+    }, t("err.visibility"));
     return true;
   }
   return false;
@@ -268,9 +269,9 @@ export function onSocialInput(el) {
   searchTimer = setTimeout(async () => {
     try {
       const list = await social.searchProfiles(q);
-      if (el.value === q) box.innerHTML = peopleList(list, "Aucune personne trouvée.");
+      if (el.value === q) box.innerHTML = peopleList(list, t("discover.noOneFound"));
     } catch {
-      box.innerHTML = `<p class="note">Recherche impossible pour le moment.</p>`;
+      box.innerHTML = `<p class="note">${t("err.search")}</p>`;
     }
   }, 300);
   return true;

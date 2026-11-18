@@ -5,7 +5,10 @@ import { render } from "./views/trip.js";
 import { linkRow, todoRow, newStop, readStopForm } from "./views/stop.js";
 import { readActivityForm } from "./views/program.js";
 import { newTransport, readTransportForm } from "./views/transport.js";
-import { uid, nights, duration, plural } from "./utils.js";
+import { uid, nights, duration } from "./utils.js";
+import { t, count, setLang, inAllLangs } from "./i18n.js";
+import { countryName } from "./i18n-data.js";
+import { resetSocial } from "./social.js";
 import { toast } from "./toast.js";
 import * as cloud from "./cloud.js";
 import { deleteAccount } from "./account.js";
@@ -61,8 +64,9 @@ function newTrip() {
 function createKind(b) {
   const x = b.dataset.country ? countryByCode(b.dataset.country) : null;
   const kind = b.dataset.kind === "sejour" ? "sejour" : "";
-  const id = createTrip(x ? { name: x.name, currency: x.currency, country: x.code, kind } : { kind });
-  if (x) toast(`Voyage « ${x.name} » créé : ${kind ? "indiquez où vous allez" : "ajoutez vos étapes"}`);
+  const name = x ? countryName(x.code) : undefined;
+  const id = createTrip(x ? { name, currency: x.currency, country: x.code, kind } : { kind });
+  if (x) toast(t(kind ? "toast.tripCreatedSejour" : "toast.tripCreatedRoad", { name }));
   else state.focusName = true; // on place le curseur sur le nom du voyage
   go("voyage-" + id);
 }
@@ -80,11 +84,11 @@ async function deleteSelected() {
   state.confirm = null;
   render();
   const done = [];
-  if (mine.length) done.push(`${plural(mine.length, "voyage")} supprimé${mine.length > 1 ? "s" : ""}`);
+  if (mine.length) done.push(count(mine.length, "toast.tripsDeleted"));
   const left = others.length - failed;
-  if (left) done.push(`${mine.length ? left : plural(left, "voyage")} quitté${left > 1 ? "s" : ""}`); // « 2 voyages supprimés, 1 quitté »
+  if (left) done.push(count(left, mine.length ? "toast.leftShort" : "toast.tripsLeft")); // « 2 voyages supprimés, 1 quitté »
   toast(failed
-    ? `${done.length ? done.join(", ") + ". " : ""}Impossible de quitter ${plural(failed, "voyage")} : vérifiez votre connexion.`
+    ? `${done.length ? done.join(", ") + ". " : ""}${count(failed, "toast.cantLeave")}`
     : done.join(", "));
 }
 
@@ -98,15 +102,15 @@ function onClick(e) {
   if (onAccountClick(act, b)) return;
   if (onPageClick(act, b)) return;
 
-  const t = currentTrip();
-  if (!t) return;
-  const idx = b.dataset.id ? t.items.findIndex((i) => i.id === b.dataset.id) : -1;
+  const trip = currentTrip();
+  if (!trip) return;
+  const idx = b.dataset.id ? trip.items.findIndex((i) => i.id === b.dataset.id) : -1;
 
   switch (act) {
     case "add-stop": {
       const pos = +b.dataset.pos;
-      const { prev } = neighbours(t, pos);
-      const before = t.items[pos - 1];
+      const { prev } = neighbours(trip, pos);
+      const before = trip.items[pos - 1];
       const prevLeg = before && before.type === "transport" ? before : null;
       const arrive = prevLeg && prevLeg.arr ? prevLeg.arr.slice(0, 10) : (prev && prev.depart) || "";
       state.insertAt = { pos, draft: newStop(prevLeg ? prevLeg.to : "", arrive) };
@@ -116,7 +120,7 @@ function onClick(e) {
     }
     case "add-leg": {
       const pos = +b.dataset.pos;
-      const { prev, next } = neighbours(t, pos);
+      const { prev, next } = neighbours(trip, pos);
       const dep = prev && prev.depart ? prev.depart + "T08:00" : "";
       state.insertAt = { pos, draft: newTransport(prev ? prev.place : "", next ? next.place : "", dep) };
       state.editingId = null;
@@ -152,7 +156,7 @@ function onClick(e) {
     case "up":
     case "down": {
       const j = act === "up" ? idx - 1 : idx + 1;
-      [t.items[idx], t.items[j]] = [t.items[j], t.items[idx]];
+      [trip.items[idx], trip.items[j]] = [trip.items[j], trip.items[idx]];
       save();
       break;
     }
@@ -160,20 +164,20 @@ function onClick(e) {
       state.confirm = b.dataset.id;
       break;
     case "del-yes":
-      deleteTicketFiles(allTickets(t.items[idx])); // ses billets ne restent pas dans le compte
-      t.items.splice(idx, 1);
+      deleteTicketFiles(allTickets(trip.items[idx])); // ses billets ne restent pas dans le compte
+      trip.items.splice(idx, 1);
       state.confirm = null;
       save();
-      toast("Supprimé");
+      toast(t("toast.deleted"));
       break;
     case "del-trip":
       state.confirm = "trip";
       break;
     case "del-trip-yes":
       // Le créateur supprime le voyage pour tout le monde ; les autres le quittent
-      if (isOwner(t)) {
+      if (isOwner(trip)) {
         deleteTrip(state.currentId);
-        toast("Voyage supprimé");
+        toast(t("toast.tripDeleted"));
       } else {
         leaveTrip(state.currentId);
       }
@@ -184,12 +188,12 @@ function onClick(e) {
       break;
     case "set-kind":
       // Un séjour n'a qu'un lieu : un road trip à plusieurs étapes reste un road trip
-      if (b.dataset.kind === "sejour" && t.items.filter((i) => i.type === "stop").length > 1) return;
-      if (b.dataset.kind === "sejour") t.kind = "sejour";
-      else delete t.kind;
+      if (b.dataset.kind === "sejour" && trip.items.filter((i) => i.type === "stop").length > 1) return;
+      if (b.dataset.kind === "sejour") trip.kind = "sejour";
+      else delete trip.kind;
       resetUi();
       save();
-      toast(t.kind ? "C'est maintenant un séjour" : "C'est maintenant un road trip");
+      toast(trip.kind ? t("toast.nowSejour") : t("toast.nowRoad"));
       break;
     case "act-add":
       state.actForm = { stop: b.dataset.stop, date: b.dataset.date || "" };
@@ -233,8 +237,8 @@ function onClick(e) {
 
 // ---------- Checklist des étapes ----------
 function findStop(stopId) {
-  const t = currentTrip();
-  return t ? t.items.find((i) => i.id === stopId && i.type === "stop") : null;
+  const trip = currentTrip();
+  return trip ? trip.items.find((i) => i.id === stopId && i.type === "stop") : null;
 }
 function findTodo(stopId, todoId) {
   const s = findStop(stopId);
@@ -245,7 +249,7 @@ function saveActivity(f) {
   const s = findStop(f.dataset.actForm);
   if (!s) return;
   const v = readActivityForm(f);
-  if (!v.text) { toast("Indiquez l'activité."); f.text.focus(); return; }
+  if (!v.text) { toast(t("toast.needActivity")); f.text.focus(); return; }
   const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, x]) => x)); // pas de champ vide
   const old = f.dataset.todo && (s.todos || []).find((x) => x.id === f.dataset.todo);
   // book reste enregistré même à false : sans lui, l'activité serait comptée comme à réserver
@@ -260,7 +264,7 @@ function saveActivity(f) {
   state.programOpen.add(s.id);
   save();
   render();
-  toast(old ? "Enregistré" : "Activité ajoutée");
+  toast(old ? t("toast.saved") : t("toast.activityAdded"));
 }
 
 // ---------- Menu, destinations, favoris, paramètres ----------
@@ -290,7 +294,7 @@ function onPageClick(act, b) {
         document.querySelectorAll(`.fav[data-code="${code}"]`).forEach((btn) => (btn.outerHTML = favButton(code, btn.classList.contains("small"))));
         renderSidebar();
       }
-      toast(on ? "Ajouté aux favoris" : "Retiré des favoris");
+      toast(on ? t("toast.favAdded") : t("toast.favRemoved"));
       return true;
     }
     case "chip": {
@@ -376,7 +380,7 @@ function onPageClick(act, b) {
       if (!trip) return render(), true;
       if (isOwner(trip)) {
         deleteTrip(id); // ses billets sont supprimés avec lui dans le compte
-        toast("Voyage supprimé");
+        toast(t("toast.tripDeleted"));
       } else {
         leaveTrip(id);
       }
@@ -417,7 +421,7 @@ function onSettingChange(el) {
   if (el.id === "emailReminders") {
     prefs.emailReminders = el.checked;
     savePrefs();
-    toast(el.checked ? "Rappels par e-mail activés" : "Rappels par e-mail désactivés");
+    toast(el.checked ? t("toast.remindersOn") : t("toast.remindersOff"));
     return true;
   }
   if (el.dataset && el.dataset.todo && el.type === "checkbox") {
@@ -426,8 +430,17 @@ function onSettingChange(el) {
       todo.done = el.checked;
       save();
       render();
-      if (el.checked) toast("Marqué comme réservé");
+      if (el.checked) toast(t("toast.markedBooked"));
     }
+    return true;
+  }
+  // Langue : la page est redessinée tout de suite, sans rechargement (rien de ce qui est en cours n'est perdu)
+  if (el.name === "lang") {
+    prefs.lang = el.value === "en" ? "en" : "fr";
+    savePrefs();
+    setLang(prefs.lang);
+    resetSocial(); // textes par défaut des pages sociales (« Sans titre »…) recalculés dans la nouvelle langue
+    render();
     return true;
   }
   if (el.name === "theme") {
@@ -439,14 +452,14 @@ function onSettingChange(el) {
   if (el.id === "defaultCurrency") {
     prefs.currency = el.value;
     savePrefs();
-    toast("Devise par défaut enregistrée");
+    toast(t("toast.currencySaved"));
     return true;
   }
   if (el.id === "profileName") {
     prefs.name = el.value.trim();
     savePrefs();
     renderSidebar();
-    toast("Nom enregistré");
+    toast(t("toast.nameSaved"));
     return true;
   }
   return false;
@@ -491,7 +504,7 @@ function onAccountClick(act, b) {
       return true;
     case "sign-out":
       // On envoie d'abord les dernières modifications, encore en attente
-      flush().then(() => cloud.signOut()).then(() => toast("Vous êtes déconnecté(e)"));
+      flush().then(() => cloud.signOut()).then(() => toast(t("toast.signedOut")));
       return true;
     case "verify-check":
       checkVerified(b);
@@ -499,11 +512,11 @@ function onAccountClick(act, b) {
     case "verify-later":
       state.verifyOpen = false;
       render();
-      toast("Vous pourrez confirmer votre adresse plus tard dans Paramètres.");
+      toast(t("toast.verifyLater"));
       return true;
     case "resend-verification":
       cloud.resendVerification()
-        .then(() => toast("E-mail de confirmation envoyé. Pensez à regarder dans vos spams."))
+        .then(() => toast(t("toast.verifySent")))
         .catch((err) => toast(cloud.errorMessage(err)));
       return true;
     default:
@@ -522,7 +535,7 @@ async function checkVerified(btn) {
   try {
     const verified = await cloud.refreshEmailVerified();
     if (!verified) {
-      msg.textContent = "Votre adresse n'est pas encore confirmée. Ouvrez le lien reçu par e-mail, puis réessayez.";
+      msg.textContent = t("verify.notYet");
       msg.hidden = false;
       btn.disabled = false;
       return;
@@ -530,7 +543,7 @@ async function checkVerified(btn) {
     state.user.emailVerified = true;
     state.verifyOpen = false;
     state.invitations = await cloud.listInvitations().catch(() => []);
-    toast(state.invitations.length ? "Adresse confirmée. Vos invitations vous attendent dans Mes voyages." : "Adresse confirmée, merci !");
+    toast(state.invitations.length ? t("verify.okInvites") : t("verify.ok"));
     go("voyages");
     render();
   } catch (err) {
@@ -552,9 +565,9 @@ async function onAuthSubmit(f) {
     msg.hidden = false;
   };
 
-  if (!email) return show("Indiquez votre adresse e-mail.");
-  if (mode !== "reset" && !password) return show("Indiquez votre mot de passe.");
-  if (mode === "signup" && password !== f.confirm.value) return show("Les deux mots de passe ne sont pas identiques.");
+  if (!email) return show(t("auth.needEmail"));
+  if (mode !== "reset" && !password) return show(t("auth.needPassword"));
+  if (mode === "signup" && password !== f.confirm.value) return show(t("auth.mismatch"));
 
   btn.disabled = true;
   try {
@@ -567,7 +580,7 @@ async function onAuthSubmit(f) {
     }
     else {
       await cloud.resetPassword(email);
-      show("E-mail envoyé. Pensez à regarder dans vos spams.", true);
+      show(t("auth.resetSent"), true);
     }
   } catch (err) {
     show(cloud.errorMessage(err));
@@ -598,7 +611,7 @@ function onSubmit(e) {
         document.getElementById("deletePassword")?.focus();
         return;
       }
-      toast("Votre compte et toutes ses données ont été supprimés");
+      toast(t("account.deleted"));
       go("voyages");
     });
     return;
@@ -621,24 +634,24 @@ function onSubmit(e) {
 
   // Dernière vérification avant d'enregistrer (required laisse passer un champ rempli d'espaces)
   if (f.dataset.form === "transport") {
-    const empty = [[f.from, "de départ"], [f.to, "d'arrivée"]].find(([el]) => !el.value.trim());
+    const empty = [[f.from, "leg.needFrom"], [f.to, "leg.needTo"]].find(([el]) => !el.value.trim());
     if (empty) {
-      toast(`Indiquez le lieu ${empty[1]} du trajet.`);
+      toast(t(empty[1]));
       empty[0].focus();
       return;
     }
   }
   const [start, end] = f.dataset.form === "stop" ? [f.arrive, f.depart] : [f.dep, f.arr];
   if (start.value && end.value && end.value < start.value) {
-    toast(f.dataset.form === "stop" ? "Le départ ne peut pas être avant l'arrivée." : "L'arrivée ne peut pas être avant le départ.");
+    toast(f.dataset.form === "stop" ? t("stop.departBeforeArrive") : t("leg.arriveBeforeDepart"));
     end.focus();
     return;
   }
 
-  const t = currentTrip();
+  const trip = currentTrip();
   const item = f.dataset.form === "stop" ? readStopForm(f) : readTransportForm(f);
 
-  const old = f.dataset.new === "1" ? null : t.items.find((x) => x.id === item.id);
+  const old = f.dataset.new === "1" ? null : trip.items.find((x) => x.id === item.id);
   if (item.type === "transport") commitFormTickets(item, old);
   if (item.type === "stop" && f.dataset.sejour) item.todos = (old && old.todos) || []; // le programme se gère à part
   // Formulaire de road trip : les heures d'un ancien séjour sont gardées
@@ -647,24 +660,27 @@ function onSubmit(e) {
 
   if (f.dataset.new === "1") {
     // Premier lieu d'un séjour encore sans nom : le séjour prend le nom du lieu
-    if (f.dataset.sejour && t.name === "Nouveau voyage" && item.place) t.name = item.place;
-    t.items.splice(state.insertAt.pos, 0, item);
+    if (f.dataset.sejour && inAllLangs("trips.newShort").includes(trip.name) && item.place) trip.name = item.place;
+    trip.items.splice(state.insertAt.pos, 0, item);
     state.insertAt = null;
   } else {
-    const i = t.items.findIndex((x) => x.id === item.id);
+    const i = trip.items.findIndex((x) => x.id === item.id);
     if (i >= 0) {
       // Garde la position sur la carte et le pays si le lieu n'a pas été rechoisi
       if (!item.geo && old.geo) item.geo = old.geo;
       if (item.type === "transport") for (const k of ["fromGeo", "toGeo"]) if (!item[k] && old[k] && old[k].q === item[k.slice(0, -3)]) item[k] = old[k];
       if (old.route) item.route = old.route; // tracé de la route, vérifié à l'affichage
-      if (item.type === "stop" && item.country === undefined && old.country && old.place === item.place) item.country = old.country;
-      t.items[i] = item;
+      if (item.type === "stop" && item.country === undefined && old.country && old.place === item.place) {
+        item.country = old.country;
+        if (old.countryCode) item.countryCode = old.countryCode;
+      }
+      trip.items[i] = item;
     }
     state.editingId = null;
   }
   save();
   render();
-  toast("Enregistré");
+  toast(t("toast.saved"));
 }
 
 // Les activités gardent leurs billets et « comment y aller » (absents du formulaire de l'étape) ;
@@ -724,13 +740,13 @@ export function refreshComputed() {
       const a = f.arrive.value, d = f.depart.value;
       const n = nights(a, d);
       f.querySelector("[data-nights]").textContent =
-        a && d ? (n !== null ? plural(n, "nuit") : "Le départ est avant l'arrivée.") : "";
+        a && d ? (n !== null ? count(n, "count.night") : t("stop.departIsBefore")) : "";
     } else {
       const dep = f.dep.value, arr = f.arr.value;
       const d = duration(dep, arr);
       f.querySelector("[data-duration]").textContent = d
-        ? `Durée : ${d}`
-        : dep && arr ? "L'arrivée doit être après le départ." : "La durée se calcule à partir des horaires.";
+        ? t("leg.duration", { d })
+        : dep && arr ? t("leg.arriveAfter") : t("leg.durationHint");
     }
   });
 }

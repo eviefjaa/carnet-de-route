@@ -2,20 +2,23 @@
 // Les boutons Précédent / Suivant du navigateur fonctionnent, et chaque page a son lien.
 
 import { state, resetUi } from "./store.js";
+import { t } from "./i18n.js";
 
 // Listes ouvertes depuis Mon profil
 const NETWORK = ["demandes", "abonnes", "abonnements"];
 
+// Adresses identiques dans les deux langues (un lien partagé marche pour tout le monde) ; libellés traduits
+const page = (key, hash) => ({ hash, get label() { return t(`page.${key}`); } });
 export const PAGES = {
-  trips: { hash: "voyages", label: "Mes voyages" },
-  publications: { hash: "mes-publications", label: "Mes publications" },
-  feed: { hash: "fil", label: "Fil d'actualité" },
-  discover: { hash: "decouvrir", label: "Découvrir" },
-  notifications: { hash: "notifications", label: "Notifications" },
-  explore: { hash: "destinations", label: "Choisir une destination" },
-  favorites: { hash: "favoris", label: "Favoris" },
-  profile: { hash: "profil", label: "Mon profil" },
-  settings: { hash: "parametres", label: "Paramètres" },
+  trips: page("trips", "voyages"),
+  publications: page("publications", "mes-publications"),
+  feed: page("feed", "fil"),
+  discover: page("discover", "decouvrir"),
+  notifications: page("notifications", "notifications"),
+  explore: page("explore", "destinations"),
+  favorites: page("favorites", "favoris"),
+  profile: page("profile", "profil"),
+  settings: page("settings", "parametres"),
 };
 
 export function readHash() {

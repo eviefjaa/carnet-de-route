@@ -7,6 +7,7 @@ import { firebaseConfig } from "./firebase-config.js";
 import { mergeTrip } from "./merge.js";
 import { describeChanges, mergeEdit } from "./changes.js";
 import { dayOrEmpty, timeOrEmpty } from "./utils.js";
+import { t } from "./i18n.js";
 
 const V = "10.12.2";
 const SDK = `https://www.gstatic.com/firebasejs/${V}`;
@@ -91,20 +92,21 @@ export const resetPassword = (email) => authReady().then(() => fb.sendPasswordRe
 // Messages d'erreur compréhensibles
 export function errorMessage(e) {
   const code = (e && e.code) || "";
-  const messages = {
-    "auth/invalid-email": "Adresse e-mail invalide.",
-    "auth/missing-email": "Indiquez votre adresse e-mail.",
-    "auth/missing-password": "Indiquez votre mot de passe.",
-    "auth/weak-password": "Mot de passe trop court : 6 caractères minimum.",
-    "auth/email-already-in-use": "Un compte existe déjà avec cette adresse. Connectez-vous.",
-    "auth/invalid-credential": "E-mail ou mot de passe incorrect.",
-    "auth/wrong-password": "E-mail ou mot de passe incorrect.",
-    "auth/user-not-found": "Aucun compte avec cette adresse.",
-    "auth/too-many-requests": "Trop de tentatives. Réessayez dans quelques minutes.",
-    "auth/network-request-failed": "Pas de connexion internet.",
-    "auth/operation-not-allowed": "La connexion par e-mail n'est pas activée dans Firebase.",
+  // Codes Firebase → clés err.* (« auth/wrong-password » et « auth/invalid-credential » : même message)
+  const keys = {
+    "auth/invalid-email": "err.invalidEmail",
+    "auth/missing-email": "auth.needEmail",
+    "auth/missing-password": "auth.needPassword",
+    "auth/weak-password": "err.weakPassword",
+    "auth/email-already-in-use": "err.emailInUse",
+    "auth/invalid-credential": "err.wrongCredentials",
+    "auth/wrong-password": "err.wrongCredentials",
+    "auth/user-not-found": "err.userNotFound",
+    "auth/too-many-requests": "err.tooMany",
+    "auth/network-request-failed": "err.offline",
+    "auth/operation-not-allowed": "err.emailDisabled",
   };
-  return messages[code] || "Une erreur est survenue. Réessayez.";
+  return t(keys[code] || "err.generic");
 }
 
 // ---------- Voyages ----------
@@ -128,28 +130,29 @@ const STR = ["place", "country", "arrive", "depart", "address", "notes", "mode",
 const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
 const str = (x) => (typeof x === "string" ? x : "");
 
-function normalize(t) {
-  if (typeof t.name !== "string") t.name = "Sans titre";
-  if (typeof t.currency !== "string") t.currency = "EUR";
-  if ("kind" in t && t.kind !== "sejour") delete t.kind; // road trip par défaut
-  if ("inviteUids" in t) t.inviteUids = (Array.isArray(t.inviteUids) ? t.inviteUids : []).filter((u) => typeof u === "string");
+function normalize(trip) {
+  if (typeof trip.name !== "string") trip.name = t("trip.untitled");
+  if (typeof trip.currency !== "string") trip.currency = "EUR";
+  if ("kind" in trip && trip.kind !== "sejour") delete trip.kind; // road trip par défaut
+  if ("inviteUids" in trip) trip.inviteUids = (Array.isArray(trip.inviteUids) ? trip.inviteUids : []).filter((u) => typeof u === "string");
   // Modifications des voyageurs : dates en millisecondes, phrases courtes, rien d'autre
-  if ("lastEdit" in t) {
+  if ("lastEdit" in trip) {
     const ms = (v) => (v && v.toMillis ? v.toMillis() : Number.isFinite(v) ? v : 0);
-    t.lastEdit = Object.fromEntries(Object.entries(isObj(t.lastEdit) ? t.lastEdit : {}).filter(([, e]) => isObj(e)).map(([u, e]) => [u, {
+    trip.lastEdit = Object.fromEntries(Object.entries(isObj(trip.lastEdit) ? trip.lastEdit : {}).filter(([, e]) => isObj(e)).map(([u, e]) => [u, {
       at: ms(e.at), since: ms(e.since),
       what: (Array.isArray(e.what) ? e.what : []).filter((w) => typeof w === "string").slice(0, 5).map((w) => w.slice(0, 120)),
       more: Number.isInteger(e.more) && e.more > 0 ? e.more : 0,
     }]));
   }
   // Itinéraire publié dont le voyage est tiré : id de la publication et pseudo de l'auteur
-  if ("source" in t && !(isObj(t.source) && /^[A-Za-z0-9_-]{1,64}$/.test(t.source.postId) && typeof t.source.ownerHandle === "string")) delete t.source;
-  t.items = (Array.isArray(t.items) ? t.items : []).filter((i) => isObj(i) && typeof i.id === "string" && (i.type === "stop" || i.type === "transport"));
-  t.items.forEach((i) => {
+  if ("source" in trip && !(isObj(trip.source) && /^[A-Za-z0-9_-]{1,64}$/.test(trip.source.postId) && typeof trip.source.ownerHandle === "string")) delete trip.source;
+  trip.items = (Array.isArray(trip.items) ? trip.items : []).filter((i) => isObj(i) && typeof i.id === "string" && (i.type === "stop" || i.type === "transport"));
+  trip.items.forEach((i) => {
     STR.forEach((k) => { if (k in i) i[k] = str(i[k]); });
     if ("price" in i && !(typeof i.price === "number" && Number.isFinite(i.price))) i.price = null;
     if ("nights" in i) delete i.nights; // calculé à partir des dates, jamais lu tel quel
     ["arriveTime", "departTime"].forEach((k) => { if (k in i) i[k] = timeOrEmpty(i[k]); });
+    if ("countryCode" in i && !/^[A-Z]{2}$/.test(i.countryCode)) delete i.countryCode;
     ["geo", "fromGeo", "toGeo"].forEach((k) => { if (k in i && !(isObj(i[k]) && Number.isFinite(i[k].lat) && Number.isFinite(i[k].lng))) delete i[k]; });
     if ("route" in i && !(isObj(i.route) && typeof i.route.key === "string")) delete i.route;
     i.todos = (Array.isArray(i.todos) ? i.todos : []).filter(isObj).map((x) => ({ ...x, id: str(x.id), text: str(x.text), done: x.done === true, ...("book" in x ? { book: x.book !== false } : {}), ...("maps" in x ? { maps: str(x.maps) } : {}), ...("date" in x ? { date: dayOrEmpty(x.date) } : {}),
@@ -160,7 +163,7 @@ function normalize(t) {
     i.tickets = files(i.tickets);
     i.todos.forEach((x) => { if ("tickets" in x) x.tickets = files(x.tickets); });
   });
-  return t;
+  return trip;
 }
 
 export { normalize as normalizeTrip }; // pour les tests
@@ -178,7 +181,7 @@ export function useAccount(user) {
 }
 
 // Firestore refuse les valeurs undefined : on passe par JSON pour nettoyer
-const clean = (t) => JSON.parse(JSON.stringify(t));
+const clean = (trip) => JSON.parse(JSON.stringify(trip));
 
 // Contenu seul : les voyageurs ne changent qu'avec les fonctions plus bas,
 // pour ne pas écraser une invitation faite au même moment par quelqu'un d'autre
@@ -261,9 +264,9 @@ export function mergeInvitations(byEmail, byUid) {
 }
 
 const invitation = (d) => {
-  const t = d.data();
-  const from = t.emails && typeof t.emails[t.owner] === "string" ? t.emails[t.owner] : "";
-  return { id: d.id, name: typeof t.name === "string" && t.name ? t.name.slice(0, 200) : "Sans titre", from };
+  const trip = d.data();
+  const from = trip.emails && typeof trip.emails[trip.owner] === "string" ? trip.emails[trip.owner] : "";
+  return { id: d.id, name: typeof trip.name === "string" && trip.name ? trip.name.slice(0, 200) : t("trip.untitled"), from };
 };
 
 export async function listInvitations() {
@@ -319,15 +322,15 @@ export async function reauthenticate(password) {
 export async function releaseMyTrips() {
   const snap = await fb.getDocs(myTrips(me.uid));
   for (const d of snap.docs) {
-    const t = d.data();
-    const others = (Array.isArray(t.members) ? t.members : []).filter((u) => u !== me.uid);
+    const trip = d.data();
+    const others = (Array.isArray(trip.members) ? trip.members : []).filter((u) => u !== me.uid);
     const out = {
       members: fb.arrayRemove(me.uid),
       [`emails.${me.uid}`]: fb.deleteField(),
-      ...(t.joined && me.uid in t.joined ? { [`joined.${me.uid}`]: fb.deleteField() } : {}),
-      ...(t.lastEdit && me.uid in t.lastEdit ? { [`lastEdit.${me.uid}`]: fb.deleteField() } : {}),
+      ...(trip.joined && me.uid in trip.joined ? { [`joined.${me.uid}`]: fb.deleteField() } : {}),
+      ...(trip.lastEdit && me.uid in trip.lastEdit ? { [`lastEdit.${me.uid}`]: fb.deleteField() } : {}),
     };
-    if (t.owner !== me.uid) await fb.updateDoc(d.ref, out);
+    if (trip.owner !== me.uid) await fb.updateDoc(d.ref, out);
     else if (others.length) await fb.updateDoc(d.ref, { ...out, owner: others[0] });
     else await deleteTrip(d.id);
   }

@@ -8,6 +8,8 @@ L'application s'appelait « Carnet de route ». Certains éléments gardent volo
 
 Petit site pour planifier un road trip : étapes, hébergements (liens Airbnb, Booking…), trajets avec horaires, carte du voyage et budget. Un menu donne accès aux idées de destinations (fiches pays), aux favoris, au profil et aux paramètres.
 
+L'application existe en français et en anglais (anglais britannique : heures sur 24 h, jour avant le mois). Au premier lancement, elle prend la langue du navigateur (français si elle commence par « fr », anglais sinon) ; on la change dans Paramètres, sans recharger la page, et le choix suit le compte.
+
 Sans compte, les voyages sont enregistrés dans le navigateur (localStorage). Avec un compte, ils sont enregistrés dans Firebase et synchronisés entre les appareils, et on peut inviter d'autres personnes à préparer un voyage.
 
 ## Organisation des fichiers
@@ -25,6 +27,7 @@ firestore.rules       Règles de sécurité Firestore (à copier dans la console
 .github/workflows/
   reminders.yml       Rappels par e-mail, lancés chaque jour par GitHub Actions
 scripts/reminders/    Programme d'envoi des rappels (Node.js)
+scripts/i18n/         Contrôles de la traduction (lancés par les tests unitaires)
 css/
   base.css            Couleurs (thèmes clair et sombre), polices
   fonts.css           Polices hébergées sur le site (aucune requête vers Google Fonts)
@@ -44,8 +47,11 @@ css/
   trips.css           Page Mes voyages (cartes)
 js/
   app.js              Point d'entrée
+  i18n.js             Traduction : t("clé", { paramètres }), pluriels, langue choisie, format des dates
+  i18n/fr.js, en.js   Textes de l'interface en français et en anglais, rangés par écran (mêmes clés)
+  i18n-data.js        Noms des pays dans la langue choisie
   router.js           Navigation entre les pages (#voyages, #voyage-…, #destinations…)
-  prefs.js            Préférences : favoris, thème, devise, nom
+  prefs.js            Préférences : favoris, thème, langue, devise, nom
   store.js            Données des voyages et sauvegarde
   events.js           Clics, saisies, formulaires
   utils.js            Dates, durées, liens
@@ -159,6 +165,8 @@ npm run test:e2e    # parcours complet dans Chrome, avec deux comptes fictifs
 ```
 
 Les tests de règles et le parcours complet tournent contre les émulateurs Firebase : aucune donnée réelle n'est lue ni modifiée. Le parcours complet sert le site sur `http://localhost:8765` et utilise Google Chrome (chemin modifiable avec la variable `CHROME_PATH`).
+
+Les parcours imposent au navigateur la langue française (`tests/e2e/langue.mjs`), sauf `anglais.test.mjs` qui vérifie l'interface en anglais. Pour ajouter un texte à l'interface : une clé dans `js/i18n/fr.js` et la même dans `js/i18n/en.js` ; le test `unit/i18n.test.mjs` signale une clé ou un paramètre manquant d'un côté.
 
 Sur GitHub, le workflow « Tests » lance les tests unitaires, ceux des rappels et ceux des règles à chaque envoi de code.
 

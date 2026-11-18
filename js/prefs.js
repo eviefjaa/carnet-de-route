@@ -1,8 +1,9 @@
-// Préférences de l'utilisateur : favoris, devise par défaut, thème, nom affiché
+// Préférences de l'utilisateur : favoris, devise par défaut, thème, langue, nom affiché
 //
 // Enregistrées dans le navigateur, et aussi dans le compte quand on est connecté.
 
 import { toast } from "./toast.js";
+import { t, setLang, browserLang } from "./i18n.js";
 
 const KEY = "carnet-route-prefs";
 const DEFAULTS = { favorites: [], favoritePosts: [], currency: "EUR", theme: "auto", name: "", emailReminders: true, notifSeen: 0 };
@@ -16,11 +17,12 @@ export function loadPrefs() {
   } catch {}
   if (!Array.isArray(prefs.favoritePosts)) prefs.favoritePosts = [];
   applyTheme();
+  applyLang();
 }
 
 export function savePrefs() {
   try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch {}
-  if (cloud) cloud.savePrefs({ ...prefs }).catch(() => toast("Préférences non synchronisées. Vérifiez votre connexion."));
+  if (cloud) cloud.savePrefs({ ...prefs }).catch(() => toast(t("err.prefsSync")));
 }
 
 // Connexion : on fusionne les préférences du compte avec celles de l'appareil
@@ -32,14 +34,16 @@ export function usePrefsCloud(c, remote) {
     Object.assign(prefs, remote, { favorites, favoritePosts });
   }
   applyTheme();
+  applyLang();
   if (c) savePrefs();
 }
 
-// Déconnexion : les favoris du compte ne restent pas sur l'appareil
+// Déconnexion : les favoris du compte ne restent pas sur l'appareil (le thème et la langue, si)
 export function resetPrefs() {
   cloud = null;
-  const theme = prefs.theme;
+  const { theme, lang } = prefs;
   Object.assign(prefs, DEFAULTS, { favorites: [], favoritePosts: [], theme });
+  if (lang) prefs.lang = lang;
   savePrefs();
 }
 
@@ -47,6 +51,12 @@ export function applyTheme() {
   const root = document.documentElement;
   if (prefs.theme === "light" || prefs.theme === "dark") root.dataset.theme = prefs.theme;
   else delete root.dataset.theme;
+}
+
+// Langue choisie dans les paramètres ; jamais choisie : celle du navigateur (français ou anglais)
+export function applyLang() {
+  if (prefs.lang !== "fr" && prefs.lang !== "en") delete prefs.lang;
+  setLang(prefs.lang || browserLang());
 }
 
 export const isFavorite = (code) => prefs.favorites.includes(code);

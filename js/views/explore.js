@@ -3,10 +3,17 @@
 import { esc } from "../utils.js";
 import { state } from "../store.js";
 import { isFavorite } from "../prefs.js";
-import { COUNTRIES, CONTINENTS, TAGS, countryByCode, wikiUrl } from "../data/countries.js";
+import { COUNTRIES, CONTINENTS, TAGS, countryByCode } from "../data/countries.js";
 import { URGENCES, URGENCES_VERIFIED } from "../data/urgences.js";
+import { t, count, getLang, locale } from "../i18n.js";
+import { countryName } from "../i18n-data.js";
 
-const BUDGET = { 1: ["€", "Bon marché"], 2: ["€€", "Moyen"], 3: ["€€€", "Cher"] };
+// Coût sur place : symbole et libellé (clés budget.level1…3)
+const budgetSign = (n) => "€".repeat(n);
+const budgetLabel = (n) => t(`budget.level${n}`);
+const continentName = (c) => t(`continent.${c}`);
+// Article Wikipédia dans la langue choisie
+const wikiUrl = (x) => `https://${getLang() === "en" ? "en" : "fr"}.wikipedia.org/wiki/${encodeURIComponent(countryName(x.code).replace(/ /g, "_"))}`;
 
 // Frise historique et incontournables détaillés : fichier chargé à la première fiche pays ouverte
 let details = null;
@@ -22,28 +29,29 @@ export function loadDetails() {
 export function favButton(code, small = false) {
   const on = isFavorite(code);
   return `<button class="fav${on ? " on" : ""}${small ? " small" : ""}" data-act="fav" data-code="${code}" type="button"
-    aria-pressed="${on}" aria-label="${on ? "Retirer des favoris" : "Ajouter aux favoris"}" title="${on ? "Retirer des favoris" : "Ajouter aux favoris"}">
+    aria-pressed="${on}" aria-label="${on ? t("fav.remove") : t("fav.add")}" title="${on ? t("fav.remove") : t("fav.add")}">
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
-    ${small ? "" : `<span>${on ? "Dans mes favoris" : "Ajouter aux favoris"}</span>`}
+    ${small ? "" : `<span>${on ? t("fav.in") : t("fav.add")}</span>`}
   </button>`;
 }
 
 export function countryCard(x) {
-  const search = [x.name, x.capital, x.continent, ...x.highlights].join(" ").toLowerCase();
+  // Recherche dans le nom affiché et le nom français (un lien ou une habitude d'une langue à l'autre)
+  const search = [countryName(x.code), x.name, x.capital, continentName(x.continent), ...x.highlights].join(" ").toLowerCase();
   return `<article class="country-card" data-continent="${esc(x.continent)}" data-tags="${x.tags.join(" ")}" data-search="${esc(search)}">
     <span class="cc-code" aria-hidden="true">${esc(x.code)}</span>
     <div class="cc-body">
-      <h3><a class="cc-link" href="#destination-${x.code}">${esc(x.name)}</a></h3>
-      <p class="cc-meta">${esc(x.continent)} · ${BUDGET[x.budget][0]}</p>
+      <h3><a class="cc-link" href="#destination-${x.code}">${esc(countryName(x.code))}</a></h3>
+      <p class="cc-meta">${esc(continentName(x.continent))} · ${budgetSign(x.budget)}</p>
       <p class="cc-tagline">${esc(x.tagline)}</p>
-      <div class="cc-tags">${x.tags.slice(0, 3).map((t) => `<span class="tag">${esc(TAGS[t])}</span>`).join("")}</div>
+      <div class="cc-tags">${x.tags.slice(0, 3).map((k) => `<span class="tag">${esc(TAGS[k])}</span>`).join("")}</div>
     </div>
     ${favButton(x.code, true)}
   </article>`;
 }
 
-// Pays par ordre alphabétique (tri français : « Égypte » avec les E)
-const byName = [...COUNTRIES].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+// Pays par ordre alphabétique de leur nom affiché (tri de la langue : « Égypte » avec les E)
+const byName = () => [...COUNTRIES].sort((a, b) => countryName(a.code).localeCompare(countryName(b.code), locale()));
 
 export function exploreView() {
   const f = state.explore;
@@ -52,19 +60,21 @@ export function exploreView() {
 
   return `<section class="page">
     <header class="page-head">
-      <h1>Choisir une destination</h1>
-      <p class="lead">${COUNTRIES.length} pays pour vous inspirer, avec leur histoire et les lieux à ne pas manquer.</p>
+      <h1>${t("page.explore")}</h1>
+      <p class="lead">${t("explore.lead", { n: COUNTRIES.length })}</p>
     </header>
     <div class="explore-tools">
-      <input type="search" id="exploreSearch" class="search" value="${esc(f.q)}" placeholder="Rechercher un pays, une ville, un lieu…" aria-label="Rechercher une destination">
-      <div class="chips" role="group" aria-label="Continent">${chip("continent", "", "Tous les continents")}${CONTINENTS.map((c) => chip("continent", c, c)).join("")}</div>
-      <div class="chips" role="group" aria-label="Envie">${chip("tag", "", "Toutes les envies")}${Object.entries(TAGS).map(([k, v]) => chip("tag", k, v)).join("")}</div>
+      <input type="search" id="exploreSearch" class="search" value="${esc(f.q)}" placeholder="${t("explore.searchHint")}" aria-label="${t("explore.searchLabel")}">
+      <div class="chips" role="group" aria-label="${t("explore.continent")}">${chip("continent", "", t("explore.allContinents"))}${CONTINENTS.map((c) => chip("continent", c, continentName(c))).join("")}</div>
+      <div class="chips" role="group" aria-label="${t("explore.tag")}">${chip("tag", "", t("explore.allTags"))}${Object.entries(TAGS).map(([k, v]) => chip("tag", k, v)).join("")}</div>
     </div>
     <p class="note" id="exploreCount"></p>
-    <div class="country-grid">${byName.map(countryCard).join("")}</div>
-    <p class="note" id="exploreEmpty" hidden>Aucun pays ne correspond. Essayez un autre continent ou une autre envie.</p>
+    <div class="country-grid">${byName().map(countryCard).join("")}</div>
+    <p class="note" id="exploreEmpty" hidden>${t("explore.empty")}</p>
   </section>`;
 }
+
+const countText = (n) => count(n, "count.destination");
 
 // Filtre les cartes sans tout réafficher (garde la saisie et le défilement)
 export function filterCountries() {
@@ -81,59 +91,59 @@ export function filterCountries() {
   });
   const empty = document.getElementById("exploreEmpty");
   if (empty) empty.hidden = shown > 0;
-  const count = document.getElementById("exploreCount");
-  if (count) count.textContent = `${shown} destination${shown > 1 ? "s" : ""}`;
+  const countEl = document.getElementById("exploreCount");
+  if (countEl) countEl.textContent = countText(shown);
 }
 
 // postsSection : idées d'itinéraires publiés dans ce pays (views/social.js), vide s'il n'y en a pas
 export function countryView(code, postsSection = "") {
   const x = countryByCode(code);
   if (!x) {
-    return `<section class="page"><a class="back" href="#destinations">← Toutes les destinations</a>
-      <p>Cette destination n'existe pas.</p></section>`;
+    return `<section class="page"><a class="back" href="#destinations">${t("explore.back")}</a>
+      <p>${t("explore.notFound")}</p></section>`;
   }
   const d = details && details[x.code];
   const facts = [
-    ["Capitale", x.capital],
-    ["Langue", x.language],
-    ["Monnaie", x.currency],
-    ["Meilleure période", x.best],
-    ["Coût sur place", `${BUDGET[x.budget][0]} · ${BUDGET[x.budget][1]}`],
-    ["Continent", x.continent],
+    [t("country.capital"), x.capital],
+    [t("country.language"), x.language],
+    [t("country.currency"), x.currency],
+    [t("country.best"), x.best],
+    [t("country.cost"), `${budgetSign(x.budget)} · ${budgetLabel(x.budget)}`],
+    [t("country.continent"), continentName(x.continent)],
   ];
 
   return `<section class="page country">
-    <a class="back" href="#destinations">← Toutes les destinations</a>
+    <a class="back" href="#destinations">${t("explore.back")}</a>
     <header class="country-head">
       <span class="country-code" aria-hidden="true">${esc(x.code)}</span>
       <div>
-        <h1>${esc(x.name)}</h1>
+        <h1>${esc(countryName(x.code))}</h1>
         <p class="lead">${esc(x.tagline)}</p>
-        <div class="cc-tags">${x.tags.map((t) => `<span class="tag">${esc(TAGS[t])}</span>`).join("")}</div>
+        <div class="cc-tags">${x.tags.map((k) => `<span class="tag">${esc(TAGS[k])}</span>`).join("")}</div>
       </div>
     </header>
     <div class="country-actions">
-      <button class="btn primary" data-act="trip-from-country" data-code="${x.code}" type="button">Créer un voyage dans ce pays</button>
+      <button class="btn primary" data-act="trip-from-country" data-code="${x.code}" type="button">${t("country.createTrip")}</button>
       ${favButton(x.code)}
     </div>
     ${postsSection}
     <dl class="facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
     ${urgencesSection(x)}
     <div class="country-text">
-      <section><h2>Présentation</h2><p>${esc(x.description)}</p></section>
+      <section><h2>${t("country.about")}</h2><p>${esc(x.description)}</p></section>
       <section>
-        <h2>Un peu d'histoire</h2>
+        <h2>${t("country.history")}</h2>
         <p>${esc(x.history)}</p>
         ${d && d.timeline ? timeline(d.timeline) : ""}
       </section>
       <section>
-        <h2>À ne pas manquer</h2>
+        <h2>${t("country.highlights")}</h2>
         ${d && d.highlights
           ? highlightCards(d.highlights, x)
           : `<ul class="highlights">${x.highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>`}
       </section>
     </div>
-    <p class="note"><a href="${wikiUrl(x)}" target="_blank" rel="noopener noreferrer">En savoir plus sur Wikipédia ↗</a></p>
+    <p class="note"><a href="${esc(wikiUrl(x))}" target="_blank" rel="noopener noreferrer">${t("country.wiki")}</a></p>
   </section>`;
 }
 
@@ -148,12 +158,12 @@ function timeline(periods) {
 // Incontournables, avec un lien pour les situer sur une carte
 function highlightCards(list, country) {
   return `<ol class="hl-grid">${list.map((h) => {
-    const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([h.name, h.region, country.name].filter(Boolean).join(", "))}`;
+    const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([h.name, h.region, countryName(country.code)].filter(Boolean).join(", "))}`;
     return `<li class="hl-card">
       <h3>${esc(h.name)}</h3>
       ${h.region ? `<p class="hl-region">${esc(h.region)}</p>` : ""}
       <p>${esc(h.text)}</p>
-      <a class="hl-map" href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Voir sur la carte ↗</a>
+      <a class="hl-map" href="${esc(maps)}" target="_blank" rel="noopener noreferrer">${t("country.seeOnMap")}</a>
     </li>`;
   }).join("")}</ol>`;
 }
@@ -169,17 +179,19 @@ function urgencesSection(x) {
   // Un service joignable au numéro général n'est pas répété (911 aux États-Unis…)
   const own = (n) => (n && n !== u.general ? n : "");
   const rows = [
-    line("Urgences (tous services)", u.general, true),
-    line("Police", own(u.police)),
-    line("Ambulance, urgences médicales", own(u.ambulance)),
-    line("Pompiers", own(u.pompiers)),
+    line(t("sos.general"), u.general, true),
+    line(t("sos.police"), own(u.police)),
+    line(t("sos.ambulance"), own(u.ambulance)),
+    line(t("sos.fire"), own(u.pompiers)),
     ...(u.autres || []).map((a) => line(a.label, a.number)),
   ].join("");
   if (!rows) return "";
-  return `<section class="panel urgences" aria-label="Numéros utiles">
-    <h2>Numéros utiles</h2>
+  const [y, m] = URGENCES_VERIFIED.split("-").map(Number);
+  const when = new Date(y, m - 1, 1).toLocaleDateString(locale(), { month: "long", year: "numeric" });
+  return `<section class="panel urgences" aria-label="${t("sos.title")}">
+    <h2>${t("sos.title")}</h2>
     <ul class="urgences-list">${rows}</ul>
-    <p class="note">Numéros à composer sur place. Vérifiés en ${esc(URGENCES_VERIFIED)} : en cas de doute, confirmez-les en arrivant (hôtel, office de tourisme).${u.conseils ? ` Pour l'ambassade et le consulat de France : <a href="${esc(u.conseils)}" target="_blank" rel="noopener noreferrer">Conseils aux voyageurs ↗</a>.` : ""}</p>
+    <p class="note">${esc(t("sos.note", { when }))}${u.conseils ? ` ${t("sos.embassy", { link: `<a href="${esc(u.conseils)}" target="_blank" rel="noopener noreferrer">${t("sos.advice")}</a>` })}` : ""}</p>
   </section>`;
 }
 
@@ -187,20 +199,20 @@ export function favoritesView(codes, postsSection = "") {
   const list = codes.map(countryByCode).filter(Boolean);
   if (!list.length && !postsSection) {
     return `<section class="page">
-      <header class="page-head"><h1>Favoris</h1></header>
+      <header class="page-head"><h1>${t("page.favorites")}</h1></header>
       <div class="empty">
-        <h2>Aucun favori pour l'instant</h2>
-        <p class="note">Touchez le cœur sur une destination ou sur un itinéraire publié pour le retrouver ici.</p>
-        <div class="row-btns"><a class="btn primary" href="#destinations">Choisir une destination</a><a class="btn" href="#decouvrir">Découvrir des itinéraires</a></div>
+        <h2>${t("fav.emptyTitle")}</h2>
+        <p class="note">${t("fav.emptyText")}</p>
+        <div class="row-btns"><a class="btn primary" href="#destinations">${t("page.explore")}</a><a class="btn" href="#decouvrir">${t("fav.discover")}</a></div>
       </div>
     </section>`;
   }
   return `<section class="page">
     <header class="page-head">
-      <h1>Favoris</h1>
-      <p class="lead">Les destinations et les itinéraires qui vous font rêver.</p>
+      <h1>${t("page.favorites")}</h1>
+      <p class="lead">${t("fav.lead")}</p>
     </header>
-    ${list.length ? `<h2 class="section-title">Destinations</h2><div class="country-grid">${list.map(countryCard).join("")}</div>` : ""}
+    ${list.length ? `<h2 class="section-title">${t("fav.destinations")}</h2><div class="country-grid">${list.map(countryCard).join("")}</div>` : ""}
     ${postsSection}
   </section>`;
 }

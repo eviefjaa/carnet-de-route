@@ -1,7 +1,8 @@
 // Pages sociales : fil d'actualité, Découvrir (et recherche de personnes), profil d'une
 // personne, publication d'un itinéraire ; sections « Publier » d'un voyage et « Profil public »
 
-import { esc, plural, MODES, safeUrl, fmtMoney } from "../utils.js";
+import { esc, MODES, safeUrl, fmtMoney } from "../utils.js";
+import { t, count, locale } from "../i18n.js";
 import { editText } from "../changes.js";
 import { computeBudget } from "../budget.js";
 import { state } from "../store.js";
@@ -11,26 +12,27 @@ import { selectButtons, selectAttrs, selectBox, selectBar } from "./select.js";
 import { isEnabled } from "../cloud.js";
 import * as social from "../social.js";
 import { COUNTRIES } from "../data/countries.js";
+import { fmtHour } from "../utils.js";
 
 const me = () => (state.user ? state.user.uid : null);
-const loadingNote = `<p class="note">Chargement…</p>`;
-const errorNote = (text = "Impossible de charger cette page. Vérifiez votre connexion puis rechargez.") => `<p class="note">${text}</p>`;
+const loadingNote = () => `<p class="note">${t("common.loading")}</p>`;
+const errorNote = (text = t("social.loadError")) => `<p class="note">${text}</p>`;
 const avatar = (p, big = false) => `<span class="avatar${big ? " big" : ""}">${esc(((p && p.name) || "?")[0].toUpperCase())}</span>`;
-const fmtDate = (ms) => new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+const fmtDate = (ms) => new Date(ms).toLocaleDateString(locale(), { day: "numeric", month: "long", year: "numeric" });
 
 const signInPanel = (text) => `<div class="panel">
     <p class="note">${text}</p>
-    <div class="row-btns"><button class="btn primary" data-act="open-auth" data-mode="signin" type="button">Se connecter</button></div>
+    <div class="row-btns"><button class="btn primary" data-act="open-auth" data-mode="signin" type="button">${t("auth.signIn")}</button></div>
   </div>`;
 
 // Cœur « favori » d'un itinéraire publié (pas sur ses propres itinéraires)
 export function postFavButton(p, small = false) {
   if (p.owner === me()) return "";
   const on = isFavoritePost(p.id);
-  const label = on ? "Retirer des favoris" : "Ajouter aux favoris";
+  const label = on ? t("fav.remove") : t("fav.add");
   return `<button class="fav${on ? " on" : ""}${small ? " small" : ""}" data-act="fav-post" data-post="${esc(p.id)}" type="button" aria-pressed="${on}" aria-label="${label}" title="${label}">
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
-    ${small ? "" : `<span>${on ? "Dans mes favoris" : "Ajouter aux favoris"}</span>`}
+    ${small ? "" : `<span>${on ? t("fav.in") : t("fav.add")}</span>`}
   </button>`;
 }
 
@@ -57,8 +59,8 @@ export function postCard(p) {
     </div>
     <h2><a class="tc-link" href="#publication-${esc(p.id)}">${esc(p.title)}</a></h2>
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
-    <p class="tc-dates">${trip.kind === "sejour" ? "Séjour" : plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""}${budgetTotal(trip) ? ` · ${esc(budgetTotal(trip))}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
-    ${p.owner === me() ? `<span class="vis-badge is-published">Publié · ${esc(social.VISIBILITIES[p.visibility] || "")}</span>` : ""}
+    <p class="tc-dates">${trip.kind === "sejour" ? t("trip.kindSejour") : count(stops.length, "count.stop")}${trip.days ? ` · ${count(trip.days, "count.day")}` : ""}${budgetTotal(trip) ? ` · ${esc(budgetTotal(trip))}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
+    ${p.owner === me() ? `<span class="vis-badge is-published">${esc(t("post.published", { who: social.VISIBILITIES[p.visibility] || "" }))}</span>` : ""}
   </article>`;
 }
 
@@ -81,8 +83,8 @@ function selectablePostCard(p) {
     <div class="tc-top"><span class="tc-flags" aria-hidden="true">${flagsOf(trip)}</span></div>
     <h2>${esc(p.title)}</h2>
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
-    <p class="tc-dates">${trip.kind === "sejour" ? "Séjour" : plural(stops.length, "étape")}${trip.days ? ` · ${plural(trip.days, "jour")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
-    <span class="vis-badge is-published">Publié · ${esc(social.VISIBILITIES[p.visibility] || "")}</span>
+    <p class="tc-dates">${trip.kind === "sejour" ? t("trip.kindSejour") : count(stops.length, "count.stop")}${trip.days ? ` · ${count(trip.days, "count.day")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
+    <span class="vis-badge is-published">${esc(t("post.published", { who: social.VISIBILITIES[p.visibility] || "" }))}</span>
   </article>`;
 }
 
@@ -91,30 +93,30 @@ const postGrid = (posts, empty) =>
 
 // ---------- Fil d'actualité ----------
 export function feedView() {
-  const head = `<header class="page-head"><h1>Fil d'actualité</h1><p class="lead">Les derniers itinéraires des voyageurs que vous suivez.</p></header>`;
-  if (!isEnabled()) return `<section class="page">${head}${errorNote("Les comptes ne sont pas activés sur ce site.")}</section>`;
-  if (!state.user) return `<section class="page">${head}${signInPanel("Connectez-vous pour suivre des voyageurs et voir leurs itinéraires ici.")}</section>`;
+  const head = `<header class="page-head"><h1>${t("page.feed")}</h1><p class="lead">${t("meta.feed")}</p></header>`;
+  if (!isEnabled()) return `<section class="page">${head}${errorNote(t("social.disabled"))}</section>`;
+  if (!state.user) return `<section class="page">${head}${signInPanel(t("feed.signIn"))}</section>`;
   const e = social.load("feed", social.feed);
-  const body = e.status === "loading" ? loadingNote
+  const body = e.status === "loading" ? loadingNote()
     : e.status === "error" ? errorNote()
     : !e.data.following
-      ? `<div class="empty"><h2>Vous ne suivez personne pour l'instant</h2>
-          <p class="note">Trouvez des voyageurs et des itinéraires qui vous inspirent.</p>
-          <a class="btn primary" href="#decouvrir">Découvrir</a></div>`
-      : postGrid(e.data.posts, "Les personnes que vous suivez n'ont encore rien publié.");
+      ? `<div class="empty"><h2>${t("feed.noOne")}</h2>
+          <p class="note">${t("feed.findPeople")}</p>
+          <a class="btn primary" href="#decouvrir">${t("page.discover")}</a></div>`
+      : postGrid(e.data.posts, t("feed.nothing"));
   return `<section class="page">${head}${body}</section>`;
 }
 
 // ---------- Découvrir ----------
 export function discoverView() {
   const e = isEnabled() ? social.load("discover", social.discover) : { status: "error" };
-  const body = e.status === "loading" ? loadingNote
+  const body = e.status === "loading" ? loadingNote()
     : e.status === "error" ? errorNote()
-    : postGrid(e.data, "Aucun itinéraire public pour l'instant. Soyez le premier à publier le vôtre !");
+    : postGrid(e.data, t("discover.nothing"));
   return `<section class="page">
-    <header class="page-head"><h1>Découvrir</h1><p class="lead">Les derniers itinéraires publiés par la communauté.</p></header>
+    <header class="page-head"><h1>${t("page.discover")}</h1><p class="lead">${t("discover.lead")}</p></header>
     <div class="explore-tools">
-      <input type="search" id="peopleSearch" class="search" placeholder="Rechercher une personne : nom ou @pseudo" aria-label="Rechercher une personne" autocomplete="off">
+      <input type="search" id="peopleSearch" class="search" placeholder="${t("discover.searchHint")}" aria-label="${t("discover.searchLabel")}" autocomplete="off">
       <div id="peopleResults" class="people-results" aria-live="polite"></div>
     </div>
     ${body}
@@ -122,7 +124,7 @@ export function discoverView() {
 }
 
 // Résultats de recherche (insérés sans réafficher la page, pour garder la saisie)
-export function peopleList(list, emptyText = "Personne trouvé(e).") {
+export function peopleList(list, emptyText = t("discover.noOne")) {
   if (!list.length) return `<p class="note">${emptyText}</p>`;
   return `<ul class="people">${list.map((p) => `<li>
       <a class="person" href="#personne-${esc(p.uid)}">${avatar(p)}<span><b>${esc(p.name)}</b> <span class="handle">@${esc(p.handle)}</span></span></a>
@@ -132,12 +134,12 @@ export function peopleList(list, emptyText = "Personne trouvé(e).") {
 // ---------- Profil d'une personne ----------
 function followButton(profile, status) {
   if (!isEnabled()) return "";
-  if (!state.user) return `<button class="btn primary" data-act="open-auth" data-mode="signin" type="button">Se connecter pour s'abonner</button>`;
-  if (profile.uid === me()) return `<a class="btn" href="#profil">Modifier mon profil</a>`;
+  if (!state.user) return `<button class="btn primary" data-act="open-auth" data-mode="signin" type="button">${t("follow.signIn")}</button>`;
+  if (profile.uid === me()) return `<a class="btn" href="#profil">${t("follow.editMine")}</a>`;
   const attrs = `data-uid="${esc(profile.uid)}"`;
-  if (status === "accepted") return `<span class="follow-state">Abonné(e)</span><button class="btn small" data-act="unfollow" ${attrs} type="button">Se désabonner</button>`;
-  if (status === "pending") return `<span class="follow-state">Demande envoyée</span><button class="btn small" data-act="unfollow" ${attrs} type="button">Annuler la demande</button>`;
-  return `<button class="btn primary" data-act="follow" ${attrs} data-visibility="${esc(profile.visibility)}" type="button">${profile.visibility === "private" ? "Demander à s'abonner" : "S'abonner"}</button>`;
+  if (status === "accepted") return `<span class="follow-state">${t("follow.following")}</span><button class="btn small" data-act="unfollow" ${attrs} type="button">${t("follow.unfollow")}</button>`;
+  if (status === "pending") return `<span class="follow-state">${t("follow.requested")}</span><button class="btn small" data-act="unfollow" ${attrs} type="button">${t("follow.cancelRequest")}</button>`;
+  return `<button class="btn primary" data-act="follow" ${attrs} data-visibility="${esc(profile.visibility)}" type="button">${profile.visibility === "private" ? t("follow.request") : t("follow.follow")}</button>`;
 }
 
 export function personView(id) {
@@ -148,10 +150,10 @@ export function personView(id) {
     const posts = await social.postsOf(id, status);
     return { profile, status, posts };
   });
-  const back = `<a class="back" href="#decouvrir">← Découvrir</a>`;
-  if (e.status === "loading") return `<section class="page">${back}${loadingNote}</section>`;
+  const back = `<a class="back" href="#decouvrir">${t("discover.back")}</a>`;
+  if (e.status === "loading") return `<section class="page">${back}${loadingNote()}</section>`;
   if (e.status === "error") return `<section class="page">${back}${errorNote()}</section>`;
-  if (!e.data) return `<section class="page">${back}<p>Ce profil n'existe pas.</p></section>`;
+  if (!e.data) return `<section class="page">${back}<p>${t("person.notFound")}</p></section>`;
 
   const { profile: p, status, posts } = e.data;
   const hidden = p.uid !== me() && status !== "accepted" && p.visibility === "private";
@@ -161,25 +163,25 @@ export function personView(id) {
       ${avatar(p, true)}
       <div class="person-id">
         <h1>${esc(p.name)}</h1>
-        <p class="handle">@${esc(p.handle)}${p.visibility === "private" ? ` · <span class="vis-badge">Compte privé</span>` : ""}</p>
+        <p class="handle">@${esc(p.handle)}${p.visibility === "private" ? ` · <span class="vis-badge">${t("person.private")}</span>` : ""}</p>
         ${p.bio ? `<p class="person-bio">${esc(p.bio)}</p>` : ""}
       </div>
       <div class="row-btns follow-btns">${followButton(p, status)}</div>
     </header>
-    <h2 class="section-title">Itinéraires</h2>
-    ${postGrid(posts, hidden ? "Ce compte est privé : abonnez-vous pour voir les itinéraires réservés à ses abonnés." : "Aucun itinéraire visible pour l'instant.")}
+    <h2 class="section-title">${t("person.itineraries")}</h2>
+    ${postGrid(posts, hidden ? t("person.privateNote") : t("person.nothing"))}
   </section>`;
 }
 
 // ---------- Publication ----------
 export function postView(id) {
   const e = social.load("post:" + id, () => social.getPost(id));
-  const back = `<a class="back" href="#decouvrir">← Découvrir</a>`;
-  if (e.status === "loading") return `<section class="page">${back}${loadingNote}</section>`;
+  const back = `<a class="back" href="#decouvrir">${t("discover.back")}</a>`;
+  if (e.status === "loading") return `<section class="page">${back}${loadingNote()}</section>`;
   if (e.status === "error" || !e.data) {
     return `<section class="page">${back}<div class="empty">
-      <h2>Itinéraire introuvable</h2>
-      <p class="note">Il a peut-être été supprimé, ou il n'est visible que par certaines personnes.${state.user ? "" : " Connectez-vous si vous êtes abonné(e) à son auteur."}</p>
+      <h2>${t("post.notFound")}</h2>
+      <p class="note">${t("post.notFoundText")}${state.user ? "" : ` ${t("post.notFoundSignIn")}`}</p>
     </div></section>`;
   }
 
@@ -191,10 +193,10 @@ export function postView(id) {
   const options = Object.entries(social.VISIBILITIES)
     .map(([k, v]) => `<option value="${k}"${p.visibility === k ? " selected" : ""}>${esc(v)}</option>`).join("");
   const del = state.confirm === "post:" + p.id
-    ? `<div class="confirm">Supprimer cette publication ? Votre voyage, lui, n'est pas touché.
-        <button class="btn small danger" data-act="delete-post-yes" data-post="${esc(p.id)}" type="button">Supprimer</button>
-        <button class="btn small" data-act="cancel-confirm" type="button">Annuler</button></div>`
-    : `<button class="btn ghost small danger" data-act="delete-post" data-post="${esc(p.id)}" type="button">Supprimer la publication</button>`;
+    ? `<div class="confirm">${t("post.deleteAsk")}
+        <button class="btn small danger" data-act="delete-post-yes" data-post="${esc(p.id)}" type="button">${t("common.delete")}</button>
+        <button class="btn small" data-act="cancel-confirm" type="button">${t("common.cancel")}</button></div>`
+    : `<button class="btn ghost small danger" data-act="delete-post" data-post="${esc(p.id)}" type="button">${t("post.delete")}</button>`;
 
   return `<section class="page post">
     ${back}
@@ -202,25 +204,25 @@ export function postView(id) {
       <a class="post-author" href="#personne-${esc(p.owner)}">${avatar({ name: p.ownerName })}<span>${esc(p.ownerName)} <span class="handle">@${esc(p.ownerHandle)}</span></span></a>
       <h1>${esc(p.title)}</h1>
       <div class="stats">
-        ${trip.kind === "sejour" ? `<span><b>Séjour</b></span>` : `<span><b>${stops.length}</b> étape${stops.length > 1 ? "s" : ""}</span>`}
-        ${trip.days ? `<span><b>${plural(trip.days, "jour")}</b></span>` : ""}
-        ${trip.nights ? `<span><b>${plural(trip.nights, "nuit")}</b></span>` : ""}
+        ${trip.kind === "sejour" ? `<span><b>${t("trip.kindSejour")}</b></span>` : `<span>${count(stops.length, "trip.statStops")}</span>`}
+        ${trip.days ? `<span><b>${count(trip.days, "count.day")}</b></span>` : ""}
+        ${trip.nights ? `<span><b>${count(trip.nights, "count.night")}</b></span>` : ""}
         ${budgetTotal(trip) ? `<span><b>${esc(budgetTotal(trip))}</b></span>` : ""}
       </div>
-      <p class="sync-note">Publié le ${esc(fmtDate(p.publishedAt))}${mine ? "" : " · lecture seule"}</p>
+      <p class="sync-note">${esc(t("post.publishedOn", { date: fmtDate(p.publishedAt) }))}${mine ? "" : ` · ${t("post.readOnly")}`}</p>
       ${mine ? `<div class="post-owner">
-          <label class="currency">Visible par <select data-post-visibility="${esc(p.id)}">${options}</select></label>
+          <label class="currency">${t("post.visibleTo")} <select data-post-visibility="${esc(p.id)}">${options}</select></label>
           ${del}
         </div>` : ""}
       <div class="row-btns post-actions">
         ${postFavButton(p)}
-        ${stops.length && state.forkOpen !== p.id ? `<button class="btn small" data-act="fork-open" data-post="${esc(p.id)}" type="button">Créer mon voyage à partir de cet itinéraire</button>` : ""}
-        ${p.visibility === "public" ? `<button class="btn small" data-act="copy-link" type="button">Copier le lien de partage</button>` : ""}
+        ${stops.length && state.forkOpen !== p.id ? `<button class="btn small" data-act="fork-open" data-post="${esc(p.id)}" type="button">${t("fork.button")}</button>` : ""}
+        ${p.visibility === "public" ? `<button class="btn small" data-act="copy-link" type="button">${t("post.copyLink")}</button>` : ""}
       </div>
       ${stops.length && state.forkOpen === p.id ? forkForm(p) : ""}
     </header>
-    ${stops.some((s) => s.geo) ? `<section class="map-box" aria-label="Carte de l'itinéraire"><div id="mapSlot"></div></section>` : ""}
-    <section class="route" aria-label="Itinéraire">${items.map((it, i) => readOnlyItem(it, stopRecos(p, i))).join("")}</section>
+    ${stops.some((s) => s.geo) ? `<section class="map-box" aria-label="${t("post.mapLabel")}"><div id="mapSlot"></div></section>` : ""}
+    <section class="route" aria-label="${t("trip.itinerary")}">${items.map((it, i) => readOnlyItem(it, stopRecos(p, i))).join("")}</section>
     ${budgetTotal(trip) ? publicBudgetSection(trip.budget) : ""}
     ${recosSection(p)}
     ${commentsSection(p)}
@@ -230,16 +232,16 @@ export function postView(id) {
 // Créer son voyage à partir de l'itinéraire : nom et date de départ, rien d'autre à remplir
 function forkForm(p) {
   return `<form class="fork panel" data-fork-form="${esc(p.id)}">
-    <h2>Créer mon voyage</h2>
-    <p class="note">Une copie de l'itinéraire, à modifier comme vous voulez. La publication de @${esc(p.ownerHandle)} ne change pas.${state.user ? "" : " Sans compte, le voyage est enregistré dans ce navigateur."}</p>
+    <h2>${t("fork.title")}</h2>
+    <p class="note">${esc(t("fork.copy", { handle: p.ownerHandle }))}${state.user ? "" : ` ${t("fork.local")}`}</p>
     <div class="grid">
-      <label class="f">Nom du voyage<input name="name" value="${esc(p.title)}" maxlength="200" required></label>
-      <label class="f">Date de départ (facultatif)<input type="date" name="start"></label>
+      <label class="f">${t("trip.nameLabel")}<input name="name" value="${esc(p.title)}" maxlength="200" required></label>
+      <label class="f">${t("fork.start")}<input type="date" name="start"></label>
     </div>
-    <p class="note">Avec une date de départ, « Jour 1, Jour 2… » deviennent des dates.</p>
+    <p class="note">${t("fork.datesNote")}</p>
     <div class="row-btns">
-      <button class="btn primary" type="submit">Créer le voyage</button>
-      <button class="btn" data-act="fork-close" type="button">Annuler</button>
+      <button class="btn primary" type="submit">${t("fork.create")}</button>
+      <button class="btn" data-act="fork-close" type="button">${t("common.cancel")}</button>
     </div>
   </form>`;
 }
@@ -249,9 +251,9 @@ function forkForm(p) {
 function readOnlyItem(it, recos = []) {
   if (it.type === "transport") {
     return `<article class="item transport">
-      <span class="mode">${esc(MODES[it.mode] || "Trajet")}</span>
+      <span class="mode">${esc(MODES[it.mode] || t("leg.generic"))}</span>
       <div class="leg">
-        <div class="leg-places">${esc(it.from || "Départ")} → ${esc(it.to || "Arrivée")}</div>
+        <div class="leg-places">${esc(it.from || t("stop.depart"))} → ${esc(it.to || t("stop.arrive"))}</div>
         ${it.duration ? `<div class="leg-times"><span class="dur">${esc(it.duration)}</span></div>` : ""}
       </div>
     </article>`;
@@ -259,15 +261,15 @@ function readOnlyItem(it, recos = []) {
   const todos = it.todos || [];
   return `<article class="item stop">
     <div class="stop-head">
-      ${it.day ? `<span class="day">JOUR ${+it.day}</span>` : ""}
-      <h2>${esc(it.place || "Étape")}</h2>
+      ${it.day ? `<span class="day">${t("stop.dayBadge", { n: +it.day })}</span>` : ""}
+      <h2>${esc(it.place || t("post.stop"))}</h2>
       ${it.country ? `<span class="stop-country">${esc(it.country)}</span>` : ""}
     </div>
-    ${it.nights === 0 ? `<div class="dates"><span class="nights is-halt">Arrêt</span></div>` : it.nights ? `<div class="dates"><span class="nights">${plural(+it.nights, "nuit")}</span></div>` : ""}
+    ${it.nights === 0 ? `<div class="dates"><span class="nights is-halt">${t("stop.halt")}</span></div>` : it.nights ? `<div class="dates"><span class="nights">${count(+it.nights, "count.night")}</span></div>` : ""}
     ${(it.program || []).length ? programSection(it.program)
-      : todos.length ? `<section class="checklist"><div class="cl-head"><h3>À faire</h3></div>
-      <ul class="post-todos">${todos.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></section>` : ""}
-    ${recos.length ? `<section class="stop-recos"><div class="cl-head"><h3>Recommandations</h3></div>
+      : todos.length ? `<section class="checklist"><div class="cl-head"><h3>${t("post.todo")}</h3></div>
+      <ul class="post-todos">${todos.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
+    ${recos.length ? `<section class="stop-recos"><div class="cl-head"><h3>${t("reco.title")}</h3></div>
       <ul class="reco-list">${recos.map((r) => recoCard(r, true)).join("")}</ul></section>` : ""}
   </article>`;
 }
@@ -276,12 +278,12 @@ function readOnlyItem(it, recos = []) {
 function programSection(program) {
   const days = [...new Set(program.map((a) => a.day))].sort((a, b) => (a ?? 1e9) - (b ?? 1e9));
   const byTime = (a, b) => (a.time || "99").localeCompare(b.time || "99");
-  return `<section class="post-program"><div class="cl-head"><h3>Programme</h3></div>
+  return `<section class="post-program"><div class="cl-head"><h3>${t("program.title")}</h3></div>
     ${days.map((d) => `<div class="sj-day${d ? "" : " is-loose"}">
-      <div class="sj-day-head"><h3>${d ? `Jour ${+d}` : "Sans jour précis"}</h3></div>
+      <div class="sj-day-head"><h3>${d ? t("program.day", { n: +d }) : t("post.noDay")}</h3></div>
       <ul class="sj-acts">${program.filter((a) => a.day === d).sort(byTime).map((a) => `<li class="sj-act is-public">
-        <div class="sj-act-main">${a.time ? `<time class="sj-time">${esc(a.time.replace(":", " h "))}</time>` : ""}<span class="sj-text">${esc(a.text)}</span></div>
-        ${a.how ? `<p class="sj-how"><span><b>Y aller :</b> ${esc(a.how)}</span></p>` : ""}
+        <div class="sj-act-main">${a.time ? `<time class="sj-time">${esc(fmtHour(a.time))}</time>` : ""}<span class="sj-text">${esc(a.text)}</span></div>
+        ${a.how ? `<p class="sj-how"><span><b>${t("program.getThere")}</b> ${esc(a.how)}</span></p>` : ""}
       </li>`).join("")}</ul>
     </div>`).join("")}
   </section>`;
@@ -292,15 +294,15 @@ function publicBudgetSection(b) {
   const m = (n) => esc(fmtMoney(n, b.currency));
   const sum = (r) => r.lodging + r.transport + r.activities;
   const rows = b.rows.filter(sum);
-  return `<section class="budget" aria-label="Budget">
-    <div class="budget-head"><h2>Budget</h2></div>
+  return `<section class="budget" aria-label="${t("budget.title")}">
+    <div class="budget-head"><h2>${t("budget.title")}</h2></div>
     <div class="budget-total">
       <span class="b-big">${m(sum(b))}</span>
-      <span class="note">dont ${m(b.lodging)} d'hébergement, ${m(b.transport)} de transport et ${m(b.activities)} d'activités</span>
+      <span class="note">${t("budget.split", { lodging: m(b.lodging), transport: m(b.transport), activities: m(b.activities) })}</span>
     </div>
     ${rows.length ? `<div class="table-scroll">
       <table class="budget-table">
-        <thead><tr><th scope="col">Destination</th><th scope="col">Hébergement</th><th scope="col">Transport</th><th scope="col">Activités</th><th scope="col">Total</th></tr></thead>
+        <thead><tr><th scope="col">${t("budget.colPlace")}</th><th scope="col">${t("budget.colLodging")}</th><th scope="col">${t("budget.colTransport")}</th><th scope="col">${t("budget.colActivities")}</th><th scope="col">${t("budget.colTotal")}</th></tr></thead>
         <tbody>${rows.map((r) => `<tr>
           <th scope="row">${esc(r.place)}</th>
           <td>${r.lodging ? m(r.lodging) : "–"}</td>
@@ -310,7 +312,7 @@ function publicBudgetSection(b) {
         </tr>`).join("")}</tbody>
       </table>
     </div>` : ""}
-    <p class="note">Hébergement, transport et activités, d'après les prix notés par l'auteur.${b.missing ? ` ${+b.missing} prix n'${b.missing > 1 ? "étaient" : "était"} pas encore renseigné${b.missing > 1 ? "s" : ""}.` : ""}</p>
+    <p class="note">${t("post.budgetNote")}${b.missing ? ` ${count(+b.missing, "post.budgetMissing")}` : ""}</p>
   </section>`;
 }
 
@@ -322,64 +324,62 @@ export function loadedPostTrip(id) {
 
 // ---------- Publier un voyage (sous l'en-tête du voyage) ----------
 // Montrer le budget : au choix, décoché par défaut (seulement s'il y a des prix)
-function budgetChoice(t) {
-  const { total } = computeBudget(t);
+function budgetChoice(trip) {
+  const { total } = computeBudget(trip);
   if (!total.total) return "";
-  const cur = /^[A-Z]{3}$/.test(t.currency || "") ? t.currency : "EUR";
+  const cur = /^[A-Z]{3}$/.test(trip.currency || "") ? trip.currency : "EUR";
   return `<label class="radio publish-budget"><input type="checkbox" name="budget">
-    <span>Montrer le budget : ${esc(fmtMoney(total.total, cur))}, avec le coût de chaque destination (hébergement, transport et activités)</span></label>`;
+    <span>${esc(t("publish.showBudget", { total: fmtMoney(total.total, cur) }))}</span></label>`;
 }
 
-export function publishPanel(t) {
+export function publishPanel(trip) {
   if (!isEnabled() || !state.user) return "";
   if (!state.publishOpen) {
-    return `<div class="hero-actions"><button class="btn small" data-act="open-publish" type="button">Publier l'itinéraire</button></div>`;
+    return `<div class="hero-actions"><button class="btn small" data-act="open-publish" type="button">${t("publish.title")}</button></div>`;
   }
   if (!state.profile) {
     return `<div class="publish panel">
-      <h2>Publier l'itinéraire</h2>
-      <p class="note">Pour publier, créez d'abord votre profil : un nom et un pseudo.</p>
-      <div class="row-btns"><a class="btn primary" href="#profil">Créer mon profil</a>
-        <button class="btn" data-act="close-publish" type="button">Annuler</button></div>
+      <h2>${t("publish.title")}</h2>
+      <p class="note">${t("publish.needProfile")}</p>
+      <div class="row-btns"><a class="btn primary" href="#profil">${t("profile.create")}</a>
+        <button class="btn" data-act="close-publish" type="button">${t("common.cancel")}</button></div>
     </div>`;
   }
   const def = state.profile.visibility === "private" ? "followers" : "public";
   return `<form class="publish panel" data-publish-form>
-    <h2>Publier l'itinéraire</h2>
-    <label class="f">Titre<input name="title" value="${esc(t.name)}" maxlength="200" required></label>
-    <fieldset class="radios"><legend>Visible par</legend>
-      ${Object.entries(social.VISIBILITIES).map(([k, v]) => `<label class="radio"><input type="radio" name="visibility" value="${k}"${k === def ? " checked" : ""}> ${esc(v)}${k === "public" ? " (même sans compte, avec le lien)" : ""}</label>`).join("")}
+    <h2>${t("publish.title")}</h2>
+    <label class="f">${t("publish.postTitle")}<input name="title" value="${esc(trip.name)}" maxlength="200" required></label>
+    <fieldset class="radios"><legend>${t("post.visibleTo")}</legend>
+      ${Object.entries(social.VISIBILITIES).map(([k, v]) => `<label class="radio"><input type="radio" name="visibility" value="${k}"${k === def ? " checked" : ""}> ${esc(v)}${k === "public" ? ` ${t("publish.publicNote")}` : ""}</label>`).join("")}
     </fieldset>
-    ${budgetChoice(t)}
-    <p class="note"><b>Publié :</b> les étapes, les activités, la carte (positions arrondies à environ 2 km) et les trajets, avec leurs lieux de départ et d'arrivée tels que vous les avez écrits. « Jour 1, Jour 2… » remplacent les dates.<br>
-      <b>Jamais publié :</b> dates, prix (sauf le budget si vous le montrez), notes, adresses d'hébergement, liens et numéros de réservation, billets, co-voyageurs.<br>
-      La publication est une copie : vos modifications du voyage ne s'y reportent pas, et personne ne peut la modifier.</p>
-    <div class="f-label">Recommandations (facultatif)
-      <p class="note">Vos bonnes adresses : un restaurant, un hébergement, un lieu à voir. Elles seront visibles par les mêmes personnes que l'itinéraire.</p>
+    ${budgetChoice(trip)}
+    <p class="note">${t("publish.what")}</p>
+    <div class="f-label">${t("publish.recos")}
+      <p class="note">${t("publish.recosNote")}</p>
       <div class="recos-edit" data-recos></div>
     </div>
-    <div><button class="btn small" data-act="add-reco-row" type="button">+ Ajouter une recommandation</button></div>
+    <div><button class="btn small" data-act="add-reco-row" type="button">${t("publish.addReco")}</button></div>
     <div class="row-btns">
-      <button class="btn primary" type="submit">Publier</button>
-      <button class="btn" data-act="close-publish" type="button">Annuler</button>
+      <button class="btn primary" type="submit">${t("publish.submit")}</button>
+      <button class="btn" data-act="close-publish" type="button">${t("common.cancel")}</button>
     </div>
   </form>`;
 }
 
 // Lien vers une page de liste : nom, nombre et flèche (« urgent » : nombre en rouge)
 const chevronRight = `<svg class="link-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`;
-const listLink = (hash, title, count, urgent = false) => `<li><a class="list-link" href="#${hash}">
+const listLink = (hash, title, n, urgent = false) => `<li><a class="list-link" href="#${hash}">
     <span>${esc(title)}</span>
-    <span class="fold-count${urgent ? " is-urgent" : ""}">${count}</span>
+    <span class="fold-count${urgent ? " is-urgent" : ""}">${n}</span>
     ${chevronRight}
   </a></li>`;
 
 // Pages des listes de Mon profil
 export const NETWORK_PAGES = {
-  demandes: "Demandes d'abonnement",
-  abonnes: "Abonnés",
-  abonnements: "Abonnements",
-  "mes-publications": "Mes publications",
+  get demandes() { return t("network.requests"); },
+  get abonnes() { return t("network.followers"); },
+  get abonnements() { return t("network.following"); },
+  get "mes-publications"() { return t("page.publications"); },
 };
 
 // ---------- Profil public, abonnés et publications (page Mon profil) ----------
@@ -387,17 +387,17 @@ export function socialProfileSection() {
   if (!isEnabled() || !state.user) return "";
   const p = state.profile;
   const form = `<form class="panel" data-profile-form>
-    <h2>Profil public</h2>
-    <p class="note">${p ? `Votre profil : <a href="#personne-${esc(me())}">@${esc(p.handle)}</a>. Votre adresse e-mail n'y apparaît jamais.`
-      : "Créez votre profil pour publier vos itinéraires et suivre d'autres voyageurs. Votre adresse e-mail n'y apparaît jamais."}</p>
-    <label class="f">Nom<input name="name" value="${esc(p ? p.name : "")}" maxlength="40" required placeholder="Ex. Evie"></label>
-    <label class="f">Pseudo (lettres minuscules, chiffres, point, tiret bas)<input name="handle" value="${esc(p ? p.handle : "")}" maxlength="20" required placeholder="ex. evie.voyage" autocomplete="off" autocapitalize="none"></label>
-    <label class="f">Bio<textarea name="bio" maxlength="160" placeholder="Quelques mots sur vous et vos voyages">${esc(p ? p.bio : "")}</textarea></label>
-    <fieldset class="radios"><legend>Compte</legend>
-      <label class="radio"><input type="radio" name="visibility" value="public"${!p || p.visibility === "public" ? " checked" : ""}> Public : tout le monde peut s'abonner</label>
-      <label class="radio"><input type="radio" name="visibility" value="private"${p && p.visibility === "private" ? " checked" : ""}> Privé : vous acceptez chaque abonnement</label>
+    <h2>${t("profile.public")}</h2>
+    <p class="note">${p ? t("profile.yours", { link: `<a href="#personne-${esc(me())}">@${esc(p.handle)}</a>` })
+      : t("profile.createWhy")}</p>
+    <label class="f">${t("profile.name")}<input name="name" value="${esc(p ? p.name : "")}" maxlength="40" required placeholder="${t("profile.nameHint")}"></label>
+    <label class="f">${t("profile.handle")}<input name="handle" value="${esc(p ? p.handle : "")}" maxlength="20" required placeholder="${t("profile.handleHint")}" autocomplete="off" autocapitalize="none"></label>
+    <label class="f">${t("profile.bio")}<textarea name="bio" maxlength="160" placeholder="${t("profile.bioHint")}">${esc(p ? p.bio : "")}</textarea></label>
+    <fieldset class="radios"><legend>${t("settings.account")}</legend>
+      <label class="radio"><input type="radio" name="visibility" value="public"${!p || p.visibility === "public" ? " checked" : ""}> ${t("profile.publicAccount")}</label>
+      <label class="radio"><input type="radio" name="visibility" value="private"${p && p.visibility === "private" ? " checked" : ""}> ${t("profile.privateAccount")}</label>
     </fieldset>
-    <div class="row-btns"><button class="btn primary" type="submit">${p ? "Enregistrer" : "Créer mon profil"}</button></div>
+    <div class="row-btns"><button class="btn primary" type="submit">${p ? t("common.save") : t("profile.create")}</button></div>
   </form>`;
   if (!p) return form;
 
@@ -408,10 +408,10 @@ export function socialProfileSection() {
 
   return `${form}
     <ul class="panel list-links">
-      ${requests ? listLink("demandes", "Demandes d'abonnement", requests, true) : ""}
-      ${listLink("abonnes", "Abonnés", n(net, (d) => d.followers.length))}
-      ${listLink("abonnements", "Abonnements", n(net, (d) => d.following.filter((f) => f.status === "accepted").length))}
-      ${listLink("mes-publications", "Mes publications", n(mine, (d) => d.length))}
+      ${requests ? listLink("demandes", t("network.requests"), requests, true) : ""}
+      ${listLink("abonnes", t("network.followers"), n(net, (d) => d.followers.length))}
+      ${listLink("abonnements", t("network.following"), n(net, (d) => d.following.filter((f) => f.status === "accepted").length))}
+      ${listLink("mes-publications", t("page.publications"), n(mine, (d) => d.length))}
     </ul>`;
 }
 
@@ -420,28 +420,28 @@ export function socialTitle() {
   if (state.view === "person") {
     const e = social.peek("person:" + state.personId);
     const p = e.status === "ok" && e.data && e.data.profile;
-    return p ? [`${p.name} (@${p.handle})`, p.bio || `Les itinéraires de ${p.name} sur Hippalos.`] : ["Profil", "Profil d'un voyageur sur Hippalos."];
+    return p ? [`${p.name} (@${p.handle})`, p.bio || t("meta.personOf", { name: p.name })] : [t("meta.person.title"), t("meta.person")];
   }
   const e = social.peek("post:" + state.postId);
   const p = e.status === "ok" && e.data;
-  return p ? [p.title, `Itinéraire publié par ${p.ownerName} sur Hippalos.`] : ["Itinéraire", "Itinéraire publié sur Hippalos."];
+  return p ? [p.title, t("meta.postBy", { name: p.ownerName })] : [t("trip.itinerary"), t("meta.post")];
 }
 
 // ---------- Recommandations ----------
 // Une recommandation dans le panneau de publication (étapes du voyage proposées)
 export function recoRow(trip) {
   const id = Math.random().toString(36).slice(2, 8);
-  const stops = trip.items.map((it, i) => (it.type === "stop" ? `<option value="${i}">${esc(it.place || "Étape")}</option>` : "")).join("");
+  const stops = trip.items.map((it, i) => (it.type === "stop" ? `<option value="${i}">${esc(it.place || t("post.stop"))}</option>` : "")).join("");
   return `<div class="reco-edit" data-reco-row>
     <div class="grid">
-      <label class="f">Type<select name="recoKind" id="rk-${id}">${Object.entries(social.RECO_KINDS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select></label>
-      <label class="f">Nom<input name="recoName" id="rn-${id}" maxlength="100" placeholder="Ex. Chez Jo" required></label>
-      <label class="f">Où<input name="recoWhere" id="rw-${id}" maxlength="120" placeholder="Ville, quartier ou adresse"></label>
-      <label class="f">Étape<select name="recoStop" id="rs-${id}"><option value="">Tout le voyage</option>${stops}</select></label>
-      <label class="f full">Pourquoi<textarea name="recoNote" id="ro-${id}" maxlength="500" placeholder="Ce qui vous a plu, ce qu'il faut commander, à quelle heure y aller…"></textarea></label>
-      <label class="f full">Lien (facultatif)<input name="recoUrl" id="ru-${id}" inputmode="url" placeholder="https://…"></label>
+      <label class="f">${t("reco.kind")}<select name="recoKind" id="rk-${id}">${Object.entries(social.RECO_KINDS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select></label>
+      <label class="f">${t("profile.name")}<input name="recoName" id="rn-${id}" maxlength="100" placeholder="${t("reco.nameHint")}" required></label>
+      <label class="f">${t("reco.where")}<input name="recoWhere" id="rw-${id}" maxlength="120" placeholder="${t("reco.whereHint")}"></label>
+      <label class="f">${t("post.stop")}<select name="recoStop" id="rs-${id}"><option value="">${t("reco.wholeTrip")}</option>${stops}</select></label>
+      <label class="f full">${t("reco.why")}<textarea name="recoNote" id="ro-${id}" maxlength="500" placeholder="${t("reco.whyHint")}"></textarea></label>
+      <label class="f full">${t("reco.link")}<input name="recoUrl" id="ru-${id}" inputmode="url" placeholder="https://…"></label>
     </div>
-    <div><button class="btn ghost small" data-act="rm-reco-row" type="button">Retirer cette recommandation</button></div>
+    <div><button class="btn ghost small" data-act="rm-reco-row" type="button">${t("reco.remove")}</button></div>
   </div>`;
 }
 
@@ -461,8 +461,8 @@ function recoCard(r, withKind = false) {
     <h4>${esc(r.name)}</h4>
     ${r.where ? `<p class="reco-where">${esc(r.where)}</p>` : ""}
     ${r.note ? `<p class="reco-note">${esc(r.note)}</p>` : ""}
-    <p class="reco-links"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Voir sur la carte ↗</a>
-      ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow ugc">Site ↗</a>` : ""}</p>
+    <p class="reco-links"><a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">${t("country.seeOnMap")}</a>
+      ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow ugc">${t("reco.site")}</a>` : ""}</p>
   </li>`;
 }
 
@@ -474,15 +474,15 @@ function recosSection(p) {
   const groups = Object.entries(social.RECO_KINDS)
     .map(([kind, label]) => [label, recos.filter((r) => r.kind === kind)])
     .filter(([, list]) => list.length);
-  return `<section class="recos" aria-label="Recommandations">
-    <h2>${recos.length < all.length ? "Pour tout le voyage" : "Recommandations"}</h2>
+  return `<section class="recos" aria-label="${t("reco.title")}">
+    <h2>${recos.length < all.length ? t("reco.forWholeTrip") : t("reco.title")}</h2>
     ${groups.map(([label, list]) => `<h3 class="reco-kind">${esc(label)}</h3>
       <ul class="reco-list">${list.map((r) => recoCard(r)).join("")}</ul>`).join("")}
   </section>`;
 }
 
 // ---------- Commentaires ----------
-const fmtDateTime = (ms) => new Date(ms).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const fmtDateTime = (ms) => new Date(ms).toLocaleString(locale(), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
 
 function commentsSection(p) {
   const e = social.load("comments:" + p.id, () => social.listComments(p.id));
@@ -500,16 +500,16 @@ function commentsSection(p) {
     </li>`).join("");
 
   const form = !isEnabled() ? ""
-    : !state.user ? `<p class="note">Connectez-vous pour commenter. <button class="link-btn" data-act="open-auth" data-mode="signin" type="button">Se connecter</button></p>`
-    : !state.profile ? `<p class="note">Pour commenter, créez d'abord votre profil (un nom et un pseudo), que votre compte soit public ou privé. <a href="#profil">Créer mon profil</a></p>`
+    : !state.user ? `<p class="note">${t("comments.signIn")} <button class="link-btn" data-act="open-auth" data-mode="signin" type="button">${t("auth.signIn")}</button></p>`
+    : !state.profile ? `<p class="note">${t("comments.needProfile")} <a href="#profil">${t("profile.create")}</a></p>`
     : `<form class="comment-form" data-comment-form="${esc(p.id)}">
-        <label class="f">Votre commentaire<textarea name="text" maxlength="1000" required placeholder="Une question, un conseil, un merci…"></textarea></label>
-        <div><button class="btn primary small" type="submit">Publier le commentaire</button></div>
+        <label class="f">${t("comments.yours")}<textarea name="text" maxlength="1000" required placeholder="${t("comments.hint")}"></textarea></label>
+        <div><button class="btn primary small" type="submit">${t("comments.submit")}</button></div>
       </form>`;
 
-  return `<section class="comments" aria-label="Commentaires">
-    <h2>Commentaires${list.length ? ` (${list.length})` : ""}</h2>
-    ${e.status === "loading" ? loadingNote : e.status === "error" ? errorNote("Impossible de charger les commentaires.") : list.length ? `<ul class="comment-list">${items}</ul>` : `<p class="note">Aucun commentaire pour l'instant.</p>`}
+  return `<section class="comments" aria-label="${t("comments.title")}">
+    <h2>${t("comments.title")}${list.length ? ` (${list.length})` : ""}</h2>
+    ${e.status === "loading" ? loadingNote() : e.status === "error" ? errorNote(t("comments.loadError")) : list.length ? `<ul class="comment-list">${items}</ul>` : `<p class="note">${t("comments.none")}</p>`}
     ${form}
   </section>`;
 }
@@ -522,18 +522,18 @@ function commentBody(p, c, parent = null) {
   const heart = `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="${liked ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
   // On n'aime pas son propre commentaire ; sans compte, on voit seulement le nombre
   const like = !state.user || c.author === me()
-    ? (n ? `<span class="comment-like is-static" aria-label="${n} j'aime">${heart}${n}</span>` : "")
+    ? (n ? `<span class="comment-like is-static" aria-label="${esc(count(n, "comments.likes"))}">${heart}${n}</span>` : "")
     : `<button class="comment-like${liked ? " is-on" : ""}" data-act="like-comment" data-post="${esc(p.id)}" data-comment="${esc(c.id)}" type="button"
-        aria-pressed="${liked}" aria-label="${liked ? "Je n'aime plus" : "J'aime"} ce commentaire${n ? ` (${n} j'aime)` : ""}">${heart}${n || ""}</button>`;
+        aria-pressed="${liked}" aria-label="${esc(t(liked ? "comments.unlike" : "comments.like") + (n ? ` (${count(n, "comments.likes")})` : ""))}">${heart}${n || ""}</button>`;
   // Répondre à une réponse : la réponse va sous le même commentaire, sur un seul niveau
   const target = parent || c;
   const reply = state.user && state.profile
-    ? `<button class="link-btn" data-act="reply-comment" data-comment="${esc(target.id)}" type="button">Répondre</button>` : "";
+    ? `<button class="link-btn" data-act="reply-comment" data-comment="${esc(target.id)}" type="button">${t("comments.reply")}</button>` : "";
   const del = !canDelete ? "" : state.confirm === "comment:" + c.id
-    ? `<div class="confirm">Supprimer ce commentaire ?
-        <button class="btn small danger" data-act="delete-comment-yes" data-post="${esc(p.id)}" data-comment="${esc(c.id)}" type="button">Supprimer</button>
-        <button class="btn small" data-act="cancel-confirm" type="button">Annuler</button></div>`
-    : `<button class="link-btn" data-act="delete-comment" data-comment="${esc(c.id)}" type="button">Supprimer</button>`;
+    ? `<div class="confirm">${t("comments.deleteAsk")}
+        <button class="btn small danger" data-act="delete-comment-yes" data-post="${esc(p.id)}" data-comment="${esc(c.id)}" type="button">${t("common.delete")}</button>
+        <button class="btn small" data-act="cancel-confirm" type="button">${t("common.cancel")}</button></div>`
+    : `<button class="link-btn" data-act="delete-comment" data-comment="${esc(c.id)}" type="button">${t("common.delete")}</button>`;
   return `<div class="comment-head">
       <a class="post-author" href="#personne-${esc(c.author)}">${avatar({ name: c.authorName })}<span>${esc(c.authorName)} <span class="handle">@${esc(c.authorHandle)}</span></span></a>
       <span class="comment-date">${esc(fmtDateTime(c.createdAt))}</span>
@@ -544,9 +544,9 @@ function commentBody(p, c, parent = null) {
 
 function replyForm(p, c) {
   return `<form class="comment-form" data-comment-form="${esc(p.id)}" data-reply-to="${esc(c.id)}" data-reply-author="${esc(c.author)}">
-    <label class="f">Répondre à ${esc(c.authorName)}<textarea name="text" maxlength="1000" required placeholder="Votre réponse…"></textarea></label>
-    <div class="row-btns"><button class="btn primary small" type="submit">Répondre</button>
-      <button class="btn small" data-act="reply-cancel" type="button">Annuler</button></div>
+    <label class="f">${esc(t("comments.replyTo", { name: c.authorName }))}<textarea name="text" maxlength="1000" required placeholder="${t("comments.replyHint")}"></textarea></label>
+    <div class="row-btns"><button class="btn primary small" type="submit">${t("comments.reply")}</button>
+      <button class="btn small" data-act="reply-cancel" type="button">${t("common.cancel")}</button></div>
   </form>`;
 }
 
@@ -564,55 +564,57 @@ export function markNotificationsSeen() {
 
 function ago(ms) {
   const min = Math.round((Date.now() - ms) / 60000);
-  if (min < 1) return "à l'instant";
-  if (min < 60) return `il y a ${min} min`;
+  if (min < 1) return t("ago.now");
+  if (min < 60) return t("ago.min", { n: min });
   const h = Math.round(min / 60);
-  if (h < 24) return `il y a ${h} h`;
+  if (h < 24) return t("ago.hours", { n: h });
   const d = Math.round(h / 24);
-  if (d === 1) return "hier";
-  if (d < 7) return `il y a ${d} jours`;
-  return new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+  if (d === 1) return t("ago.yesterday");
+  if (d < 7) return t("ago.days", { n: d });
+  return new Date(ms).toLocaleDateString(locale(), { day: "numeric", month: "long" });
 }
 
 function notifLine(n, seen) {
+  // Textes du dictionnaire ; tout ce qui vient des utilisateurs est échappé avant d'y être inséré
   const who = `<b>${esc(n.name)}</b>`;
+  const quote = (s) => `<span class="notif-quote">${esc(s.length > 90 ? s.slice(0, 90) + "…" : s)}</span>`;
   const [text, href] =
-    n.type === "reply" ? [`${who} a répondu à votre commentaire${n.postTitle ? ` sur « ${esc(n.postTitle)} »` : ""} : <span class="notif-quote">${esc(n.text.length > 90 ? n.text.slice(0, 90) + "…" : n.text)}</span>`, `#publication-${n.postId}`]
-    : n.type === "comment" ? [`${who} a commenté « ${esc(n.postTitle)} » : <span class="notif-quote">${esc(n.text.length > 90 ? n.text.slice(0, 90) + "…" : n.text)}</span>`, `#publication-${n.postId}`]
-    : n.type === "request" ? [`${who} demande à s'abonner à vous. Vous pouvez accepter ou refuser dans Mon profil.`, "#profil"]
-    : n.type === "accepted" ? [`${who} a accepté votre demande d'abonnement.`, `#personne-${n.who}`]
-    : n.type === "joined" ? [`${who} a rejoint votre voyage « ${esc(n.tripName)} ».`, `#voyage-${n.tripId}`]
-    : n.type === "edited" ? [`${who} a modifié « ${esc(n.tripName)} » : ${esc(editText(n.what, n.more))}.`, `#voyage-${n.tripId}`]
-    : n.type === "favorite" ? [`${who} a ajouté « ${esc(n.postTitle)} » à ses favoris.`, `#publication-${n.postId}`]
-    : [`${who} s'est abonné(e) à vous.`, `#personne-${n.who}`];
+    n.type === "reply" ? [n.postTitle ? t("notif.replyOn", { who, title: esc(n.postTitle), quote: quote(n.text) }) : t("notif.reply", { who, quote: quote(n.text) }), `#publication-${n.postId}`]
+    : n.type === "comment" ? [t("notif.comment", { who, title: esc(n.postTitle), quote: quote(n.text) }), `#publication-${n.postId}`]
+    : n.type === "request" ? [t("notif.request", { who }), "#profil"]
+    : n.type === "accepted" ? [t("notif.accepted", { who }), `#personne-${n.who}`]
+    : n.type === "joined" ? [t("notif.joined", { who, trip: esc(n.tripName) }), `#voyage-${n.tripId}`]
+    : n.type === "edited" ? [t("notif.edited", { who, trip: esc(n.tripName), what: esc(editText(n.what, n.more)) }), `#voyage-${n.tripId}`]
+    : n.type === "favorite" ? [t("notif.favorite", { who, title: esc(n.postTitle) }), `#publication-${n.postId}`]
+    : [t("notif.follow", { who }), `#personne-${n.who}`];
   const fresh = n.at > seen;
   return `<li class="notif${fresh ? " is-new" : ""}">
     <a href="${esc(href)}">${avatar({ name: n.name })}
-      <span class="notif-text"><span class="notif-msg">${text}</span><span class="notif-time">${esc(ago(n.at))}${fresh ? " · nouveau" : ""}</span></span>
+      <span class="notif-text"><span class="notif-msg">${text}</span><span class="notif-time">${esc(ago(n.at))}${fresh ? ` · ${t("notif.new")}` : ""}</span></span>
     </a>
   </li>`;
 }
 
 export function notificationsView() {
-  const head = `<header class="page-head"><h1>Notifications</h1><p class="lead">Commentaires, favoris, abonnements, et voyageurs qui rejoignent ou modifient vos voyages.</p></header>`;
-  if (!isEnabled()) return `<section class="page">${head}${errorNote("Les comptes ne sont pas activés sur ce site.")}</section>`;
-  if (!state.user) return `<section class="page">${head}${signInPanel("Connectez-vous pour voir qui commente vos itinéraires et qui s'abonne à vous.")}</section>`;
-  if (!state.notifs) return `<section class="page">${head}${loadingNote}</section>`;
+  const head = `<header class="page-head"><h1>${t("page.notifications")}</h1><p class="lead">${t("notif.lead")}</p></header>`;
+  if (!isEnabled()) return `<section class="page">${head}${errorNote(t("social.disabled"))}</section>`;
+  if (!state.user) return `<section class="page">${head}${signInPanel(t("notif.signIn"))}</section>`;
+  if (!state.notifs) return `<section class="page">${head}${loadingNote()}</section>`;
   const list = social.allNotifications();
   const seen = prefs.notifSeen || 0;
   return `<section class="page">${head}
     ${invitationsBlock()}
     ${list.length
       ? `<ul class="notifs">${list.map((n) => notifLine(n, seen)).join("")}</ul>`
-      : state.invitations.length ? "" : `<p class="note">Rien pour l'instant. Les commentaires sur vos itinéraires, vos nouveaux abonnés et les voyageurs qui rejoignent ou modifient vos voyages apparaîtront ici.</p>`}
+      : state.invitations.length ? "" : `<p class="note">${t("notif.none")}</p>`}
   </section>`;
 }
 
 // Page d'une liste de Mon profil : demandes, abonnés, abonnements ou publications
 export function networkView(tab) {
-  const title = NETWORK_PAGES[tab] || "Mon profil";
-  const head = `${tab === "mes-publications" ? "" : `<a class="back" href="#profil">← Mon profil</a>`}<header class="page-head"><h1>${esc(title)}</h1>${tab === "mes-publications" ? `<p class="lead">Les copies figées de vos voyages que vous avez publiées. Vos voyages, eux, restent modifiables dans Mes voyages.</p>` : ""}</header>`;
-  if (!state.user) return `<section class="page">${head}${signInPanel("Connectez-vous pour voir vos abonnés et vos publications.")}</section>`;
+  const title = NETWORK_PAGES[tab] || t("page.profile");
+  const head = `${tab === "mes-publications" ? "" : `<a class="back" href="#profil">${t("network.back")}</a>`}<header class="page-head"><h1>${esc(title)}</h1>${tab === "mes-publications" ? `<p class="lead">${t("network.postsLead")}</p>` : ""}</header>`;
+  if (!state.user) return `<section class="page">${head}${signInPanel(t("network.signIn"))}</section>`;
 
   const person = (f, buttons) => `<li>
       <a class="person" href="#personne-${esc(f.profile.uid)}">${avatar(f.profile)}<span><b>${esc(f.profile.name)}</b>${f.profile.handle ? ` <span class="handle">@${esc(f.profile.handle)}</span>` : ""}</span></a>
@@ -622,7 +624,7 @@ export function networkView(tab) {
 
   if (tab === "mes-publications") {
     const mine = social.load("mine", () => social.postsOf(me()));
-    if (mine.status !== "ok") return `<section class="page">${head}${mine.status === "loading" ? loadingNote : errorNote()}</section>`;
+    if (mine.status !== "ok") return `<section class="page">${head}${mine.status === "loading" ? loadingNote() : errorNote()}</section>`;
     const posts = mine.data;
     const sel = state.selecting && posts.length > 0;
     const n = posts.filter((p) => state.selected.has(p.id)).length;
@@ -631,13 +633,13 @@ export function networkView(tab) {
         <div><h1>${esc(title)}</h1></div>
         ${selectButtons(posts.map((p) => p.id))}
       </header>
-      <p class="lead">Les copies figées de vos voyages que vous avez publiées. Vos voyages, eux, restent modifiables dans Mes voyages.</p>`;
-    const body = !posts.length ? `<p class="note">Vous n'avez rien publié. Ouvrez un voyage et choisissez « Publier l'itinéraire ».</p>`
+      <p class="lead">${t("network.postsLead")}</p>`;
+    const body = !posts.length ? `<p class="note">${t("network.noPosts")}</p>`
       : sel ? `<div class="trip-grid">${posts.map(selectablePostCard).join("")}</div>
           ${selectBar(n, {
-            word: "publication", feminine: true,
-            hint: "Touchez les publications à supprimer",
-            question: `Supprimer ${plural(n, "publication")}, avec ${n > 1 ? "leurs" : "ses"} commentaires ? Vos voyages ne sont pas touchés.`,
+            picked: "network.picked",
+            hint: t("network.selHint"),
+            question: esc(count(n, "network.selQuestion")),
             yesAct: "select-delete-posts-yes",
           })}`
       : postGrid(posts, "");
@@ -645,14 +647,14 @@ export function networkView(tab) {
   }
 
   const net = social.load("network", social.myNetwork);
-  if (net.status !== "ok") return `<section class="page">${head}${net.status === "loading" ? loadingNote : errorNote()}</section>`;
+  if (net.status !== "ok") return `<section class="page">${head}${net.status === "loading" ? loadingNote() : errorNote()}</section>`;
   const d = net.data;
   const body =
-    tab === "demandes" ? list(d.requests, "Aucune demande en attente.", (f) => `<button class="btn small primary" data-act="accept-follower" data-uid="${esc(f.follower)}" type="button">Accepter</button>
-        <button class="btn small" data-act="remove-follower" data-uid="${esc(f.follower)}" type="button">Refuser</button>`)
-    : tab === "abonnes" ? list(d.followers, "Personne ne vous suit encore.", (f) => `<button class="btn small" data-act="remove-follower" data-uid="${esc(f.follower)}" type="button">Retirer</button>`)
-    : list(d.following, "Vous ne suivez personne. Trouvez des voyageurs dans Découvrir.", (f) => `${f.status === "pending" ? `<span class="follow-state">En attente</span>` : ""}
-        <button class="btn small" data-act="unfollow" data-uid="${esc(f.followed)}" type="button">${f.status === "pending" ? "Annuler" : "Se désabonner"}</button>`);
+    tab === "demandes" ? list(d.requests, t("network.noRequests"), (f) => `<button class="btn small primary" data-act="accept-follower" data-uid="${esc(f.follower)}" type="button">${t("network.accept")}</button>
+        <button class="btn small" data-act="remove-follower" data-uid="${esc(f.follower)}" type="button">${t("invites.decline")}</button>`)
+    : tab === "abonnes" ? list(d.followers, t("network.noFollowers"), (f) => `<button class="btn small" data-act="remove-follower" data-uid="${esc(f.follower)}" type="button">${t("ticket.remove")}</button>`)
+    : list(d.following, t("network.noFollowing"), (f) => `${f.status === "pending" ? `<span class="follow-state">${t("network.pending")}</span>` : ""}
+        <button class="btn small" data-act="unfollow" data-uid="${esc(f.followed)}" type="button">${f.status === "pending" ? t("common.cancel") : t("follow.unfollow")}</button>`);
   return `<section class="page">${head}${body}</section>`;
 }
 
@@ -663,10 +665,10 @@ export function countryPostsSection(code) {
   const e = social.load("country-posts:" + code, () => social.topPostsIn(code));
   if (e.status !== "ok" || !e.data.length) return "";
   return `<section class="country-posts" aria-labelledby="country-posts-title">
-    <h2 id="country-posts-title">Idées de voyage</h2>
-    <p class="note">Des itinéraires publiés par des voyageurs dans ce pays, les plus mis en favori d'abord.</p>
+    <h2 id="country-posts-title">${t("ideas.title")}</h2>
+    <p class="note">${t("ideas.note")}</p>
     <div class="trip-grid idea-row">${e.data.map(postCard).join("")}</div>
-    <p class="note"><a href="#decouvrir">Voir tous les itinéraires dans Découvrir</a></p>
+    <p class="note"><a href="#decouvrir">${t("ideas.all")}</a></p>
   </section>`;
 }
 
@@ -678,9 +680,9 @@ export function favoritePostsSection() {
     const posts = await Promise.all(ids.map((id) => social.getPost(id).catch(() => null)));
     return { found: posts.filter(Boolean), missing: ids.filter((id, i) => !posts[i]) };
   });
-  const body = e.status === "loading" ? loadingNote : e.status === "error" ? errorNote()
+  const body = e.status === "loading" ? loadingNote() : e.status === "error" ? errorNote()
     : `${postGrid(e.data.found, "")}
-      ${e.data.missing.length ? `<p class="note">${e.data.missing.length > 1 ? `${e.data.missing.length} itinéraires ne sont plus disponibles` : "Un itinéraire n'est plus disponible"} (supprimé, ou plus visible pour vous).
-        <button class="link-btn" data-act="forget-missing-posts" data-posts="${esc(e.data.missing.join(","))}" type="button">Les retirer des favoris</button></p>` : ""}`;
-  return `<h2 class="section-title">Itinéraires</h2>${body}`;
+      ${e.data.missing.length ? `<p class="note">${count(e.data.missing.length, "fav.missing")}
+        <button class="link-btn" data-act="forget-missing-posts" data-posts="${esc(e.data.missing.join(","))}" type="button">${t("fav.forget")}</button></p>` : ""}`;
+  return `<h2 class="section-title">${t("person.itineraries")}</h2>${body}`;
 }

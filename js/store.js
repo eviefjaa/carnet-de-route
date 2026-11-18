@@ -8,6 +8,7 @@ import { uid } from "./utils.js";
 import { toast } from "./toast.js";
 import { prefs } from "./prefs.js";
 import { mergeTrip } from "./merge.js";
+import { t } from "./i18n.js";
 
 const TRIPS_KEY = "carnet-route-trips";
 const CURRENT_KEY = "carnet-route-current";
@@ -53,7 +54,7 @@ let cloud = null;          // module cloud.js quand on est connecté
 let saved = {};            // dernière version enregistrée de chaque voyage (texte JSON)
 let saveTimer = null;
 
-const snapshot = (t) => JSON.stringify(t);
+const snapshot = (trip) => JSON.stringify(trip);
 
 // ---------- État de la synchronisation (affiché en haut de la page) ----------
 //   local    sans compte : enregistré sur cet appareil
@@ -85,10 +86,10 @@ export function setSync(status, error = "") {
 // Explication lisible d'une erreur Firestore
 export function syncError(err) {
   const code = (err && err.code) || "";
-  if (code === "permission-denied") return "Firebase refuse l'accès : vous n'avez peut-être plus accès à ce voyage, ou les règles Firestore ne sont pas à jour.";
-  if (code === "unavailable" || code === "deadline-exceeded") return "Pas de connexion avec Firebase.";
-  if (code === "unauthenticated") return "Votre session a expiré : reconnectez-vous.";
-  return `Erreur Firebase${code ? ` (${code})` : ""}.`;
+  if (code === "permission-denied") return t("err.denied");
+  if (code === "unavailable" || code === "deadline-exceeded") return t("err.noFirebase");
+  if (code === "unauthenticated") return t("err.sessionExpired");
+  return t("err.firebase", { code: code ? ` (${code})` : "" });
 }
 
 export function setCloud(c) {
@@ -100,7 +101,7 @@ export function setCloud(c) {
 export function replaceTrips(trips) {
   state.trips = trips;
   saved = {};
-  Object.entries(trips).forEach(([id, t]) => (saved[id] = snapshot(t)));
+  Object.entries(trips).forEach(([id, trip]) => (saved[id] = snapshot(trip)));
   pickCurrent();
 }
 
@@ -122,7 +123,7 @@ function saveLocal() {
   try {
     localStorage.setItem(TRIPS_KEY, JSON.stringify(state.trips));
   } catch {
-    toast("Enregistrement impossible : le stockage du navigateur est plein ou bloqué.");
+    toast(t("err.storageFull"));
   }
 }
 
@@ -133,14 +134,14 @@ async function flushCloud() {
   const c = cloud;
   if (!c) return;
   const jobs = [];
-  Object.entries(state.trips).forEach(([id, t]) => {
+  Object.entries(state.trips).forEach(([id, trip]) => {
     // Voyage pas encore dans le compte : on en devient le créateur
     const isNew = !(id in saved);
-    if (!t.owner) Object.assign(t, c.newTripSharing());
-    const s = snapshot(t);
+    if (!trip.owner) Object.assign(trip, c.newTripSharing());
+    const s = snapshot(trip);
     if (saved[id] === s) return;
     const base = saved[id] ? JSON.parse(saved[id]) : null;
-    jobs.push(c.saveTrip(id, t, isNew, base).then((merged) => {
+    jobs.push(c.saveTrip(id, trip, isNew, base).then((merged) => {
       if (!merged) { saved[id] = s; return; }
       // Le serveur contient maintenant la version fusionnée. Si j'ai encore modifié le voyage
       // pendant l'envoi, mes nouvelles modifications sont reportées sur cette version.
@@ -166,7 +167,7 @@ async function flushCloud() {
   if (cloud !== c) return; // déconnecté entre-temps
   if (failed) {
     setSync("error", syncError(failed.reason));
-    toast("Modifications non enregistrées dans le compte. " + sync.error);
+    toast(`${t("err.notSaved")} ${sync.error}`);
   } else {
     setSync(hasUnsaved() ? "pending" : "saved");
   }
@@ -194,11 +195,11 @@ export const hasPendingChanges = (id) => state.trips[id] && saved[id] !== snapsh
 
 // Voyageurs ou invitations changés directement dans le cloud : on met à jour la copie locale
 export function patchTrip(id, fields) {
-  const t = state.trips[id];
-  if (!t) return;
+  const trip = state.trips[id];
+  if (!trip) return;
   const pending = hasPendingChanges(id);
-  Object.assign(t, fields);
-  if (!pending) saved[id] = snapshot(t);
+  Object.assign(trip, fields);
+  if (!pending) saved[id] = snapshot(trip);
 }
 
 // Voyage quitté : on l'oublie sans le supprimer du compte des autres
@@ -236,7 +237,7 @@ function pickCurrent() {
 export const currentTrip = () => state.trips[state.currentId] || null;
 
 // Créateur du voyage (ou voyage pas encore dans un compte)
-export const isOwner = (t) => !t.owner || (!!state.user && t.owner === state.user.uid);
+export const isOwner = (trip) => !trip.owner || (!!state.user && trip.owner === state.user.uid);
 
 export function resetUi() {
   state.editingId = null;
@@ -262,7 +263,7 @@ export function selectTrip(id) {
 
 // kind : "sejour" (un seul lieu, programme jour par jour) ; road trip sinon
 // items et source : voyage créé à partir d'un itinéraire publié (fork.js)
-export function createTrip({ name = "Nouveau voyage", currency = prefs.currency || "EUR", country = "", kind = "", items = [], source = null } = {}) {
+export function createTrip({ name = t("trips.newShort"), currency = prefs.currency || "EUR", country = "", kind = "", items = [], source = null } = {}) {
   const id = "v-" + uid();
   state.trips[id] = { name, currency, country, createdAt: Date.now(), items, ...(kind === "sejour" ? { kind } : {}), ...(source ? { source } : {}) };
   selectTrip(id);
@@ -278,30 +279,30 @@ export function deleteTrip(id) {
 }
 
 // Première et dernière date du voyage
-export function tripStart(t) {
+export function tripStart(trip) {
   const ds = [];
-  t.items.forEach((i) => {
+  trip.items.forEach((i) => {
     if (i.type === "stop" && i.arrive) ds.push(i.arrive);
     if (i.type === "transport" && i.dep) ds.push(i.dep.slice(0, 10));
   });
   return ds.sort()[0] || null;
 }
 
-export function tripEnd(t) {
+export function tripEnd(trip) {
   const ds = [];
-  t.items.forEach((i) => {
+  trip.items.forEach((i) => {
     if (i.type === "stop") { if (i.depart) ds.push(i.depart); else if (i.arrive) ds.push(i.arrive); }
     if (i.type === "transport" && i.arr) ds.push(i.arr.slice(0, 10));
   });
   ds.sort();
   // Sans date de fin (ex. trajet sans heure d'arrivée), le voyage finit le jour où il commence
-  return ds[ds.length - 1] || tripStart(t);
+  return ds[ds.length - 1] || tripStart(trip);
 }
 
 // Étapes juste avant et juste après une position (pour pré-remplir un trajet)
-export function neighbours(t, pos) {
+export function neighbours(trip, pos) {
   let prev = null, next = null;
-  for (let i = pos - 1; i >= 0; i--) if (t.items[i].type === "stop") { prev = t.items[i]; break; }
-  for (let i = pos; i < t.items.length; i++) if (t.items[i].type === "stop") { next = t.items[i]; break; }
+  for (let i = pos - 1; i >= 0; i--) if (trip.items[i].type === "stop") { prev = trip.items[i]; break; }
+  for (let i = pos; i < trip.items.length; i++) if (trip.items[i].type === "stop") { next = trip.items[i]; break; }
   return { prev, next };
 }

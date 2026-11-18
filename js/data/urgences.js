@@ -4,7 +4,7 @@
 // general : numéro unique pour tous les secours (null s'il n'y en a pas)
 // conseils : fiche « Conseils aux voyageurs » (ambassade, consulat), null pour la France
 
-export const URGENCES_VERIFIED = "novembre 2026";
+export const URGENCES_VERIFIED = "2026-11"; // mois de vérification (AAAA-MM), affiché dans la langue choisie
 
 export const URGENCES = {
   // https://www.masecurite.interieur.gouv.fr/fr/fiches-pratiques/famille-et-aides-aux-victimes/numeros-utiles-nationaux
