@@ -69,9 +69,9 @@ for (const [lang, width] of [["fr", 390], ["fr", 1366], ["en", 390], ["en", 1366
   const page = await openPage(lang, width);
   await go(page, "voyage-v-pt");
 
-  // Ordre : en-tête, itinéraire, carte, budget ; plus de grand cadre « Voyageurs »
+  // Ordre : en-tête, carte, budget, itinéraire ; plus de grand cadre « Voyageurs »
   const order = await page.evaluate(() => [...document.querySelectorAll("#app > section")].map((s) => s.classList[0]).join(","));
-  check(`${tag} ordre des sections (${order})`, order === "hero,route,map-box,budget");
+  check(`${tag} ordre des sections (${order})`, order === "hero,map-box,budget,route");
   check(`${tag} pas de cadre Voyageurs ouvert d'office`, !(await page.$("#sharePanel")));
 
   // Budget replié : une ligne, puis déplié avec la devise et le tableau

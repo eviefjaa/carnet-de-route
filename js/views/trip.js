@@ -153,8 +153,8 @@ export function render() {
   }
 
   const stops = trip.items.filter((i) => i.type === "stop");
-  // En-tête (voyageurs et actions compris), itinéraire ou séjour, puis carte et budget
-  app.innerHTML = hero(trip) + (trip.kind === "sejour" ? sejourView(trip) : itinerary(trip)) + (stops.length ? mapSection() : "") + (trip.items.length ? budgetSection(trip) : "");
+  // En-tête (voyageurs et actions compris), carte, budget replié en une ligne, puis itinéraire ou séjour
+  app.innerHTML = hero(trip) + (stops.length ? mapSection() : "") + (trip.items.length ? budgetSection(trip) : "") + (trip.kind === "sejour" ? sejourView(trip) : itinerary(trip));
   drawMap();
   scheduleGeo();
   if (state.focusName) {

@@ -122,7 +122,7 @@ await page.reload({ waitUntil: "networkidle0" });
 await sleep(800);
 const full = () => page.evaluate(() => !!document.querySelector(".map-wrap.is-full"));
 const openFull = async () => { await page.click(".map-full-btn"); await sleep(600); };
-// Page défilée, bouton plein écran visible (la carte est sous l'itinéraire) : le défilement doit être retrouvé à la fermeture
+// Page défilée, bouton plein écran visible : le défilement doit être retrouvé à la fermeture
 await page.evaluate(() => window.scrollTo(0, document.querySelector(".map-box").getBoundingClientRect().top + window.scrollY - 150));
 await sleep(200);
 const y0 = await page.evaluate(() => window.scrollY);
