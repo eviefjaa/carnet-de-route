@@ -16,15 +16,44 @@ const continentName = (c) => t(`continent.${c}`);
 const wikiUrl = (x) => `https://${getLang() === "en" ? "en" : "fr"}.wikipedia.org/wiki/${encodeURIComponent(countryName(x.code).replace(/ /g, "_"))}`;
 
 // Frise historique et incontournables détaillés : fichier chargé à la première fiche pays ouverte
-let details = null;
-let loading = null;
-export const detailsReady = () => !!details;
+// En anglais, les textes des fiches (countries.en.js, urgences.en.js) sont chargés à la première
+// page de destinations, et les fiches détaillées en anglais avec la française. Fichier anglais
+// absent, hors ligne ou pays manquant : le texte français s'affiche (jamais une fiche vide).
+let details = null, loading = null;
+let detailsEn = null, loadingDetailsEn = null;
+let textsEn = null, loadingTextsEn = null;
+const english = () => getLang() === "en";
+export const detailsReady = () => !!details && (!english() || !!detailsEn);
+export const textsReady = () => !english() || !!textsEn;
 export function loadDetails() {
   loading ||= import("../data/country-details.js")
     .then((m) => (details = m.DETAILS))
     .catch(() => (details = {})); // hors ligne : la fiche garde sa version courte
-  return loading;
+  if (!english()) return loading;
+  loadingDetailsEn ||= import("../data/country-details.en.js")
+    .then((m) => (detailsEn = m.DETAILS))
+    .catch(() => (detailsEn = {}));
+  return Promise.all([loading, loadingDetailsEn, loadTexts()]);
 }
+export function loadTexts() {
+  if (!english()) return Promise.resolve();
+  loadingTextsEn ||= Promise.all([import("../data/countries.en.js"), import("../data/urgences.en.js")])
+    .then(([c, u]) => (textsEn = { countries: Object.fromEntries(c.COUNTRIES.map((x) => [x.code, x])), urgences: u.LABELS }))
+    .catch(() => (textsEn = { countries: {}, urgences: {} }));
+  return loadingTextsEn;
+}
+
+// Textes d'un pays dans la langue choisie (codes, envies, budget : toujours ceux de countries.js)
+const TEXT_FIELDS = ["capital", "language", "best", "tagline", "description", "history"];
+export function localCountry(x) {
+  const e = english() && textsEn && textsEn.countries[x.code];
+  if (!e) return x;
+  const o = { ...x };
+  TEXT_FIELDS.forEach((k) => { if (typeof e[k] === "string" && e[k]) o[k] = e[k]; });
+  if (Array.isArray(e.highlights) && e.highlights.length) o.highlights = e.highlights;
+  return o;
+}
+const localDetails = (code) => (english() && detailsEn && detailsEn[code]) || (details && details[code]);
 
 export function favButton(code, small = false) {
   const on = isFavorite(code);
@@ -35,9 +64,10 @@ export function favButton(code, small = false) {
   </button>`;
 }
 
-export function countryCard(x) {
+export function countryCard(fr) {
+  const x = localCountry(fr);
   // Recherche dans le nom affiché et le nom français (un lien ou une habitude d'une langue à l'autre)
-  const search = [countryName(x.code), x.name, x.capital, continentName(x.continent), ...x.highlights].join(" ").toLowerCase();
+  const search = [countryName(x.code), fr.name, x.capital, fr.capital, continentName(x.continent), ...x.highlights].join(" ").toLowerCase();
   return `<article class="country-card" data-continent="${esc(x.continent)}" data-tags="${x.tags.join(" ")}" data-search="${esc(search)}">
     <span class="cc-code" aria-hidden="true">${esc(x.code)}</span>
     <div class="cc-body">
@@ -97,12 +127,13 @@ export function filterCountries() {
 
 // postsSection : idées d'itinéraires publiés dans ce pays (views/social.js), vide s'il n'y en a pas
 export function countryView(code, postsSection = "") {
-  const x = countryByCode(code);
-  if (!x) {
+  const fr = countryByCode(code);
+  if (!fr) {
     return `<section class="page"><a class="back" href="#destinations">${t("explore.back")}</a>
       <p>${t("explore.notFound")}</p></section>`;
   }
-  const d = details && details[x.code];
+  const x = localCountry(fr);
+  const d = localDetails(x.code);
   const facts = [
     [t("country.capital"), x.capital],
     [t("country.language"), x.language],
@@ -173,6 +204,7 @@ function highlightCards(list, country) {
 function urgencesSection(x) {
   const u = URGENCES[x.code];
   if (!u) return "";
+  const labelsEn = (english() && textsEn && textsEn.urgences[x.code]) || [];
   // Simple liste (pas de bouton d'appel)
   const line = (label, number, main = false) => number
     ? `<li${main ? ' class="is-main"' : ""}><span>${esc(label)}</span><b class="urgence-num">${esc(number)}</b></li>` : "";
@@ -183,7 +215,7 @@ function urgencesSection(x) {
     line(t("sos.police"), own(u.police)),
     line(t("sos.ambulance"), own(u.ambulance)),
     line(t("sos.fire"), own(u.pompiers)),
-    ...(u.autres || []).map((a) => line(a.label, a.number)),
+    ...(u.autres || []).map((a, i) => line(labelsEn[i] || a.label, a.number)),
   ].join("");
   if (!rows) return "";
   const [y, m] = URGENCES_VERIFIED.split("-").map(Number);

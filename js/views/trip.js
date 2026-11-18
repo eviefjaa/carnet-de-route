@@ -14,7 +14,7 @@ import { scheduleGeo } from "../geocode.js";
 import { authScreen, renderAccountBar, syncNote, verifyScreen } from "./auth.js";
 import { isEnabled } from "../cloud.js";
 import { renderSidebar } from "./sidebar.js";
-import { exploreView, filterCountries, countryView, favoritesView, detailsReady, loadDetails } from "./explore.js";
+import { exploreView, filterCountries, countryView, favoritesView, detailsReady, loadDetails, textsReady, loadTexts, localCountry } from "./explore.js";
 import { profileView, settingsView } from "./pages.js";
 import { prefs } from "../prefs.js";
 import { tripsListView, newTripView } from "./trips-list.js";
@@ -39,7 +39,7 @@ function setMeta() {
     state.authOpen ? [t("meta.auth.title"), t("meta.auth")]
     : state.verifyOpen && state.user && !state.user.emailVerified ? [t("meta.verify.title"), t("meta.verify")]
     : trip ? [trip.name || t("meta.trip.title"), t("meta.trips")]
-    : country ? [countryName(country.code), country.tagline]
+    : country ? [countryName(country.code), localCountry(country).tagline]
     : ["person", "post"].includes(state.view) ? socialTitle()
     : state.view === "network" ? [NETWORK_PAGES[state.networkTab] || t("page.profile"), t("meta.profile")]
     : pageMeta(state.view);
@@ -89,6 +89,8 @@ export function render() {
     case "explore":
       app.innerHTML = exploreView();
       filterCountries();
+      // En anglais, première visite : les textes des pays arrivent juste après (français en attendant)
+      if (!textsReady()) loadTexts().then(() => state.view === "explore" && !state.authOpen && render());
       return;
     case "country":
       app.innerHTML = countryView(state.country, countryPostsSection(state.country));
@@ -97,6 +99,7 @@ export function render() {
       return;
     case "favorites":
       app.innerHTML = favoritesView(prefs.favorites, favoritePostsSection());
+      if (!textsReady()) loadTexts().then(() => state.view === "favorites" && !state.authOpen && render());
       return;
     case "feed":
       app.innerHTML = feedView();

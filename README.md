@@ -27,7 +27,8 @@ firestore.rules       Règles de sécurité Firestore (à copier dans la console
 .github/workflows/
   reminders.yml       Rappels par e-mail, lancés chaque jour par GitHub Actions
 scripts/reminders/    Programme d'envoi des rappels (Node.js)
-scripts/i18n/         Contrôles de la traduction (lancés par les tests unitaires)
+scripts/i18n/         Contrôles de la traduction (lancés par les tests unitaires), dont check-countries.mjs
+                      pour les fiches pays en anglais
 css/
   base.css            Couleurs (thèmes clair et sombre), polices
   fonts.css           Polices hébergées sur le site (aucune requête vers Google Fonts)
@@ -77,6 +78,9 @@ js/
     countries.js      Fiches pays (ajoutez-en en copiant une ligne)
     country-details.js  Frise historique et incontournables détaillés de chaque pays
     urgences.js       Numéros d'urgence de chaque pays (source en commentaire, à revérifier chaque année)
+    countries.en.js, country-details.en.js, urgences.en.js
+                      Les mêmes fiches en anglais (mêmes pays, même ordre ; urgences : libellés seulement),
+                      chargées seulement quand l'interface est en anglais, avec repli sur le français
     airports.js       Aéroports avec vols réguliers et code IATA (OurAirports, domaine public),
                       régénérés par : node scripts/aeroports/build.mjs airports.csv
   views/

@@ -31,9 +31,9 @@ page.on("console", (m) => { if (/Traduction manquante/.test(m.text())) warnings.
 
 // Mots qui trahissent un texte resté en français (les données du voyage n'en contiennent aucun)
 const FRENCH = /(^|[^\p{L}])(voyages?|étapes?|ajouter|supprimer|modifier|paramètres|jours?|nuits?|réserver|hébergement|trajets?|activités?|enregistrer|annuler|connexion|connectez|mes|vos|votre|pour|avec|sans|aucune?|les?|la|des|du|et|à|où|chargement)(?=$|[^\p{L}])/iu;
-// Texte visible (sans les accroches des pays, traduites avec les fiches pays), et aussi libellés lus par les lecteurs d'écran, infobulles et exemples des champs
+// Texte visible, et aussi libellés lus par les lecteurs d'écran, infobulles et exemples des champs
 const pageText = () => page.evaluate(() => [
-  document.body.innerText.split("\n").filter((l) => ![...document.querySelectorAll(".cc-tagline")].some((e) => e.innerText.trim() === l.trim())).join("\n"),
+  document.body.innerText,
   ...[...document.querySelectorAll("[aria-label], [title], [placeholder]")].map((e) => [e.getAttribute("aria-label"), e.getAttribute("title"), e.getAttribute("placeholder")].filter(Boolean).join(" ")),
   document.title,
 ].join("\n"));
@@ -91,6 +91,24 @@ for (const [hash, label] of [["destinations", "Destinations"], ["favoris", "Favo
 }
 await open("destinations");
 check("noms des pays en anglais", (await page.evaluate(() => document.body.innerText)).includes("Brazil"));
+check("accroches des pays en anglais", await page.evaluate(() => [...document.querySelectorAll(".country-card")].find((c) => c.querySelector("h3").textContent.trim() === "Portugal").querySelector(".cc-tagline").textContent.includes("Atlantic")));
+await page.type("#exploreSearch", "lisbon");
+await sleep(300);
+check("recherche d'un lieu par son nom anglais", await page.evaluate(() => [...document.querySelectorAll(".country-card:not([hidden]) h3")].map((h) => h.textContent.trim()).join() === "Portugal"));
+await page.evaluate(() => { const i = document.getElementById("exploreSearch"); i.value = ""; i.dispatchEvent(new Event("input", { bubbles: true })); });
+
+// Trois fiches pays complètes : texte, frise, incontournables, urgences, lien Wikipédia anglais
+for (const [code, name, capital] of [["PT", "Portugal", "Lisbon"], ["JP", "Japan", "Tokyo"], ["US", "United States", "Washington"]]) {
+  await open(`destination-${code}`);
+  await page.waitForSelector(".timeline", { timeout: 10000 }).catch(() => {});
+  await sleep(300);
+  check(`fiche ${code} : titre en anglais`, await page.$eval("h1", (e) => e.textContent.trim()) === name);
+  check(`fiche ${code} : capitale en anglais`, (await page.$eval(".facts", (e) => e.innerText)).includes(capital));
+  check(`fiche ${code} : frise et incontournables détaillés`, !!(await page.$(".timeline li")) && !!(await page.$(".hl-card")));
+  check(`fiche ${code} : Wikipédia en anglais`, await page.$eval('.country a[href*="wikipedia"]', (a) => a.href.startsWith("https://en.wikipedia.org/")));
+  await noFrench(`Fiche ${code}`);
+}
+check("numéros d'urgence en plus, libellés en anglais", await (async () => { await open("destination-GB"); return (await page.$eval(".urgences", (e) => e.innerText)).includes("NHS"); })());
 
 // Fenêtre de connexion
 await open("profil");
