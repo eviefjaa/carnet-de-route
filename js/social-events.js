@@ -29,6 +29,7 @@ export function onSocialClick(act, b) {
     case "open-publish":
       state.publishOpen = true;
       render();
+      document.querySelector("form[data-publish-form] input[name=title], .publish .btn")?.focus();
       return true;
     case "fork-open":
       state.forkOpen = b.dataset.post;

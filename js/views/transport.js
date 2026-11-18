@@ -7,33 +7,44 @@ import { itemActions } from "./actions.js";
 import { ticketsBlock, formTicketsBlock } from "./tickets.js";
 import { pickedPlace } from "../autocomplete.js";
 
+// Icône de chaque moyen de transport (même trait que les icônes du menu)
+const MODE_ICONS = {
+  avion: '<path d="M12 3c.8 0 1.5.7 1.5 1.5V9l7 4v2l-7-2v4.5l2 1.5v1.5L12 19.5l-3.5 1V19l2-1.5V13l-7 2v-2l7-4V4.5C10.5 3.7 11.2 3 12 3z"/>',
+  train: '<rect x="6" y="3" width="12" height="13" rx="3"/><path d="M6 10h12M9 19.5 7.5 22M15 19.5l1.5 2.5M9.5 13h.01M14.5 13h.01"/>',
+  bus: '<rect x="4" y="4" width="16" height="13" rx="2.5"/><path d="M4 11h16M7 17v2.5M17 17v2.5M8 14h.01M16 14h.01"/>',
+  voiture: '<path d="M4.5 16.5h15V13l-2-4.5h-11l-2 4.5z"/><path d="M4.5 13h15"/><circle cx="8" cy="16.5" r="1.6"/><circle cx="16" cy="16.5" r="1.6"/>',
+  bateau: '<path d="M3 18.5c1.5 1 3 1 4.5 0s3-1 4.5 0 3 1 4.5 0 3-1 4.5 0"/><path d="M5 15.5 4 11h16l-1 4.5M12 11V4l5 7"/>',
+  autre: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+};
+const modeIcon = (mode) => `<svg class="leg-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MODE_ICONS[mode] || MODE_ICONS.autre}</svg>`;
+
 export function transportCard(it, trip, idx) {
   const d = duration(it.dep, it.arr);
   const u = safeUrl(it.url);
   const hasExtra = it.company || it.ref || u || it.notes;
 
-  // Carte repliée : mode, lieux, départ et durée. Un clic affiche le reste.
+  // Trajet replié : une ligne fine sur la route (icône du mode, lieux, départ, durée, billets).
+  // Le nom du mode reste lu par les lecteurs d'écran. Un toucher affiche le reste.
   const open = state.openItems.has(it.id);
   const tickets = (it.tickets || []).length;
   const detailId = `leg-detail-${esc(it.id)}`;
+  const meta = [it.dep ? `<span>${esc(fmtDateTime(it.dep))}</span>` : "", d ? `<span class="dur">${esc(d)}</span>` : "",
+    tickets ? `<span class="leg-tickets">${count(tickets, "count.ticket")}</span>` : ""].filter(Boolean).join(`<span aria-hidden="true">·</span>`);
 
-  return `<article class="item transport${open ? " open" : ""}">
+  return `<article class="item transport is-line${open ? " open" : ""}${it.mode === "avion" ? " is-flight" : ""}">
     <div class="leg-summary">
-      <span class="mode">${esc(MODES[it.mode] || t("leg.generic"))}</span>
+      ${modeIcon(it.mode)}
       <div class="leg">
         <div class="leg-places">
-          <button class="stop-toggle" data-act="toggle-item" data-id="${esc(it.id)}" type="button" aria-expanded="${open}" aria-controls="${detailId}">${esc(it.from || t("leg.fromUnknown"))} → ${esc(it.to || t("leg.toUnknown"))}</button>
-          <svg class="stop-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          <button class="stop-toggle" data-act="toggle-item" data-id="${esc(it.id)}" type="button" aria-expanded="${open}" aria-controls="${detailId}"><span class="sr-only">${esc(MODES[it.mode] || t("leg.generic"))}, </span>${esc(it.from || t("leg.fromUnknown"))} → ${esc(it.to || t("leg.toUnknown"))}</button>
         </div>
-        <div class="leg-times">
-          <span>${t("leg.departs", { when: `<b>${esc(fmtDateTime(it.dep))}</b>` })}</span>
-          ${d ? `<span class="dur">${esc(d)}</span>` : ""}
-          ${tickets ? `<span class="leg-tickets">${count(tickets, "count.ticket")}</span>` : ""}
-        </div>
+        ${meta ? `<div class="leg-times">${meta}</div>` : ""}
       </div>
+      <svg class="stop-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
     </div>
     ${open ? `<div class="leg-detail" id="${detailId}">
       <div class="leg-times">
+        <span>${t("leg.departs", { when: `<b>${esc(fmtDateTime(it.dep))}</b>` })}</span>
         <span>${t("leg.arrives", { when: `<b>${esc(fmtDateTime(it.arr))}</b>` })}</span>
         ${hasPrice(it.price) ? `<span class="price">${esc(fmtMoney(it.price, trip.currency || "EUR"))}</span>` : ""}
       </div>

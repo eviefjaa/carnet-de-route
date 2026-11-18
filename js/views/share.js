@@ -1,5 +1,6 @@
-// Section « Voyageurs » d'un voyage : qui en fait partie, invitations en attente, inviter par e-mail
-// ou, par son nom ou son pseudo, une personne de son réseau
+// Voyageurs d'un voyage : une rangée de petits ronds dans l'en-tête, et un panneau (sous l'en-tête)
+// avec qui en fait partie, les invitations en attente, et l'invitation par e-mail ou, par son nom
+// ou son pseudo, d'une personne de son réseau. Panneau ouvert : state.shareOpen.
 
 import { esc } from "../utils.js";
 import { state, isOwner } from "../store.js";
@@ -41,11 +42,29 @@ function invitedName(uid) {
 // Nombre de voyageurs (1 pour un voyage pas partagé)
 export const travellers = (trip) => (trip.members || []).length || 1;
 
-export function shareSection(trip) {
+// Rangée de l'en-tête : 3 ronds au plus (initiale), puis « +2 », et « + Inviter »
+export function travellersRow(trip) {
   if (!isEnabled()) return "";
+  const invite = `<button class="btn small sh-invite" data-act="open-invite" type="button" aria-expanded="${!!state.shareOpen}" aria-controls="sharePanel">${t("share.inviteBtn")}</button>`;
+  if (!state.user) return `<div class="sh-row">${invite}</div>`;
+  const me = state.user.uid;
+  const emails = trip.emails || {};
+  const ids = trip.members && trip.members.length ? trip.members : [me];
+  const initial = (uid) => (emails[uid] || (uid === me ? state.user.email : "") || "?").trim()[0].toUpperCase();
+  const shown = ids.slice(0, 3).map((uid) => `<span class="sh-dot" aria-hidden="true">${esc(initial(uid))}</span>`).join("");
+  const more = ids.length > 3 ? `<span class="sh-dot sh-dot-more" aria-hidden="true">+${ids.length - 3}</span>` : "";
+  return `<div class="sh-row">
+    <button class="sh-dots" data-act="share-toggle" type="button" aria-expanded="${!!state.shareOpen}" aria-controls="sharePanel" aria-label="${esc(count(ids.length, "share.show"))}">${shown}${more}</button>
+    ${invite}
+  </div>`;
+}
+
+export function shareSection(trip) {
+  if (!isEnabled() || !state.shareOpen) return "";
+  const close = `<button class="btn ghost small sh-close" data-act="share-close" type="button" aria-label="${t("common.close")}" title="${t("common.close")}">✕</button>`;
   if (!state.user) {
-    return `<section class="share" aria-label="${t("share.title")}">
-      <h2>${t("share.title")}</h2>
+    return `<section class="share" id="sharePanel" aria-label="${t("share.title")}">
+      <div class="sh-head"><h2>${t("share.title")}</h2>${close}</div>
       <p class="note">${t("share.signIn")}</p>
       <div><button class="btn small" data-act="open-auth" data-mode="signin" type="button">${t("auth.signIn")}</button></div>
     </section>`;
@@ -81,8 +100,8 @@ export function shareSection(trip) {
       </svg>
     </button>`;
 
-  return `<section class="share" aria-label="${t("share.title")}">
-    <div class="sh-head"><h2>${t("share.title")}</h2>${addButton}</div>
+  return `<section class="share" id="sharePanel" aria-label="${t("share.title")}">
+    <div class="sh-head"><h2>${t("share.title")}</h2>${addButton}${close}</div>
     <ul class="sh-list">${members}${invites}${inviteUids}</ul>
     ${state.inviteOpen ? `<form class="cl-form" data-invite-form>
       <span class="ac sh-ac"><input name="who" id="inviteWho" placeholder="${t("share.whoHint")}" aria-label="${t("share.whoLabel")}"

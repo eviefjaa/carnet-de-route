@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { forceLang } from "./langue.mjs";
+import { openBudget } from "./aides.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const PORT = 8769;
@@ -153,7 +154,9 @@ check("prix enregistré", (await priced()).price === 25);
 const nb = (s) => s.replace(/\s/g, " ");
 check("prix affiché dans le programme", nb(await page.$$eval(".program .sj-act", (l) => (l.find((li) => li.innerText.includes("Croisière")).querySelector(".sj-price") || {}).textContent || "")) === "25 €");
 check("total des prix en haut du programme, pas dans la pastille", nb(await page.$eval(".pg-meta", (e) => e.textContent)) === "Sur 4 jours · 25 € d'activités" && !(await summary()).includes("€"));
-const budgetRow = () => page.$$eval(".budget-table tbody tr", (l) => l.map((tr) => [...tr.children].map((c) => c.textContent.trim())));
+// Budget replié en une ligne : déplié d'abord ; le nom de la destination est lu dans son texte (pas dans le bouton du téléphone)
+await openBudget(page);
+const budgetRow = () => page.$$eval(".budget-table tbody tr:not(.b-detail)", (l) => l.map((tr) => [...tr.children].map((c) => (c.querySelector(".b-place") || c).textContent.trim())));
 const row = (await budgetRow())[0];
 check("colonne « Activités » du budget", JSON.stringify((await page.$$eval(".budget-table thead th", (l) => l.map((e) => e.textContent)))) === JSON.stringify(["Destination", "Hébergement", "Transport", "Activités", "Total"])
   && nb(row[3]) === "25 €" && nb(row[4]) === "25 €");

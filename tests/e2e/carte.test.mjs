@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { forceLang } from "./langue.mjs";
+import { clickInsert } from "./aides.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const PORT = 8768;
@@ -72,7 +73,7 @@ const note = await page.$eval("#geoNote", (e) => e.textContent).catch(() => "");
 check("pas de message « introuvable »", !note.includes("Introuvable"));
 
 // Suggestions : un conseil quand aucune ne correspond à ce qui est tapé
-await page.click('[data-act="add-stop"]');
+await clickInsert(page, "add-stop", 0);
 await page.waitForSelector('form[data-form="stop"] [name="place"]');
 const typeIn = async (txt) => {
   await page.$eval('form[data-form="stop"] [name="place"]', (el) => (el.value = ""));
@@ -86,7 +87,7 @@ check("bon nom : pas de conseil", !(await typeIn("paraty")).includes("Essayez le
 
 // Trajet : l'aéroport de São Paulo trouvé par son code GRU
 await page.reload({ waitUntil: "networkidle0" });
-await page.click('[data-act="add-leg"]');
+await clickInsert(page, "add-leg", 0);
 await page.waitForSelector('form[data-form="transport"] [name="from"]');
 await page.type('form[data-form="transport"] [name="from"]', "GRU");
 await page.waitForFunction(() => [...document.querySelectorAll(".ac-list li")].some((li) => li.textContent.includes("(GRU)")), { timeout: 5000 }).catch(() => {});
@@ -121,7 +122,8 @@ await page.reload({ waitUntil: "networkidle0" });
 await sleep(800);
 const full = () => page.evaluate(() => !!document.querySelector(".map-wrap.is-full"));
 const openFull = async () => { await page.click(".map-full-btn"); await sleep(600); };
-await page.evaluate(() => window.scrollTo(0, 150));
+// Page défilée, bouton plein écran visible (la carte est sous l'itinéraire) : le défilement doit être retrouvé à la fermeture
+await page.evaluate(() => window.scrollTo(0, document.querySelector(".map-box").getBoundingClientRect().top + window.scrollY - 150));
 await sleep(200);
 const y0 = await page.evaluate(() => window.scrollY);
 const hash0 = await page.evaluate(() => location.hash);

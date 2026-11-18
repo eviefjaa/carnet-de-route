@@ -24,13 +24,21 @@ export function itemActions(it, idx, trip) {
 }
 
 // big : voyage encore vide, les deux boutons sont affichés en grand pour bien démarrer
-export function insertRow(pos, big = false) {
+// full : fin de l'itinéraire, les deux boutons toujours affichés ; ailleurs, un petit « + » sur la
+// ligne de route qui les affiche à cet endroit (state.insertMenu ; Échap ou un toucher ailleurs referme)
+export function insertRow(pos, big = false, full = false) {
   if (state.insertAt && state.insertAt.pos === pos) {
     const d = state.insertAt.draft;
     return d.type === "stop" ? stopForm(d, true) : transportForm(d, true);
   }
-  return `<div class="insert${big ? " is-big" : ""}">
-    <button class="btn" data-act="add-stop" data-pos="${pos}" type="button">${t("item.addStop")}</button>
-    <button class="btn" data-act="add-leg" data-pos="${pos}" type="button">${t("item.addLeg")}</button>
+  const buttons = `<button class="btn" data-act="add-stop" data-pos="${pos}" type="button">${t("item.addStop")}</button>
+    <button class="btn" data-act="add-leg" data-pos="${pos}" type="button">${t("item.addLeg")}</button>`;
+  if (big || full) return `<div class="insert${big ? " is-big" : ""}">${buttons}</div>`;
+  const open = state.insertMenu === pos;
+  return `<div class="insert is-compact${open ? " is-open" : ""}">
+    <button class="ins-plus" data-act="insert-open" data-pos="${pos}" type="button" aria-label="${t("item.insertHere")}" title="${t("item.insertHere")}" aria-expanded="${open}" aria-controls="ins-${pos}">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <div class="ins-menu" id="ins-${pos}"${open ? "" : " hidden"}>${buttons}</div>
   </div>`;
 }

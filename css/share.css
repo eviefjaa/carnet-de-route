@@ -1,5 +1,22 @@
 /* Voyageurs d'un voyage et invitations */
 
+/* Rangée de l'en-tête : petits ronds chevauchés (initiales) et « + Inviter » */
+.sh-row { display: flex; align-items: center; gap: 8px; }
+.sh-dots { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; border: 0; background: none; border-radius: 22px; }
+.sh-dot {
+  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; margin-left: -8px;
+  background: var(--accent); color: var(--accent-ink); font-family: var(--display); font-weight: 700; font-size: 13px;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.sh-dot:first-child { margin-left: 0; }
+.sh-dot-more { background: var(--surface); color: var(--muted); font-family: var(--body); font-size: 11px; border: 1px solid var(--line); }
+@media (hover: hover) { .sh-dots:hover .sh-dot { box-shadow: 0 0 0 2px var(--accent-soft); } }
+.sh-invite { min-height: 36px; border-style: dashed; color: var(--accent); background: transparent; }
+@media (pointer: coarse) { .sh-invite { min-height: 44px; } }
+.sh-close { margin-left: auto; }
+.sh-head .sh-add + .sh-close { margin-left: 0; }
+
+/* Panneau des voyageurs, sous l'en-tête */
 .share { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
 .share h2 { font-size: 20px; font-weight: 700; }
 .sh-head { display: flex; align-items: center; gap: 10px; }

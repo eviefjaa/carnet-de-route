@@ -20,7 +20,7 @@ import { prefs } from "../prefs.js";
 import { tripsListView, newTripView } from "./trips-list.js";
 import { sejourView, sejourStats } from "./sejour.js";
 import { tripPending } from "./checklist.js";
-import { shareSection, travellers } from "./share.js";
+import { shareSection, travellersRow, travellers } from "./share.js";
 import { feedView, discoverView, personView, postView, loadedPostTrip, publishPanel, socialTitle, notificationsView, markNotificationsSeen, networkView, NETWORK_PAGES, favoritePostsSection, countryPostsSection } from "./social.js";
 import { refreshNotifications } from "../social.js";
 import { countryByCode } from "../data/countries.js";
@@ -153,7 +153,8 @@ export function render() {
   }
 
   const stops = trip.items.filter((i) => i.type === "stop");
-  app.innerHTML = hero(trip) + shareSection(trip) + (stops.length ? mapSection() : "") + (trip.items.length ? budgetSection(trip) : "") + (trip.kind === "sejour" ? sejourView(trip) : itinerary(trip));
+  // En-tête (voyageurs et actions compris), itinéraire ou séjour, puis carte et budget
+  app.innerHTML = hero(trip) + (trip.kind === "sejour" ? sejourView(trip) : itinerary(trip)) + (stops.length ? mapSection() : "") + (trip.items.length ? budgetSection(trip) : "");
   drawMap();
   scheduleGeo();
   if (state.focusName) {
@@ -174,6 +175,7 @@ function hero(trip) {
   // Seul le créateur supprime le voyage ; les autres voyageurs peuvent le quitter
   const owner = isOwner(trip);
   const others = travellers(trip) - 1;
+  // Confirmation de la suppression (ou du départ), demandée depuis le menu « ⋯ »
   const del = state.confirm === "trip"
     ? `<div class="confirm">${esc(owner
           ? (others ? t("trip.deleteAskShared", { name, others: count(others, "count.otherTraveller") }) : t("trip.deleteAsk", { name }))
@@ -181,12 +183,15 @@ function hero(trip) {
         <button class="btn small danger" data-act="del-trip-yes" type="button">${owner ? t("common.delete") : t("common.leave")}</button>
         <button class="btn small" data-act="cancel-confirm" type="button">${t("common.cancel")}</button>
       </div>`
-    : `<div class="hero-actions"><button class="btn ghost small danger" data-act="del-trip" type="button">${owner ? t("trip.deleteThis") : t("trip.leaveThis")}</button></div>`;
+    : "";
   const pending = tripPending(trip);
 
   return `<section class="hero">
     <a class="trip-back" href="#voyages">${t("trips.back")}</a>
-    <h1><input id="tripName" value="${esc(trip.name)}" maxlength="200" aria-label="${t("trip.nameLabel")}"></h1>
+    <div class="hero-title">
+      <h1><input id="tripName" value="${esc(trip.name)}" maxlength="200" aria-label="${t("trip.nameLabel")}"></h1>
+      ${moreMenu(trip, stops.length, owner)}
+    </div>
     ${trip.source ? `<p class="trip-source">${t("trip.inspiredBy", { who: `<a href="#publication-${esc(trip.source.postId)}">@${esc(trip.source.ownerHandle)}</a>` })}</p>` : ""}
     <div class="stats">
       ${start ? `<span><b>${esc(fmtDay(start))}</b> → <b>${esc(fmtDay(end))}</b></span>` : ""}
@@ -194,13 +199,33 @@ function hero(trip) {
       <span><b>${count(totalNights, "count.night")}</b></span>
       <span>${count(legs.length, "trip.statLegs")}</span>`}
       ${budget ? `<span><b>${esc(fmtMoney(budget, trip.currency || "EUR"))}</b></span>` : ""}
+      ${isEnabled() ? `<span class="sync-note${sync.status === "error" ? " is-error" : ""}" id="syncNote" role="status">${esc(syncNote(travellers(trip)))}</span>` : ""}
     </div>
-    ${pending ? `<span class="todo-alert">${count(pending, "trip.toBook")}</span>` : ""}
-    ${kindLine(trip, stops.length)}
-    ${isEnabled() ? `<p class="sync-note${sync.status === "error" ? " is-error" : ""}" id="syncNote" role="status">${esc(syncNote(travellers(trip)))}</p>` : ""}
+    ${pending || isEnabled() ? `<div class="hero-row">
+      ${pending ? `<span class="todo-alert">${count(pending, "trip.toBook")}</span>` : ""}
+      ${travellersRow(trip)}
+    </div>` : ""}
+    ${shareSection(trip)}
     ${publishPanel(trip)}
     ${del}
   </section>`;
+}
+
+// Menu « ⋯ » à droite du titre : publier, changer de type de voyage, supprimer ou quitter.
+// Ouvert : state.moreOpen ; clavier (flèches, Échap) et toucher ailleurs dans js/events.js
+function moreMenu(trip, nStops, owner) {
+  const items = [];
+  if (isEnabled() && state.user) items.push(`<button class="more-item" role="menuitem" data-act="open-publish" type="button">${t("publish.title")}</button>`);
+  if (trip.kind === "sejour") items.push(`<button class="more-item" role="menuitem" data-act="set-kind" data-kind="road" type="button">${t("trip.menuToRoad")}</button>`);
+  else if (nStops <= 1) items.push(`<button class="more-item" role="menuitem" data-act="set-kind" data-kind="sejour" type="button">${t("trip.menuToSejour")}</button>`);
+  items.push(`<button class="more-item is-danger" role="menuitem" data-act="del-trip" type="button">${owner ? t("trip.deleteThis") : t("trip.leaveThis")}</button>`);
+  const open = !!state.moreOpen;
+  return `<div class="more">
+    <button class="more-btn" id="tripMoreBtn" data-act="more-toggle" type="button" aria-label="${t("trip.more")}" title="${t("trip.more")}" aria-haspopup="menu" aria-expanded="${open}" aria-controls="tripMore">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+    </button>
+    <div class="more-menu" id="tripMore" role="menu" aria-labelledby="tripMoreBtn"${open ? "" : " hidden"}>${items.join("")}</div>
+  </div>`;
 }
 
 function sejourHeroStats(trip, totalNights) {
@@ -210,11 +235,6 @@ function sejourHeroStats(trip, totalNights) {
       <span><b>${count(s.activities, "count.activity")}</b></span>`;
 }
 
-// Type du voyage, et passage de l'un à l'autre (un séjour n'a qu'un lieu)
-function kindLine(trip, nStops) {
-  if (trip.kind === "sejour") return `<p class="kind-line">${t("trip.kindSejour")} · <button class="link-btn" data-act="set-kind" data-kind="road" type="button">${t("trip.toRoad")}</button></p>`;
-  return nStops <= 1 ? `<p class="kind-line">${t("trip.kindRoad")} · <button class="link-btn" data-act="set-kind" data-kind="sejour" type="button">${t("trip.toSejour")}</button></p>` : "";
-}
 
 function mapSection() {
   return `<section class="map-box" aria-label="${t("trip.mapLabel")}">
@@ -223,13 +243,15 @@ function mapSection() {
   </section>`;
 }
 
+// Entre deux éléments, un petit « + » ; à la fin, les deux boutons en entier ; voyage vide, en grand
 function itinerary(trip) {
-  let html = `<section class="route" aria-label="${t("trip.itinerary")}">` + insertRow(0, !trip.items.length);
+  const n = trip.items.length;
+  let html = `<section class="route" aria-label="${t("trip.itinerary")}">` + insertRow(0, !n, !n);
   trip.items.forEach((it, idx) => {
     const editing = state.editingId === it.id;
     if (it.type === "stop") html += editing ? stopForm(it) : stopCard(it, trip, idx);
     else html += editing ? transportForm(it) : transportCard(it, trip, idx);
-    html += insertRow(idx + 1);
+    html += insertRow(idx + 1, false, idx + 1 === n);
   });
   if (!trip.items.length && !state.insertAt) html += `<p class="note">${t("trip.startHint")}</p>`;
   return html + `</section>`;

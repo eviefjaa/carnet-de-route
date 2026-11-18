@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { forceLang } from "./langue.mjs";
+import { clickMore } from "./aides.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const PORT = 8770;
@@ -156,7 +157,7 @@ await page.goBack({ waitUntil: "networkidle0" });
 await page.waitForSelector(".sj-day");
 
 // 8. Passer en road trip et revenir
-await click('[data-act="set-kind"][data-kind="road"]');
+await clickMore(page, '[data-act="set-kind"][data-kind="road"]'); await sleep(150);
 check("road trip : étapes et checklist classiques", !(await one()).kind && !!(await page.$(".route .insert [data-act='add-stop']")));
 if (!(await page.$(`[data-act="edit"][data-id="${stop.id}"]`))) await click(`[data-act="toggle-item"][data-id="${stop.id}"]`);
 await click(`[data-act="edit"][data-id="${stop.id}"]`);
@@ -165,7 +166,7 @@ await page.$eval('form[data-form="stop"]', (f) => f.requestSubmit());
 await sleep(300);
 { const s = (await one()).items.find((i) => i.type === "stop");
   check("enregistrée en road trip, l'étape garde ses heures", s.arriveTime === "15:00" && s.departTime === "11:30"); }
-await click('[data-act="set-kind"][data-kind="sejour"]');
+await clickMore(page, '[data-act="set-kind"][data-kind="sejour"]'); await sleep(150);
 check("retour en séjour", (await one()).kind === "sejour" && (await page.$$(".sj-day")).length === 4);
 
 // 9. Depuis une destination : le pays est gardé

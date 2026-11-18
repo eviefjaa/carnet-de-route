@@ -17,6 +17,9 @@
 .nights { display: inline-block; font-family: var(--body); font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--night-bg); color: var(--night-ink); }
 /* Étape sans nuit sur place (arrivée et départ le même jour) */
 .nights.is-halt { background: var(--halt-bg); color: var(--halt-ink); }
+/* Page d'un voyage : nuits en texte simple à la suite des dates ; « Arrêt » en texte atténué */
+.nights-text { font-family: var(--body); font-size: 14px; color: var(--ink); white-space: nowrap; }
+.nights-text.is-halt { color: var(--muted); }
 .addr { font-size: 14px; color: var(--muted); }
 .notes { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 
@@ -78,3 +81,43 @@
 .leg-tickets { color: var(--accent); font-weight: 600; }
 .leg-detail { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--route); padding-top: 10px; }
 .leg-detail .tickets { border-top: 0; padding-top: 0; }
+
+/* ---------- Page d'un voyage : trajet en une ligne fine sur la route (is-line) ----------
+   Sans cadre ni fond (icône du mode, lieux, départ, durée, billets) ; ouvert, un fond léger
+   pour que le détail se lise bien. La page d'une publication garde le trajet « billet » ci-dessus. */
+.transport.is-line { margin: 4px 0; padding: 8px 10px; background: none; border: 0; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.transport.is-line::before { top: 19px; }
+.transport.is-line.open { background: var(--surface); border: 1px solid var(--line); padding: 12px 14px; }
+.transport.is-line.open::before { top: 23px; }
+.is-line .leg-icon { flex: none; color: var(--muted); margin-top: 1px; }
+/* Vol : un petit rappel pointillé sous l'icône, comme le tracé de l'avion sur la carte */
+.is-line.is-flight .leg-icon { border-bottom: 2px dashed var(--route); padding-bottom: 1px; }
+.is-line .leg { flex: 1; gap: 2px; }
+.is-line .leg-times { gap: 2px 8px; }
+.is-line .leg-detail .leg-times { gap: 4px 14px; }
+.is-line .dur { color: var(--muted); font-weight: 400; }
+.is-line .leg-summary { display: flex; gap: 10px; align-items: flex-start; }
+.is-line .leg-summary .stop-toggle::after { inset: -8px -10px; }
+.is-line.open .leg-summary .stop-toggle::after { inset: -12px -14px -6px; }
+.is-line .leg-summary > .stop-chevron { margin-top: 2px; align-self: flex-start; }
+@media (hover: hover) {
+  .transport.is-line:not(.open):hover { border-style: none; background: color-mix(in srgb, var(--surface) 60%, transparent); }
+}
+.is-line .leg-detail { border-top: 1px solid var(--line); }
+
+/* Entre deux éléments : un petit « + » posé sur la ligne de route (24 px visibles, 44 px à toucher),
+   qui affiche « + Étape » et « + Trajet » à cet endroit */
+.insert.is-compact { position: relative; padding: 0; min-height: 22px; opacity: 1; align-items: center; }
+.ins-plus {
+  position: absolute; left: -44px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; padding: 0;
+  display: grid; place-items: center; border: 0; background: none; color: var(--muted); opacity: .6; transition: opacity .15s;
+}
+.ins-plus svg { width: 24px; height: 24px; padding: 4px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--line); box-sizing: border-box; }
+.ins-plus:focus-visible { outline: none; opacity: 1; }
+.ins-plus:focus-visible svg { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (hover: hover) { .ins-plus:hover { opacity: 1; color: var(--accent); } .ins-plus:hover svg { border-color: var(--accent); } }
+@media (hover: none) { .ins-plus { opacity: .9; } }
+.insert.is-open { padding: 6px 0; }
+.insert.is-open .ins-plus { display: none; }
+.ins-menu { display: flex; gap: 6px; }
+.ins-menu[hidden] { display: none; }

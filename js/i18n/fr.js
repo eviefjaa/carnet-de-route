@@ -832,4 +832,17 @@ export default {
   "edit.order": "ordre des étapes",
   "edit.tripName": "nom du voyage",
   "edit.currency": "devise du voyage",
+
+  // ---------- Page d'un voyage allégée ----------
+  "trip.more": "Plus d'actions",
+  "trip.menuToSejour": "Passer en séjour",
+  "trip.menuToRoad": "Passer en road trip",
+  "share.inviteBtn": "+ Inviter",
+  "share.show": { one: "Voir le voyageur", other: "Voir les {n} voyageurs" },
+  "budget.missingShort": { one: "{n} prix manquant", other: "{n} prix manquants" },
+  "budget.rowDetail": "Détail de {place}",
+  "item.insertHere": "Ajouter ici une étape ou un trajet",
+  "nav.explore": "Destinations",
+  "nav.groupTrips": "Voyages",
+  "nav.groupCommunity": "Communauté",
 };

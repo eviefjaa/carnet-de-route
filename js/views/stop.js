@@ -37,7 +37,7 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
       </div>
       <div class="dates">
         ${datesLine(it)}
-        ${n === 0 ? `<span class="nights is-halt">${t("stop.halt")}</span>` : n ? `<span class="nights">${count(n, "count.night")}</span>` : ""}
+        ${n === 0 ? `<span class="nights-text is-halt">· ${t("stop.halt")}</span>` : n ? `<span class="nights-text">· ${count(n, "count.night")}</span>` : ""}
       </div>
       ${sejour ? "" : `<div class="pg-pill-row">${programPill(it)}</div>`}
     </div>

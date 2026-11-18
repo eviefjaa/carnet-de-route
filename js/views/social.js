@@ -334,9 +334,7 @@ function budgetChoice(trip) {
 
 export function publishPanel(trip) {
   if (!isEnabled() || !state.user) return "";
-  if (!state.publishOpen) {
-    return `<div class="hero-actions"><button class="btn small" data-act="open-publish" type="button">${t("publish.title")}</button></div>`;
-  }
+  if (!state.publishOpen) return ""; // ouvert depuis le menu « ⋯ » de l'en-tête
   if (!state.profile) {
     return `<div class="publish panel">
       <h2>${t("publish.title")}</h2>

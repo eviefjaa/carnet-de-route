@@ -831,4 +831,17 @@ export default {
   "edit.order": "order of the stops",
   "edit.tripName": "trip name",
   "edit.currency": "trip currency",
+
+  // ---------- Lighter trip page ----------
+  "trip.more": "More actions",
+  "trip.menuToSejour": "Switch to a stay",
+  "trip.menuToRoad": "Switch to a road trip",
+  "share.inviteBtn": "+ Invite",
+  "share.show": { one: "See the traveller", other: "See the {n} travellers" },
+  "budget.missingShort": { one: "{n} price missing", other: "{n} prices missing" },
+  "budget.rowDetail": "Breakdown for {place}",
+  "item.insertHere": "Add a stop or a journey here",
+  "nav.explore": "Destinations",
+  "nav.groupTrips": "Trips",
+  "nav.groupCommunity": "Community",
 };

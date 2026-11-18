@@ -64,7 +64,12 @@ export function programDays(stop, { firstDay = 1, moves = {} } = {}) {
   return out;
 }
 
-const daysHtml = (stop, opts) => programDays(stop, opts).map((x) => dayBlock(stop, x)).join("");
+// « Rien de prévu pour l'instant » une seule fois, quand aucun jour n'a d'activité (un jour vide n'a que son titre)
+const daysHtml = (stop, opts) => {
+  const days = programDays(stop, opts);
+  const empty = !(stop.todos || []).length && !(state.actForm && state.actForm.stop === stop.id);
+  return (empty && stopDays(stop).length ? `<p class="note pg-empty">${t("program.nothingYet")}</p>` : "") + days.map((x) => dayBlock(stop, x)).join("");
+};
 
 // Séjour : toujours déplié, sous son titre
 export function sejourProgram(stop) {
@@ -118,11 +123,10 @@ function dayBlock(stop, { title, sub, date, list, moves = {} }) {
   const rows = [...list, ...(moves.arrive ? [move(moves.arrive, t("stop.arrive"))] : []), ...(moves.depart ? [move(moves.depart, t("stop.depart"))] : [])].sort(byTime);
   return `<section class="sj-day${date ? "" : " is-loose"}" aria-label="${esc(title)}${sub ? " " + esc(sub) : ""}">
     <div class="sj-day-head">
-      <h3>${esc(title)}${sub ? ` <span>${esc(sub)}</span>` : ""}</h3>
+      <h3>${esc(title)}${sub ? ` <span>· ${esc(sub)}</span>` : ""}</h3>
       ${adding ? "" : `<button class="cl-add" data-act="act-add" data-stop="${esc(stop.id)}" data-date="${esc(date)}" type="button" aria-label="${esc(sub ? t("program.addOn", { day: sub }) : t("program.add"))}" title="${t("program.add")}">+</button>`}
     </div>
     ${rows.length ? `<ul class="sj-acts">${rows.map((x) => x.move ? moveRow(x) : f && f.todo === x.id ? `<li>${activityForm(stop, x)}</li>` : activity(stop, x)).join("")}</ul>` : ""}
-    ${list.length || adding || !date ? "" : `<p class="note">${t("program.nothingYet")}</p>`}
     ${adding ? activityForm(stop, { date }) : ""}
   </section>`;
 }

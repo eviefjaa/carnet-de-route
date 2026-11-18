@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { forceLang } from "./langue.mjs";
+import { clickInsert, clickMore } from "./aides.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const PDF = fileURLToPath(new URL("./billet.pdf", import.meta.url));
@@ -95,7 +96,7 @@ async function page_newTrip(page) {
   await page.waitForSelector("#tripName");
   await page.click("#tripName", { clickCount: 3 });
   await page.type("#tripName", "Japon en train");
-  await page.click('[data-act="add-stop"][data-pos="0"]');
+  await clickInsert(page, "add-stop", 0);
   await page.waitForSelector('form[data-form="stop"]');
   await page.type('form[data-form="stop"] [name="place"]', "Kyoto");
   await page.$eval('form[data-form="stop"] [name="arrive"]', (el) => (el.value = "2026-11-02"));
@@ -118,7 +119,7 @@ await makeProfile(alice, "Alice", "alice.test");
 check("profil d'Alice créé", (await text(alice)).includes("@alice.test"));
 
 await goHash(alice, tripHash.slice(1));
-await alice.click('[data-act="open-publish"]');
+await clickMore(alice, '[data-act="open-publish"]');
 await alice.waitForSelector("[data-publish-form]");
 await alice.click('[data-act="add-reco-row"]');
 await alice.select('[name="recoKind"]', "resto");
@@ -160,7 +161,7 @@ check("Mes voyages : le voyage reste sans pastille « Publié »", (await text(a
 
 // ---------- Alice : trajet avec un billet PDF, ouverture du billet ----------
 await goHash(alice, tripHash.slice(1));
-await alice.click('[data-act="add-leg"][data-pos="1"]');
+await clickInsert(alice, "add-leg", 1);
 await alice.waitForSelector('form[data-form="transport"]');
 await alice.select('form[data-form="transport"] [name="mode"]', "train");
 // Le lieu d'arrivée est obligatoire : vide, puis rempli d'espaces, le trajet n'est pas enregistré
@@ -313,10 +314,10 @@ check("invitation disparue après la réponse", !(await carla.$(".invitations"))
 // ---------- Modifications simultanées : Alice et Carla ajoutent chacune une étape ----------
 await goHash(alice, tripHash.slice(1));
 await goHash(carla, tripHash.slice(1));
-await alice.click('[data-act="add-stop"][data-pos="1"]');          // Alice commence à saisir…
+await clickInsert(alice, "add-stop", 1);          // Alice commence à saisir…
 await alice.waitForSelector('form[data-form="stop"]');
 await alice.type('form[data-form="stop"] [name="place"]', "Nara");
-await carla.click('[data-act="add-stop"][data-pos="1"]');          // …pendant que Carla ajoute Osaka
+await clickInsert(carla, "add-stop", 1);          // …pendant que Carla ajoute Osaka
 await carla.waitForSelector('form[data-form="stop"]');
 await carla.type('form[data-form="stop"] [name="place"]', "Osaka");
 await carla.click('form[data-form="stop"] button[type="submit"]');
@@ -361,7 +362,7 @@ check("sans compte : publication publique lisible", (await text(anon)).includes(
 
 // ---------- Alice : Mes publications, sélectionner et supprimer plusieurs publications ----------
 await goHash(alice, tripHash.slice(1));
-await alice.click('[data-act="open-publish"]');
+await clickMore(alice, '[data-act="open-publish"]');
 await alice.waitForSelector("[data-publish-form]");
 // Budget : au choix, décoché par défaut
 check("case « Montrer le budget » décochée, avec le total", !(await alice.$eval('[data-publish-form] [name="budget"]', (e) => e.checked))
@@ -416,7 +417,7 @@ await alice.click('[data-act="trip-from-country"]');
 await alice.waitForSelector('[data-act="create-trip"][data-kind="road"]');
 await alice.click('[data-act="create-trip"][data-kind="road"]');
 await sleep(2500);
-await alice.click('[data-act="open-publish"]');
+await clickMore(alice, '[data-act="open-publish"]');
 await alice.waitForSelector("[data-publish-form]");
 await alice.click('[data-publish-form] button[type="submit"]');
 await sleep(3000);
@@ -463,7 +464,7 @@ await alice.type("form[data-act-form] [name=how]", "Tram 15 depuis Praça da Fig
 await alice.type("form[data-act-form] [name=maps]", "https://maps.app.goo.gl/secret-maison");
 await alice.$eval("form[data-act-form]", (f) => f.requestSubmit());
 await sleep(2500);
-await alice.click('[data-act="open-publish"]');
+await clickMore(alice, '[data-act="open-publish"]');
 await alice.waitForSelector("[data-publish-form]");
 await alice.click('[data-publish-form] button[type="submit"]');
 await sleep(3000);

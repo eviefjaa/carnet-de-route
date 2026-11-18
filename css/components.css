@@ -24,6 +24,33 @@ a.btn { display: inline-block; text-decoration: none; color: var(--ink); }
 .stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--body); font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .stats b { color: var(--ink); font-weight: 600; }
 .hero-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+/* Titre du voyage et menu « ⋯ » à sa droite */
+.hero-title { display: flex; align-items: flex-start; gap: 8px; }
+.hero-title h1 { flex: 1; min-width: 0; }
+.more { position: relative; flex: none; margin-top: 4px; }
+.more-btn { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); }
+.more-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+@media (hover: hover) { .more-btn:hover { border-color: var(--accent); } }
+.more-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 1100; min-width: 230px; max-width: min(300px, calc(100vw - 32px));
+  display: flex; flex-direction: column; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .14);
+}
+.more-menu[hidden] { display: none; }
+.more-item { min-height: 44px; padding: 10px 12px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: inherit; font-size: 15px; text-align: left; }
+.more-item.is-danger { color: var(--danger); }
+.more-item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+@media (hover: hover) { .more-item:hover { background: var(--bg); } }
+/* À réserver et voyageurs, sur une ligne sous les stats */
+.hero-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+/* État de la synchronisation : discret, à côté des stats ; une erreur reste bien visible */
+.stats .sync-note { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.stats .sync-note::before {
+  content: ""; flex: none; width: 13px; height: 13px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 18a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.4 1.6A3.8 3.8 0 0 1 17.5 18z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 18a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.4 1.6A3.8 3.8 0 0 1 17.5 18z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.stats .sync-note.is-error { color: var(--danger); font-weight: 600; font-size: 13px; }
 .hero > p { margin: 0; }
 .hero > .hero-actions .btn.ghost { padding-inline: 0; } /* aligné sur le titre, sans retrait */
 

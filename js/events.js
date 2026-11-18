@@ -28,7 +28,9 @@ export function bindEvents() {
   document.addEventListener("input", onInput);
   // Safari ne signale pas toujours les changements de date par "input" : on écoute aussi "change"
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && closePopupsWithKey()) return;
     if (e.key === "Escape") closeMenu();
+    if (moveInMoreMenu(e)) return;
     // Entrée dans une activité du formulaire d'étape : nouvelle activité plutôt qu'enregistrer
     if (e.key === "Enter" && ["todoText", "todoMaps", "todoDate", "todoTime", "todoPrice"].includes(e.target.name)) {
       e.preventDefault();
@@ -92,9 +94,56 @@ async function deleteSelected() {
     : done.join(", "));
 }
 
+// Menu « ⋯ » et « + » de l'itinéraire : un toucher ailleurs (ou sur un de leurs choix) les referme
+function closePopups(target) {
+  let changed = false;
+  if (state.moreOpen && !target.closest('[data-act="more-toggle"]')) { state.moreOpen = false; changed = true; }
+  if (state.insertMenu !== null && !target.closest('[data-act="insert-open"]')) { state.insertMenu = null; changed = true; }
+  return changed;
+}
+
+// Échap : referme le menu ouvert et rend le focus au bouton qui l'avait ouvert
+function closePopupsWithKey() {
+  if (state.moreOpen) {
+    state.moreOpen = false;
+    render();
+    document.getElementById("tripMoreBtn")?.focus();
+    return true;
+  }
+  if (state.insertMenu !== null) {
+    const pos = state.insertMenu;
+    state.insertMenu = null;
+    render();
+    document.querySelector(`[data-act="insert-open"][data-pos="${pos}"]`)?.focus();
+    return true;
+  }
+  return false;
+}
+
+// Flèches, Début et Fin dans le menu « ⋯ »
+function moveInMoreMenu(e) {
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key) || !e.target.closest("#tripMore")) return false;
+  const items = [...document.querySelectorAll("#tripMore .more-item")];
+  const i = items.indexOf(e.target);
+  const j = e.key === "Home" ? 0 : e.key === "End" ? items.length - 1 : (i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+  e.preventDefault();
+  items[j]?.focus();
+  return true;
+}
+
+// Réaffiche la page puis place le focus (sélecteur), pour les boutons qui ouvrent ou ferment quelque chose
+function renderFocus(selector) {
+  render();
+  document.querySelector(selector)?.focus();
+}
+
 function onClick(e) {
+  const closed = closePopups(e.target);
   const b = e.target.closest("[data-act]");
-  if (!b) return;
+  if (!b) {
+    if (closed) render();
+    return;
+  }
   const act = b.dataset.act;
   if (act === "new-trip") return newTrip();
   if (act === "create-trip") return createKind(b);
@@ -107,6 +156,30 @@ function onClick(e) {
   const idx = b.dataset.id ? trip.items.findIndex((i) => i.id === b.dataset.id) : -1;
 
   switch (act) {
+    // En-tête du voyage : menu « ⋯ », voyageurs ; itinéraire : « + » ; budget replié ou déplié
+    case "more-toggle":
+      state.moreOpen = !b.matches('[aria-expanded="true"]');
+      return renderFocus(state.moreOpen ? "#tripMore .more-item" : "#tripMoreBtn");
+    case "share-toggle":
+      state.shareOpen = !state.shareOpen;
+      if (!state.shareOpen) state.inviteOpen = false;
+      return renderFocus('[data-act="share-toggle"]');
+    case "share-close":
+      state.shareOpen = false;
+      state.inviteOpen = false;
+      return renderFocus('[data-act="share-toggle"], .sh-invite');
+    case "insert-open":
+      state.insertMenu = +b.dataset.pos;
+      return renderFocus(`#ins-${+b.dataset.pos} [data-act="add-stop"]`);
+    case "budget-toggle":
+      state.budgetOpen = !state.budgetOpen;
+      return renderFocus('[data-act="budget-toggle"]');
+    case "budget-row": {
+      const key = b.dataset.row;
+      if (state.budgetRows.has(key)) state.budgetRows.delete(key);
+      else state.budgetRows.add(key);
+      return renderFocus(`[data-act="budget-row"][data-row="${CSS.escape(key)}"]`);
+    }
     case "add-stop": {
       const pos = +b.dataset.pos;
       const { prev } = neighbours(trip, pos);
@@ -172,7 +245,7 @@ function onClick(e) {
       break;
     case "del-trip":
       state.confirm = "trip";
-      break;
+      return renderFocus('[data-act="cancel-confirm"]');
     case "del-trip-yes":
       // Le créateur supprime le voyage pour tout le monde ; les autres le quittent
       if (isOwner(trip)) {
@@ -194,7 +267,7 @@ function onClick(e) {
       resetUi();
       save();
       toast(trip.kind ? t("toast.nowSejour") : t("toast.nowRoad"));
-      break;
+      return renderFocus("#tripMoreBtn"); // choisi dans le menu « ⋯ » : le focus revient à son bouton
     case "act-add":
       state.actForm = { stop: b.dataset.stop, date: b.dataset.date || "" };
       state.programOpen.add(b.dataset.stop); // le formulaire est dans le programme
@@ -317,10 +390,13 @@ function onPageClick(act, b) {
     case "export":
       exportTrips();
       return true;
+    // « + Inviter » (en-tête) ou l'icône du panneau : ouvre le panneau des voyageurs et le champ
+    // d'invitation (sans compte, le panneau propose de se connecter)
     case "open-invite":
-      state.inviteOpen = true;
+      state.shareOpen = true;
+      state.inviteOpen = !!state.user;
       render();
-      document.querySelector("form[data-invite-form] input")?.focus();
+      document.querySelector("form[data-invite-form] input, #sharePanel [data-act=\"open-auth\"]")?.focus();
       return true;
     case "close-invite":
       state.inviteOpen = false;

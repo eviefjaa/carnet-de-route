@@ -31,11 +31,20 @@ export function renderSidebar() {
     notifications: unreadNotifications(),
   };
 
-  const links = Object.entries(PAGES).map(([key, p]) => `
-    <a class="nav-link${key === current ? " on" : ""}" href="#${p.hash}"${key === current ? ' aria-current="page"' : ""}>
-      ${icon(key)}<span>${esc(p.label)}</span>
+  // Libellé court dans le menu pour « Choisir une destination »
+  const label = (key) => (key === "explore" ? t("nav.explore") : PAGES[key].label);
+  const link = (key) => `
+    <a class="nav-link${key === current ? " on" : ""}" href="#${PAGES[key].hash}"${key === current ? ' aria-current="page"' : ""}>
+      ${icon(key)}<span>${esc(label(key))}</span>
       ${counts[key] ? `<span class="nav-count${key === "notifications" ? " is-new" : ""}"${key === "notifications" ? ` aria-label="${esc(count(counts[key], "nav.newCount"))}"` : ""}>${counts[key]}</span>` : ""}
-    </a>`).join("");
+    </a>`;
+  // Groupes « Voyages » et « Communauté » ; en bas, au-dessus du compte : notifications, profil, paramètres
+  const group = (id, title, keys) => `<div class="side-group" role="group" aria-labelledby="${id}">
+      <p class="side-group-title" id="${id}">${title}</p>${keys.map(link).join("")}
+    </div>`;
+  const links = group("navTrips", t("nav.groupTrips"), ["trips", "explore", "favorites"])
+    + group("navCommunity", t("nav.groupCommunity"), ["feed", "discover", "publications"])
+    + `<div class="side-group side-bottom">${["notifications", "profile", "settings"].map(link).join("")}</div>`;
 
   const who = state.user
     ? `<a class="side-user" href="#profil"><span class="avatar">${esc((prefs.name || state.user.email || "?")[0].toUpperCase())}</span>

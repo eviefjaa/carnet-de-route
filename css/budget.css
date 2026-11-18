@@ -1,6 +1,26 @@
 /* Budget : total du voyage et tableau par destination */
 
 .budget { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+/* Page d'un voyage (trip-budget) ; la page d'une publication garde le budget toujours déplié */
+.trip-budget { padding: 4px 6px; }
+.trip-budget.is-open { padding-bottom: 16px; }
+/* Replié : une ligne « Budget · 615 € · 2 prix manquants ▸ » ; un toucher déplie le reste */
+.b-head { font-size: inherit; margin: 0; }
+.b-toggle {
+  width: 100%; min-height: 48px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 8px 12px;
+  border: 0; border-radius: 10px; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.b-title { font-family: var(--display); font-size: 20px; font-weight: 700; }
+.b-sum { font-family: var(--body); font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.b-sum b { color: var(--ink); font-weight: 600; }
+.b-missing { color: var(--muted); }
+.b-arrow { flex: none; margin-left: auto; color: var(--muted); transition: transform .15s; }
+.b-toggle[aria-expanded="true"] .b-arrow { transform: rotate(90deg); }
+.b-toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+@media (hover: hover) { .b-toggle:hover { background: var(--bg); } }
+@media (prefers-reduced-motion: reduce) { .b-arrow { transition: none; } }
+.b-body { display: flex; flex-direction: column; gap: 12px; padding: 0 12px; }
+.b-body .currency { align-self: flex-start; }
 .budget-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .budget-head h2 { font-size: 20px; font-weight: 700; }
 
@@ -10,7 +30,6 @@
 .budget-total { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
 .b-big { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 6vw, 34px); font-variant-numeric: tabular-nums; }
 
-.table-scroll { overflow-x: auto; }
 .budget-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
 .budget-table th, .budget-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .budget-table thead th { font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); text-align: right; }
@@ -19,15 +38,41 @@
 .budget-table td { text-align: right; font-family: var(--body); }
 .budget-table tfoot th, .budget-table tfoot td { border-bottom: 0; border-top: 2px solid var(--ink); font-weight: 700; }
 .b-total { color: var(--accent); font-weight: 600; }
+/* Ordinateur : nom de la destination en texte, toutes les colonnes ; le détail par ligne ne sert que sur téléphone */
+.b-place-btn, .b-detail { display: none; }
+.b-detail[hidden] { display: none !important; }
 
 /* Prix affiché sur les étapes et les trajets */
 .price { display: inline-block; font-family: var(--body); font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--accent); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
 .price-sub { font-family: var(--body); font-size: 12px; color: var(--muted); }
 
-/* Sur téléphone : tableau plus compact pour que la colonne Total reste visible */
+.table-scroll { overflow-x: auto; }
+
+/* Publication, sur téléphone : tableau plus compact pour que la colonne Total reste visible */
 @media (max-width: 480px) {
-  .budget { padding: 14px 12px; }
-  .budget-table { font-size: 12px; }
-  .budget-table th, .budget-table td { padding: 7px 4px; }
-  .budget-table thead th { font-size: 10px; letter-spacing: .02em; }
+  .budget:not(.trip-budget) { padding: 14px 12px; }
+  .table-scroll .budget-table { font-size: 12px; }
+  .table-scroll .budget-table th, .table-scroll .budget-table td { padding: 7px 4px; }
+  .table-scroll .budget-table thead th { font-size: 10px; letter-spacing: .02em; }
+}
+
+/* Voyage, sur téléphone : seulement Destination et Total, sans défilement horizontal ; toucher une ligne
+   affiche son détail (hébergement, transport, activités) juste en dessous */
+@media (max-width: 520px) {
+  .b-body { padding: 0 6px; }
+  .trip-budget .budget-table th:nth-child(2), .trip-budget .budget-table th:nth-child(3), .trip-budget .budget-table th:nth-child(4),
+  .trip-budget .budget-table td:nth-child(2), .trip-budget .budget-table td:nth-child(3), .trip-budget .budget-table td:nth-child(4) { display: none; }
+  .trip-budget .budget-table .b-detail td { display: table-cell; }
+  .b-place { display: none; }
+  .b-place-btn {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: -8px 0; padding: 0; border: 0; background: none;
+    color: var(--ink); font: inherit; font-weight: 600; text-align: left;
+  }
+  .b-place-btn .b-arrow { margin-left: 0; }
+  .b-place-btn[aria-expanded="true"] .b-arrow { transform: rotate(90deg); }
+  .b-detail { display: table-row; }
+  .b-detail td { text-align: left; white-space: normal; padding: 4px 10px 10px; color: var(--muted); }
+  .b-detail span { display: inline-block; margin-right: 14px; }
+  .b-detail b { color: var(--ink); font-weight: 600; }
+  .trip-budget .budget-table tbody tr:has(+ .b-detail:not([hidden])) th, .trip-budget .budget-table tbody tr:has(+ .b-detail:not([hidden])) td { border-bottom: 0; }
 }

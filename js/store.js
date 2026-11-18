@@ -37,6 +37,11 @@ export const state = {
   publishOpen: false, // panneau « Publier l'itinéraire » ouvert
   forkOpen: false,  // formulaire « Créer mon voyage à partir de cet itinéraire » ouvert
   inviteOpen: false,  // champ « Inviter une personne » ouvert
+  shareOpen: false,   // panneau des voyageurs ouvert sous l'en-tête du voyage
+  moreOpen: false,    // menu « ⋯ » de l'en-tête du voyage ouvert
+  insertMenu: null,   // position du « + » de l'itinéraire ouvert (« + Étape » et « + Trajet » affichés)
+  budgetOpen: false,  // budget déplié (pour la session, comme le programme)
+  budgetRows: new Set(), // téléphone : lignes du budget dont le détail est affiché (« idVoyage:ligne »)
   openItems: new Set(), // étapes et trajets dépliés (le détail s'affiche au clic sur leur carte)
   programOpen: new Set(), // étapes de road trip dont le programme est déplié (pour la session, jamais enregistré)
   mapFull: false,   // carte du voyage en plein écran (js/map.js)
@@ -250,6 +255,9 @@ export function resetUi() {
   state.publishOpen = false;
   state.forkOpen = false;
   state.inviteOpen = false;
+  state.shareOpen = false;
+  state.moreOpen = false;
+  state.insertMenu = null;
   state.openItems = new Set();
   state.selecting = false;
   state.selected = new Set();

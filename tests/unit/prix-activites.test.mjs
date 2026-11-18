@@ -27,9 +27,16 @@ const trip = { currency: "EUR", items: [
   assert.deepEqual(rows.map((r) => [r.place, r.lodging, r.transport, r.activities, r.total]),
     [["Lisbonne", 300, 0, 52.5, 352.5], ["Porto", 0, 30, 15, 45], ["Autres trajets", 0, 80, 0, 80]]);
   assert.deepEqual([total.lodging, total.transport, total.activities, total.total, total.missing], [300, 110, 67.5, 477.5, 1], "seul le prix de Porto manque");
+  // Replié (par défaut) : une ligne avec le total et les prix manquants
+  const short = budgetSection(trip);
+  assert.match(short, /aria-expanded="false"/);
+  assert.match(short, /<b>477,50\s€<\/b> <span class="b-missing">· 1 prix manquant<\/span>/);
+  assert.doesNotMatch(short, /budget-table/);
+  state.budgetOpen = true;
   const html = budgetSection(trip);
+  state.budgetOpen = false;
   assert.match(html, /<th scope="col">Transport<\/th><th scope="col">Activités<\/th><th scope="col">Total<\/th>/);
-  assert.match(html, /<th scope="row">Autres trajets<\/th>[\s\S]*?<td>–<\/td>\s*<td class="b-total">/, "Autres trajets : pas d'activités");
+  assert.match(html, /class="b-place">Autres trajets<\/span>[\s\S]*?<td>–<\/td>\s*<td class="b-total">/, "Autres trajets : pas d'activités");
   assert.match(html, /dont 300\s€ d'hébergement, 110\s€ de transport et 67,50\s€ d'activités/);
   assert.match(html, /1 prix pas encore renseigné\./); }
 // Séjour : une ligne pour le lieu, même calcul
