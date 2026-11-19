@@ -39,6 +39,19 @@ const trip = { currency: "EUR", items: [
   assert.match(html, /class="b-place">Autres trajets<\/span>[\s\S]*?<td>–<\/td>\s*<td class="b-total">/, "Autres trajets : pas d'activités");
   assert.match(html, /dont 300\s€ d'hébergement, 110\s€ de transport et 67,50\s€ d'activités/);
   assert.match(html, /1 prix pas encore renseigné\./); }
+// Arrêt (arrivée et départ le même jour) : pas d'hébergement, pas de prix manquant ; un prix saisi est compté.
+// Étape sans dates : on ne sait pas, le prix manque toujours.
+{ const b = computeBudget({ items: [{ id: "h", type: "stop", place: "Sintra", arrive: "2030-06-03", depart: "2030-06-03" },
+    { id: "n", type: "stop", place: "Porto", arrive: "2030-06-03", depart: "2030-06-05" }, { id: "x", type: "stop", place: "Nulle part" },
+    { id: "p", type: "stop", place: "Braga", arrive: "2030-06-05", depart: "2030-06-05", price: 20 }] });
+  assert.deepEqual(b.rows.map((r) => r.missing), [0, 1, 1, 0], "arrêt sans prix : rien ne manque");
+  assert.equal(b.total.lodging, 20, "prix d'un arrêt compté");
+  assert.equal(computeBudget({ items: [{ id: "u", type: "stop" }] }).rows[0].place, "Étape sans nom"); }
+{ const { setLang } = await import(root + "/js/i18n.js");
+  setLang("en");
+  const b = computeBudget({ items: [{ id: "u", type: "stop" }, { id: "t", type: "transport", price: 5 }] });
+  assert.deepEqual(b.rows.map((r) => r.place), ["Unnamed stop", "Other journeys"], "libellés du budget en anglais");
+  setLang("fr"); }
 // Séjour : une ligne pour le lieu, même calcul
 { const s = computeBudget({ kind: "sejour", items: [{ id: "s", type: "stop", place: "Rome", price: 500, todos: [{ id: "x", text: "Colisée", price: 18 }] }] });
   assert.deepEqual([s.rows.length, s.rows[0].activities, s.total.total, s.total.missing], [1, 18, 518, 0]); }

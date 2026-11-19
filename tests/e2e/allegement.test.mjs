@@ -30,8 +30,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const browser = forceLang(await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-first-run", "--no-sandbox"] }), "fr-FR");
 
 const TEXT = {
-  fr: { missing: "3 prix manquants", lodging: "Hébergement", groups: "Voyages,Communauté", explore: "Destinations", del: "Supprimer ce voyage", publish: "Publier l'itinéraire", you: "vous", mode: "Train" },
-  en: { missing: "3 prices missing", lodging: "Accommodation", groups: "Trips,Community", explore: "Destinations", del: "Delete this trip", publish: "Publish the itinerary", you: "you", mode: "Train" },
+  fr: { missing: "2 prix manquants", lodging: "Hébergement", groups: "Voyages,Communauté", explore: "Destinations", del: "Supprimer ce voyage", publish: "Publier l'itinéraire", you: "vous", mode: "Train" },
+  en: { missing: "2 prices missing", lodging: "Accommodation", groups: "Trips,Community", explore: "Destinations", del: "Delete this trip", publish: "Publish the itinerary", you: "you", mode: "Train" },
 };
 const stop = (id, place, arrive, depart, extra = {}) => ({ id, type: "stop", place, country: "Portugal", arrive, depart, address: "", notes: "", links: [], price: null, todos: [], ...extra });
 const TRIPS = {

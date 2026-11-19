@@ -292,7 +292,7 @@ export default {
   "budget.colActivities": "Activités",
   "budget.colTotal": "Total",
   "budget.tripTotal": "Total du voyage",
-  "budget.rule": "Chaque trajet est compté dans la destination vers laquelle il mène. Une activité sans prix n'est pas comptée.",
+  "budget.rule": "Chaque trajet est compté dans la destination vers laquelle il mène. Une activité sans prix n'est pas comptée. Un arrêt sans nuit n'a pas besoin de prix d'hébergement.",
   "budget.missing": { one: "{n} prix pas encore renseigné.", other: "{n} prix pas encore renseignés." },
   "map.stripLabel": "Étapes du voyage",
   "map.notPlaced": "Pas encore placée sur la carte",
@@ -845,4 +845,7 @@ export default {
   "nav.explore": "Destinations",
   "nav.groupTrips": "Voyages",
   "nav.groupCommunity": "Communauté",
+
+  // ---------- Page d'un voyage allégée ----------
+  "budget.otherLegs": "Autres trajets",
 };

@@ -5,12 +5,15 @@
 // est compté dans « Autres trajets ».
 // Activités : la somme des prix des activités de l'étape. Une activité sans prix est gratuite
 // ou pas encore chiffrée : elle n'est pas comptée dans les prix manquants.
+// Arrêt (arrivée et départ le même jour, aucune nuit sur place) : pas d'hébergement, donc pas
+// de prix manquant ; un prix saisi quand même est compté.
 
-import { hasPrice } from "./utils.js";
+import { hasPrice, nights } from "./utils.js";
+import { t } from "./i18n.js";
 
 export function computeBudget(trip) {
   const rows = [];
-  const others = { place: "Autres trajets", lodging: 0, transport: 0, activities: 0, missing: 0, legs: 0 };
+  const others = { place: t("budget.otherLegs"), lodging: 0, transport: 0, activities: 0, missing: 0, legs: 0 };
   let pendingLegs = [];
 
   trip.items.forEach((it) => {
@@ -18,10 +21,10 @@ export function computeBudget(trip) {
       pendingLegs.push(it);
       return;
     }
-    const row = { id: it.id, place: it.place || "Étape sans nom", lodging: 0, transport: 0, missing: 0, legs: pendingLegs.length,
-      activities: (it.todos || []).reduce((s, t) => s + (hasPrice(t.price) ? t.price : 0), 0) };
+    const row = { id: it.id, place: it.place || t("stop.unnamed"), lodging: 0, transport: 0, missing: 0, legs: pendingLegs.length,
+      activities: (it.todos || []).reduce((s, x) => s + (hasPrice(x.price) ? x.price : 0), 0) };
     if (hasPrice(it.price)) row.lodging = it.price;
-    else row.missing++;
+    else if (nights(it.arrive, it.depart) !== 0) row.missing++;
     pendingLegs.forEach((leg) => {
       if (hasPrice(leg.price)) row.transport += leg.price;
       else row.missing++;
