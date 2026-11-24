@@ -40,11 +40,13 @@ const trip = { currency: "EUR", items: [
   assert.match(html, /dont 300\s€ d'hébergement, 110\s€ de transport et 67,50\s€ d'activités/);
   assert.match(html, /1 prix pas encore renseigné\./); }
 // Arrêt (arrivée et départ le même jour) : pas d'hébergement, pas de prix manquant ; un prix saisi est compté.
+// Point de départ ou d'arrivée (une seule date) : pas de nuit, rien ne manque.
 // Étape sans dates : on ne sait pas, le prix manque toujours.
 { const b = computeBudget({ items: [{ id: "h", type: "stop", place: "Sintra", arrive: "2030-06-03", depart: "2030-06-03" },
     { id: "n", type: "stop", place: "Porto", arrive: "2030-06-03", depart: "2030-06-05" }, { id: "x", type: "stop", place: "Nulle part" },
-    { id: "p", type: "stop", place: "Braga", arrive: "2030-06-05", depart: "2030-06-05", price: 20 }] });
-  assert.deepEqual(b.rows.map((r) => r.missing), [0, 1, 1, 0], "arrêt sans prix : rien ne manque");
+    { id: "p", type: "stop", place: "Braga", arrive: "2030-06-05", depart: "2030-06-05", price: 20 },
+    { id: "d", type: "stop", place: "São Paulo", depart: "2030-06-01" }, { id: "f", type: "stop", place: "São Paulo", arrive: "2030-06-09" }] });
+  assert.deepEqual(b.rows.map((r) => r.missing), [0, 1, 1, 0, 0, 0], "arrêt, départ ou arrivée sans prix : rien ne manque");
   assert.equal(b.total.lodging, 20, "prix d'un arrêt compté");
   assert.equal(computeBudget({ items: [{ id: "u", type: "stop" }] }).rows[0].place, "Étape sans nom"); }
 { const { setLang } = await import(root + "/js/i18n.js");

@@ -291,7 +291,7 @@ export default {
   "budget.colActivities": "Activities",
   "budget.colTotal": "Total",
   "budget.tripTotal": "Trip total",
-  "budget.rule": "Each journey counts towards the destination it leads to. Activities without a price aren't counted. A day stop with no night there doesn't need an accommodation price.",
+  "budget.rule": "Each journey counts towards the destination it leads to. Activities without a price aren't counted. A day stop, the starting point or the end point, with no night there, doesn't need an accommodation price.",
   "budget.missing": { one: "{n} price still missing.", other: "{n} prices still missing." },
   "map.stripLabel": "Trip stops",
   "map.notPlaced": "Not on the map yet",

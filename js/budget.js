@@ -5,8 +5,10 @@
 // est compté dans « Autres trajets ».
 // Activités : la somme des prix des activités de l'étape. Une activité sans prix est gratuite
 // ou pas encore chiffrée : elle n'est pas comptée dans les prix manquants.
-// Arrêt (arrivée et départ le même jour, aucune nuit sur place) : pas d'hébergement, donc pas
-// de prix manquant ; un prix saisi quand même est compté.
+// Hébergement : il manque seulement pour une étape avec au moins une nuit, ou sans aucune date
+// (on ne sait pas encore). Arrêt (arrivée et départ le même jour), point de départ (date de départ
+// seule) ou d'arrivée (date d'arrivée seule) : pas de nuit, donc pas de prix manquant ; un prix
+// saisi quand même est compté.
 
 import { hasPrice, nights } from "./utils.js";
 import { t } from "./i18n.js";
@@ -24,7 +26,7 @@ export function computeBudget(trip) {
     const row = { id: it.id, place: it.place || t("stop.unnamed"), lodging: 0, transport: 0, missing: 0, legs: pendingLegs.length,
       activities: (it.todos || []).reduce((s, x) => s + (hasPrice(x.price) ? x.price : 0), 0) };
     if (hasPrice(it.price)) row.lodging = it.price;
-    else if (nights(it.arrive, it.depart) !== 0) row.missing++;
+    else if (nights(it.arrive, it.depart) > 0 || (!it.arrive && !it.depart)) row.missing++;
     pendingLegs.forEach((leg) => {
       if (hasPrice(leg.price)) row.transport += leg.price;
       else row.missing++;
