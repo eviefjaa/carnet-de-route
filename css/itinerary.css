@@ -9,7 +9,8 @@
 
 /* Étape */
 .stop { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
-.stop::before { content: ""; position: absolute; left: -31px; top: 18px; width: 17px; height: 17px; border-radius: 50%; background: var(--surface); border: 4px solid var(--route); }
+/* Rond centré sur la ligne de route (centre à 12,5 px du bord de .route) ; box-sizing pour compter la bordure */
+.stop::before { content: ""; position: absolute; left: -35px; top: 18px; width: 25px; height: 25px; box-sizing: border-box; border-radius: 50%; background: var(--surface); border: 4px solid var(--route); }
 .stop-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
 .stop-head h2 { font-size: 22px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
 .day { font-family: var(--body); font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--muted); }
@@ -86,9 +87,9 @@
    Sans cadre ni fond (icône du mode, lieux, départ, durée, billets) ; ouvert, un fond léger
    pour que le détail se lise bien. La page d'une publication garde le trajet « billet » ci-dessus. */
 .transport.is-line { margin: 4px 0; padding: 8px 10px; background: none; border: 0; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
-.transport.is-line::before { top: 19px; }
+.transport.is-line::before { top: 19px; left: -26px; } /* sans bordure : 1 px de plus que le billet pour rester centré */
 .transport.is-line.open { background: var(--surface); border: 1px solid var(--line); padding: 12px 14px; }
-.transport.is-line.open::before { top: 23px; }
+.transport.is-line.open::before { top: 23px; left: -27px; }
 .is-line .leg-icon { flex: none; color: var(--muted); margin-top: 1px; }
 /* Vol : un petit rappel pointillé sous l'icône, comme le tracé de l'avion sur la carte */
 .is-line.is-flight .leg-icon { border-bottom: 2px dashed var(--route); padding-bottom: 1px; }
@@ -105,18 +106,18 @@
 }
 .is-line .leg-detail { border-top: 1px solid var(--line); }
 
-/* Entre deux éléments : un petit « + » posé sur la ligne de route (24 px visibles, 44 px à toucher),
+/* Entre deux éléments : un petit « + » posé sur la ligne de route (22 px visibles, 44 px à toucher),
    qui affiche « + Étape » et « + Trajet » à cet endroit */
 .insert.is-compact { position: relative; padding: 0; min-height: 22px; opacity: 1; align-items: center; }
 .ins-plus {
   position: absolute; left: -44px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; padding: 0;
-  display: grid; place-items: center; border: 0; background: none; color: var(--muted); opacity: .6; transition: opacity .15s;
+  display: grid; place-items: center; border: 0; background: none; color: var(--muted); transition: color .15s;
 }
-.ins-plus svg { width: 24px; height: 24px; padding: 4px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--line); box-sizing: border-box; }
-.ins-plus:focus-visible { outline: none; opacity: 1; }
+/* Rond plein (pas de transparence) : la ligne pointillée ne se voit pas à travers */
+.ins-plus svg { width: 22px; height: 22px; padding: 4px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--line); box-sizing: border-box; }
+.ins-plus:focus-visible { outline: none; color: var(--accent); }
 .ins-plus:focus-visible svg { outline: 2px solid var(--focus); outline-offset: 2px; }
-@media (hover: hover) { .ins-plus:hover { opacity: 1; color: var(--accent); } .ins-plus:hover svg { border-color: var(--accent); } }
-@media (hover: none) { .ins-plus { opacity: .9; } }
+@media (hover: hover) { .ins-plus:hover { color: var(--accent); } .ins-plus:hover svg { border-color: var(--accent); } }
 .insert.is-open { padding: 6px 0; }
 .insert.is-open .ins-plus { display: none; }
 .ins-menu { display: flex; gap: 6px; }
