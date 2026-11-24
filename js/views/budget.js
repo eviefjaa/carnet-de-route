@@ -64,7 +64,14 @@ export function budgetSection(trip) {
         <tbody>${body}</tbody>
         <tfoot><tr><th scope="row">${t("budget.tripTotal")}</th><td>${m(total.lodging)}</td><td>${m(total.transport)}</td><td>${m(total.activities)}</td><td class="b-total">${m(total.total)}</td></tr></tfoot>
       </table>
-      <p class="note">${t("budget.rule")}${total.missing ? ` ${count(total.missing, "budget.missing")}` : ""}</p>
+      <p class="note">${t("budget.rule")}${total.missing ? ` ${count(total.missing, "budget.missing", { list: missingText(total.missingList) })}` : ""}</p>
     </div>
   </section>`;
+}
+
+// « trajet Prague → São Paulo, hébergement à Curitiba » : ce qui manque, pour savoir où le saisir
+function missingText(list) {
+  return list.map((x) => x.leg
+    ? t("budget.missingLeg", { from: esc(x.leg.from || t("leg.fromUnknown")), to: esc(x.leg.to || t("leg.toUnknown")) })
+    : t("budget.missingLodging", { place: esc(x.lodging) })).join(", ");
 }

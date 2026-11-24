@@ -16,6 +16,7 @@ import { t } from "./i18n.js";
 export function computeBudget(trip) {
   const rows = [];
   const others = { place: t("budget.otherLegs"), lodging: 0, transport: 0, activities: 0, missing: 0, legs: 0 };
+  const missingList = []; // ce qui manque, dans l'ordre de l'itinéraire : { leg: { from, to } } ou { lodging: lieu }
   let pendingLegs = [];
 
   trip.items.forEach((it) => {
@@ -25,12 +26,12 @@ export function computeBudget(trip) {
     }
     const row = { id: it.id, place: it.place || t("stop.unnamed"), lodging: 0, transport: 0, missing: 0, legs: pendingLegs.length,
       activities: (it.todos || []).reduce((s, x) => s + (hasPrice(x.price) ? x.price : 0), 0) };
-    if (hasPrice(it.price)) row.lodging = it.price;
-    else if (nights(it.arrive, it.depart) > 0 || (!it.arrive && !it.depart)) row.missing++;
     pendingLegs.forEach((leg) => {
       if (hasPrice(leg.price)) row.transport += leg.price;
-      else row.missing++;
+      else { row.missing++; missingList.push({ leg: { from: leg.from || "", to: leg.to || "" } }); }
     });
+    if (hasPrice(it.price)) row.lodging = it.price;
+    else if (nights(it.arrive, it.depart) > 0 || (!it.arrive && !it.depart)) { row.missing++; missingList.push({ lodging: row.place }); }
     pendingLegs = [];
     rows.push(row);
   });
@@ -38,7 +39,7 @@ export function computeBudget(trip) {
   pendingLegs.forEach((leg) => {
     others.legs++;
     if (hasPrice(leg.price)) others.transport += leg.price;
-    else others.missing++;
+    else { others.missing++; missingList.push({ leg: { from: leg.from || "", to: leg.to || "" } }); }
   });
   if (others.legs) rows.push(others);
 
@@ -48,6 +49,7 @@ export function computeBudget(trip) {
     transport: rows.reduce((s, r) => s + r.transport, 0),
     activities: rows.reduce((s, r) => s + r.activities, 0),
     missing: rows.reduce((s, r) => s + r.missing, 0),
+    missingList,
   };
   total.total = total.lodging + total.transport + total.activities;
   return { rows, total };

@@ -38,7 +38,26 @@ const trip = { currency: "EUR", items: [
   assert.match(html, /<th scope="col">Transport<\/th><th scope="col">Activités<\/th><th scope="col">Total<\/th>/);
   assert.match(html, /class="b-place">Autres trajets<\/span>[\s\S]*?<td>–<\/td>\s*<td class="b-total">/, "Autres trajets : pas d'activités");
   assert.match(html, /dont 300\s€ d'hébergement, 110\s€ de transport et 67,50\s€ d'activités/);
-  assert.match(html, /1 prix pas encore renseigné\./); }
+  assert.match(html, /1 prix pas encore renseigné : hébergement à Porto\./, "le prix manquant est nommé"); }
+// Ce qui manque est nommé, dans l'ordre de l'itinéraire (trajet puis hébergement), noms échappés
+{ const b = computeBudget({ items: [{ id: "v", type: "transport", from: "Prague", to: "São Paulo" },
+    { id: "s", type: "stop", place: "São Paulo", arrive: "2026-12-18", depart: "2026-12-18" },
+    { id: "w", type: "transport", from: "São Paulo", to: "<b>Curitiba</b>", price: 20 },
+    { id: "c", type: "stop", place: "<b>Curitiba</b>", arrive: "2026-12-23", depart: "2026-12-25" },
+    { id: "z", type: "transport", to: "Rio" }] });
+  assert.deepEqual(b.total.missingList, [{ leg: { from: "Prague", to: "São Paulo" } }, { lodging: "<b>Curitiba</b>" }, { leg: { from: "", to: "Rio" } }]);
+  state.budgetOpen = true;
+  const html = budgetSection({ currency: "EUR", items: [{ id: "v", type: "transport", from: "Prague", to: "São Paulo" },
+    { id: "c", type: "stop", place: "<b>Curitiba</b>", arrive: "2026-12-23", depart: "2026-12-25" }] });
+  state.budgetOpen = false;
+  assert.match(html, /2 prix pas encore renseignés : trajet Prague → São Paulo, hébergement à &lt;b&gt;Curitiba&lt;\/b&gt;\./);
+  const { setLang } = await import(root + "/js/i18n.js");
+  setLang("en");
+  state.budgetOpen = true;
+  const en = budgetSection({ currency: "EUR", items: [{ id: "z", type: "transport", to: "Rio" }] });
+  state.budgetOpen = false;
+  setLang("fr");
+  assert.match(en, /1 price still missing: journey From\? → Rio\./); }
 // Arrêt (arrivée et départ le même jour) : pas d'hébergement, pas de prix manquant ; un prix saisi est compté.
 // Point de départ ou d'arrivée (une seule date) : pas de nuit, rien ne manque.
 // Étape sans dates : on ne sait pas, le prix manque toujours.
