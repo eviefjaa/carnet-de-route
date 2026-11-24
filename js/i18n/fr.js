@@ -292,7 +292,7 @@ export default {
   "budget.colActivities": "Activités",
   "budget.colTotal": "Total",
   "budget.tripTotal": "Total du voyage",
-  "budget.rule": "Chaque trajet est compté dans la destination vers laquelle il mène. Une activité sans prix n'est pas comptée. Un arrêt, le point de départ ou le point d'arrivée, sans nuit sur place, n'a pas besoin de prix d'hébergement.",
+  "budget.rule": "Chaque trajet est compté dans la destination vers laquelle il mène, le retour dans la dernière. Une activité sans prix n'est pas comptée. Un arrêt, le point de départ ou le point d'arrivée, sans nuit sur place, n'a pas besoin de prix d'hébergement. Un retour sans prix, quand l'aller en a un, est compté comme compris dans l'aller-retour.",
   "budget.missing": { one: "{n} prix pas encore renseigné : {list}.", other: "{n} prix pas encore renseignés : {list}." },
   "budget.missingLeg": "trajet {from} → {to}",
   "budget.missingLodging": "hébergement à {place}",

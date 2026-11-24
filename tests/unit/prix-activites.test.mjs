@@ -25,7 +25,7 @@ const trip = { currency: "EUR", items: [
   { id: "u", type: "transport", price: 80 }] };
 { const { rows, total } = computeBudget(trip);
   assert.deepEqual(rows.map((r) => [r.place, r.lodging, r.transport, r.activities, r.total]),
-    [["Lisbonne", 300, 0, 52.5, 352.5], ["Porto", 0, 30, 15, 45], ["Autres trajets", 0, 80, 0, 80]]);
+    [["Lisbonne", 300, 0, 52.5, 352.5], ["Porto", 0, 110, 15, 125]], "le retour compte dans la dernière étape");
   assert.deepEqual([total.lodging, total.transport, total.activities, total.total, total.missing], [300, 110, 67.5, 477.5, 1], "seul le prix de Porto manque");
   // Replié (par défaut) : une ligne avec le total et les prix manquants
   const short = budgetSection(trip);
@@ -36,7 +36,7 @@ const trip = { currency: "EUR", items: [
   const html = budgetSection(trip);
   state.budgetOpen = false;
   assert.match(html, /<th scope="col">Transport<\/th><th scope="col">Activités<\/th><th scope="col">Total<\/th>/);
-  assert.match(html, /class="b-place">Autres trajets<\/span>[\s\S]*?<td>–<\/td>\s*<td class="b-total">/, "Autres trajets : pas d'activités");
+  assert.doesNotMatch(html, /Autres trajets/, "pas de ligne « Autres trajets » quand il y a une étape");
   assert.match(html, /dont 300\s€ d'hébergement, 110\s€ de transport et 67,50\s€ d'activités/);
   assert.match(html, /1 prix pas encore renseigné : hébergement à Porto\./, "le prix manquant est nommé"); }
 // Ce qui manque est nommé, dans l'ordre de l'itinéraire (trajet puis hébergement), noms échappés
@@ -70,9 +70,20 @@ const trip = { currency: "EUR", items: [
   assert.equal(computeBudget({ items: [{ id: "u", type: "stop" }] }).rows[0].place, "Étape sans nom"); }
 { const { setLang } = await import(root + "/js/i18n.js");
   setLang("en");
-  const b = computeBudget({ items: [{ id: "u", type: "stop" }, { id: "t", type: "transport", price: 5 }] });
-  assert.deepEqual(b.rows.map((r) => r.place), ["Unnamed stop", "Other journeys"], "libellés du budget en anglais");
+  const b = computeBudget({ items: [{ id: "u", type: "stop" }] });
+  assert.deepEqual(b.rows.map((r) => r.place), ["Unnamed stop"], "libellé du budget en anglais");
+  assert.deepEqual(computeBudget({ items: [{ id: "t", type: "transport", price: 5 }] }).rows.map((r) => [r.place, r.transport]), [["Other journeys", 5]], "voyage sans étape");
   setLang("fr"); }
+// Aller-retour payé en une fois : le retour sans prix (lieux inversés, même écrits autrement) n'est pas manquant ;
+// le retour est compté dans le lieu du séjour, sans ligne « Autres trajets »
+{ const b = computeBudget({ kind: "sejour", items: [{ id: "a", type: "transport", from: "São Paulo (GRU)", to: "Santiago", price: 909 },
+    { id: "s", type: "stop", place: "Santiago", arrive: "2026-12-03", depart: "2026-12-10" },
+    { id: "r", type: "transport", from: "santiago", to: "Sao Paulo" }] });
+  assert.deepEqual(b.rows.map((r) => [r.place, r.transport, r.missing]), [["Santiago", 909, 1]], "seul le logement manque");
+  assert.deepEqual(b.total.missingList, [{ lodging: "Santiago" }]);
+  const c = computeBudget({ items: [{ id: "a", type: "transport", from: "Lyon", to: "Paris", price: 30 }, { id: "s", type: "stop", place: "Paris", arrive: "2026-01-01", depart: "2026-01-01" },
+    { id: "r", type: "transport", from: "Paris", to: "Nantes" }] });
+  assert.equal(c.total.missing, 1, "un trajet vers ailleurs reste manquant"); }
 // Séjour : une ligne pour le lieu, même calcul
 { const s = computeBudget({ kind: "sejour", items: [{ id: "s", type: "stop", place: "Rome", price: 500, todos: [{ id: "x", text: "Colisée", price: 18 }] }] });
   assert.deepEqual([s.rows.length, s.rows[0].activities, s.total.total, s.total.missing], [1, 18, 518, 0]); }
@@ -105,7 +116,7 @@ assert.match(todoRow({ id: "r", text: "Cave", price: 15 }), /name="todoPrice" id
 // Budget publié : total des activités par ligne, jamais le prix d'une activité ; anciennes publications : 0
 { const b = publicBudget(trip);
   assert.equal(b.activities, 67.5);
-  assert.deepEqual(b.rows.map((r) => r.activities), [52.5, 15, 0]);
+  assert.deepEqual(b.rows.map((r) => r.activities), [52.5, 15]);
   assert.doesNotMatch(JSON.stringify(b), /Musée|12\.5/);
   const old = normalizePost("p", { title: "x", visibility: "public", trip: { items: [], budget: { currency: "EUR", lodging: 10, transport: 5, missing: 0, rows: [{ place: "A", lodging: 10, transport: 5 }] } } });
   assert.deepEqual([old.trip.budget.activities, old.trip.budget.rows[0].activities], [0, 0]); }

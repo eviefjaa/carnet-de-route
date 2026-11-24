@@ -291,7 +291,7 @@ export default {
   "budget.colActivities": "Activities",
   "budget.colTotal": "Total",
   "budget.tripTotal": "Trip total",
-  "budget.rule": "Each journey counts towards the destination it leads to. Activities without a price aren't counted. A day stop, the starting point or the end point, with no night there, doesn't need an accommodation price.",
+  "budget.rule": "Each journey counts towards the destination it leads to, the way home towards the last one. Activities without a price aren't counted. A day stop, the starting point or the end point, with no night there, doesn't need an accommodation price. A return journey with no price, when the outward one has a price, counts as included in the round trip.",
   "budget.missing": { one: "{n} price still missing: {list}.", other: "{n} prices still missing: {list}." },
   "budget.missingLeg": "journey {from} → {to}",
   "budget.missingLodging": "accommodation in {place}",
