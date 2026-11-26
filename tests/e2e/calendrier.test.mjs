@@ -1,4 +1,4 @@
-// Calendrier et liste des heures du site sur ordinateur ; sélecteur du système sur téléphone
+// Calendrier et choix de l'heure du site sur ordinateur ; sélecteur du système sur téléphone
 import puppeteer from "puppeteer-core";
 import http from "node:http";
 import fs from "node:fs";
@@ -112,28 +112,44 @@ await edit("t");
 await page.waitForSelector("#t-dep-t");
 await page.click("#t-dep-t");
 check("date sans heure (voyage tiré d'un itinéraire) : la date est reprise", (await page.$eval(".dp-day.is-sel", (e) => e.dataset.day).catch(() => "")) === "2030-06-03");
-check("date et heure : calendrier et liste des heures", !!(await page.$(".dp-cal")) && !!(await page.$(".dp-times")) && (await page.$eval(".dp-times .dp-time", (e) => e.textContent)) === "00 h 00");
-check("une heure toutes les 30 min", (await page.$$eval(".dp-time", (l) => l.length)) === 48);
+check("date et heure : calendrier, case de l'heure, heures et minutes", !!(await page.$(".dp-cal")) && !!(await page.$(".dp-time-input")) && (await page.$eval(".dp-time[data-hour]", (e) => e.textContent)) === "00");
+check("24 heures, minutes de 5 en 5", (await page.$$eval(".dp-time[data-hour]", (l) => l.length)) === 24 && (await page.$$eval(".dp-time[data-min]", (l) => l.map((e) => e.dataset.min).join(","))) === "00,05,10,15,20,25,30,35,40,45,50,55");
 await page.click('.dp-day[data-day="2030-06-04"]');
 await sleep(100);
 check("jour choisi sans heure : on demande l'heure, rien d'inventé", !!(await dp()) && (await page.$eval(".dp-times-title", (e) => e.textContent)) === "Choisissez l'heure" && (await page.$eval("#t-dep-t", (e) => e.value)) === "");
+check("la case de l'heure est prête à taper", await page.$eval(".dp-time-input", (e) => document.activeElement === e));
 if (SHOTS) await page.screenshot({ path: SHOTS + "/calendrier-heure.png", clip: await page.$eval(".dp", (e) => { const r = e.getBoundingClientRect(); return { x: r.x + scrollX - 20, y: r.y + scrollY - 70, width: r.width + 40, height: r.height + 90 }; }) });
-await page.click('.dp-time[data-time="09:30"]');
+await page.click('.dp-time[data-hour="09"]');
+await sleep(100);
+check("l'heure choisie : valeur déjà écrite (minutes 00), calendrier encore ouvert", (await page.$eval("#t-dep-t", (e) => e.value)) === "2030-06-04T09:00" && !!(await dp()));
+await page.click('.dp-time[data-min="30"]');
 await sleep(150);
-check("puis l'heure : valeur complète", (await page.$eval("#t-dep-t", (e) => e.value)) === "2030-06-04T09:30" && !(await dp()));
-// Une heure tapée à la main apparaît dans la liste
+check("puis les minutes : valeur complète, calendrier fermé", (await page.$eval("#t-dep-t", (e) => e.value)) === "2030-06-04T09:30" && !(await dp()));
+// Une minute hors liste apparaît dans sa colonne
 await page.$eval("#t-dep-t", (e) => { e.value = "2030-06-03T09:07"; });
 await page.click("#t-dep-t");
-check("heure hors liste : ajoutée et sélectionnée", (await page.$eval(".dp-time.is-sel", (e) => e.dataset.time)) === "09:07");
-await page.keyboard.press("Escape");
+check("minute hors liste : ajoutée et sélectionnée", (await page.$eval(".dp-time.is-sel[data-min]", (e) => e.dataset.min)) === "07" && (await page.$eval(".dp-time.is-sel[data-hour]", (e) => e.dataset.hour)) === "09");
+// Heure tapée dans la case : « 25h » refusée, « 555 » donne 05:55
+await page.click(".dp-time-input", { clickCount: 3 });
+await page.keyboard.type("25h");
+await page.keyboard.press("Enter");
+await sleep(100);
+check("heure impossible : signalée, rien d'écrit", (await page.$eval(".dp-times-title", (e) => e.textContent)) === "Heure non reconnue" && (await page.$eval("#t-dep-t", (e) => e.value)) === "2030-06-03T09:07");
+await page.click(".dp-time-input", { clickCount: 3 });
+await page.keyboard.type("555");
+await page.keyboard.press("Enter");
+await sleep(150);
+check("heure tapée « 555 » : 05:55, calendrier fermé", (await page.$eval("#t-dep-t", (e) => e.value)) === "2030-06-03T05:55" && !(await dp()));
 await page.evaluate(async () => { const s = (await import("/js/store.js")).state; s.editingId = null; (await import("/js/views/trip.js")).render(); });
 
 // ---------- Heure seule (activité) ----------
 await page.evaluate(async () => { const s = (await import("/js/store.js")).state; s.openItems = new Set(["a"]); s.actForm = { stop: "a", date: "2030-06-01" }; s.programOpen.add("a"); (await import("/js/views/trip.js")).render(); });
 await page.waitForSelector("#act-time-new");
 await page.click("#act-time-new");
-check("heure seule : liste des heures, sans calendrier", !(await page.$(".dp-cal")) && !!(await page.$(".dp-times")) && (await page.$eval(".dp", (e) => e.getAttribute("aria-label"))) === "Choisir une heure");
-await page.click('.dp-time[data-time="14:30"]');
+check("heure seule : case et colonnes, sans calendrier", !(await page.$(".dp-cal")) && !!(await page.$(".dp-cols")) && (await page.$eval(".dp", (e) => e.getAttribute("aria-label"))) === "Choisir une heure");
+check("heure seule : la case a le focus", await page.$eval(".dp-time-input", (e) => document.activeElement === e));
+await page.click('.dp-time[data-hour="14"]');
+await page.click('.dp-time[data-min="30"]');
 check("heure choisie", (await page.$eval("#act-time-new", (e) => e.value)) === "14:30");
 
 // ---------- Thème sombre ----------

@@ -24,11 +24,20 @@
 .dp-day:disabled { color: var(--muted); opacity: .4; cursor: default; }
 
 /* Heures */
-.dp-times-box { width: 92px; display: flex; flex-direction: column; gap: 6px; }
+/* Une case où taper l'heure, puis deux colonnes : heures et minutes */
+.dp-times-box { width: 128px; display: flex; flex-direction: column; gap: 6px; }
 .dp-times-title { font-size: 12px; font-weight: 600; color: var(--muted); padding: 8px 0 3px; text-align: center; }
 .dp-times-title.is-ask { color: var(--accent); }
-.dp-times { height: 252px; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 2px; padding-right: 2px; }
-.dp-time { flex: none; height: 32px; border: 0; border-radius: 8px; background: none; font-size: 14px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.dp-times-title.is-bad { color: var(--danger); }
+.dp-time-input { width: 100%; height: 34px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; font-size: 15px; font-variant-numeric: tabular-nums; text-align: center; }
+.dp-time-input::placeholder { color: var(--muted); }
+.dp-time-input:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+.dp-time-input[aria-invalid="true"] { border-color: var(--danger); }
+.dp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.dp-colbox { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dp-colhead { font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+.dp-col { position: relative; height: 196px; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 2px; scrollbar-width: thin; }
+.dp-time { flex: none; height: 30px; border: 0; border-radius: 8px; background: none; font-size: 14px; font-variant-numeric: tabular-nums; cursor: pointer; }
 .dp-time.is-sel { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
 /* Bas du calendrier */

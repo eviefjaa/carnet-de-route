@@ -805,7 +805,13 @@ export default {
   "dp.prev": "Previous month",
   "dp.next": "Next month",
   "dp.askTime": "Choose the time",
-  "dp.times": "Times",
+  "dp.hours": "Hours",
+  "dp.minutes": "Minutes",
+  "dp.hShort": "hr",
+  "dp.minShort": "min",
+  "dp.typeTime": "Type the time",
+  "dp.timeHint": "e.g. 5:55",
+  "dp.badTime": "Time not recognised",
 
   // ---------- Messages and errors ----------
   "err.prefsSync": "Settings not synced. Check your connection.",

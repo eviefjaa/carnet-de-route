@@ -806,7 +806,13 @@ export default {
   "dp.prev": "Mois précédent",
   "dp.next": "Mois suivant",
   "dp.askTime": "Choisissez l'heure",
-  "dp.times": "Heures",
+  "dp.hours": "Heures",
+  "dp.minutes": "Minutes",
+  "dp.hShort": "h",
+  "dp.minShort": "min",
+  "dp.typeTime": "Taper l'heure",
+  "dp.timeHint": "ex. 5h55",
+  "dp.badTime": "Heure non reconnue",
 
   // ---------- Messages et erreurs ----------
   "err.prefsSync": "Préférences non synchronisées. Vérifiez votre connexion.",

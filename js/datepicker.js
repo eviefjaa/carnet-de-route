@@ -1,4 +1,4 @@
-// Calendrier et liste des heures du site, sur ordinateur (souris) seulement
+// Calendrier et choix de l'heure du site, sur ordinateur (souris) seulement
 //
 // Les champs restent de vrais champs date, heure ou date et heure : le code qui les lit, la saisie
 // au clavier dans le champ et les bornes (min, max) ne changent pas. Un clic sur le champ ouvre
@@ -12,7 +12,7 @@ const FIELDS = 'input[type="date"], input[type="time"], input[type="datetime-loc
 // Noms des mois et des jours dans la langue choisie ; la semaine commence le lundi dans les deux langues
 const monthName = (d) => d.toLocaleDateString(locale(), { month: "long", year: "numeric" });
 const dayNames = () => Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(locale(), { weekday: "short" })); // 1er janvier 2024 : un lundi
-const STEP = 30; // minutes entre deux heures de la liste (une autre heure se tape dans le champ)
+const MIN_STEP = 5; // minutes proposées de 5 en 5 ; une autre minute se tape dans la case de l'heure
 
 const pad = (n) => String(n).padStart(2, "0");
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -21,7 +21,7 @@ const longDay = (s) => parse(s).toLocaleDateString(locale(), { weekday: "long", 
 const finePointer = () => matchMedia("(hover: hover) and (pointer: fine)").matches;
 
 let box = null; // calendrier ouvert
-let cur = null; // { id, kind, date, time, month: Date (1er du mois affiché), min, max }
+let cur = null; // { id, kind, date, h, m (heure et minutes, "" si pas choisies), bad, month: Date (1er du mois affiché), min, max }
 
 const field = () => (cur && document.getElementById(cur.id)) || null; // le champ, même après un réaffichage
 
@@ -70,7 +70,8 @@ function open(input, byKeyboard) {
   const date = kind === "time" ? "" : value.slice(0, 10);
   const time = kind === "date" ? "" : kind === "time" ? value : value.slice(11, 16);
   const start = parse(date) || parse((input.min || "").slice(0, 10)) || new Date();
-  cur = { id: input.id, kind, date, time, month: new Date(start.getFullYear(), start.getMonth(), 1),
+  const [h = "", m = ""] = /^\d{2}:\d{2}/.test(time) ? time.slice(0, 5).split(":") : [];
+  cur = { id: input.id, kind, date, h, m, bad: false, month: new Date(start.getFullYear(), start.getMonth(), 1),
     min: (input.min || "").slice(0, 10), max: (input.max || "").slice(0, 10) };
   if (!box) {
     box = document.createElement("div");
@@ -83,7 +84,9 @@ function open(input, byKeyboard) {
   box.setAttribute("aria-label", kind === "time" ? t("dp.pickTime") : kind === "datetime" ? t("dp.pickDateTime") : t("dp.pickDate"));
   draw();
   place(input);
-  if (byKeyboard) (box.querySelector('.dp-day[tabindex="0"], .dp-time[tabindex="0"]') || box).focus();
+  // Heure seule : la case de l'heure prête à taper ; au clavier, le jour ou l'heure choisis
+  if (kind === "time") box.querySelector(".dp-time-input").focus();
+  else if (byKeyboard) (box.querySelector('.dp-day[tabindex="0"]') || box).focus();
 }
 
 export function close(refocus = false) {
@@ -114,8 +117,11 @@ function draw() {
       ${kind !== "time" && inRange(iso(new Date())) ? `<button class="dp-link" data-dp="today" type="button">${t("dp.today")}</button>` : ""}
       <button class="dp-link" data-dp="clear" type="button">${t("dp.clear")}</button>
     </div>`;
-  const sel = box.querySelector(".dp-time.is-sel") || box.querySelector('.dp-time[data-time="09:00"]');
-  if (sel) sel.parentElement.scrollTop = sel.offsetTop - 60;
+  // Chaque colonne montre l'heure ou la minute choisie (sinon 9 h et 00)
+  box.querySelectorAll(".dp-col").forEach((col) => {
+    const sel = col.querySelector('[tabindex="0"]');
+    if (sel) col.scrollTop = sel.offsetTop - 50;
+  });
 }
 
 const inRange = (d) => (!cur.min || d >= cur.min) && (!cur.max || d <= cur.max);
@@ -146,17 +152,36 @@ function calendar() {
   </div>`;
 }
 
+// Heure : une case où la taper (« 5h55 », « 0555 », « 17:30 », Entrée pour valider) et deux colonnes,
+// les heures puis les minutes de 5 en 5. Choisir l'heure écrit déjà la valeur ; choisir les minutes la valide.
 function times() {
-  const list = [];
-  for (let m = 0; m < 24 * 60; m += STEP) list.push(`${pad(Math.floor(m / 60))}:${pad(m % 60)}`);
-  if (cur.time && !list.includes(cur.time)) list.push(cur.time); // heure tapée à la main : dans la liste aussi
-  list.sort();
-  const ask = cur.kind === "datetime" && cur.date && !cur.time;
-  const tab = cur.time || "09:00"; // une seule heure joignable par Tab
+  const hours = Array.from({ length: 24 }, (_, i) => pad(i));
+  const mins = Array.from({ length: 60 / MIN_STEP }, (_, i) => pad(i * MIN_STEP));
+  if (cur.m && !mins.includes(cur.m)) mins.push(cur.m), mins.sort(); // minute tapée à la main : dans la liste aussi
+  const ask = cur.kind === "datetime" && cur.date && !cur.h;
+  const title = cur.bad ? t("dp.badTime") : ask ? t("dp.askTime") : t("act.time");
+  const col = (name, list, sel, tab, label, head) => `<div class="dp-colbox"><span class="dp-colhead" aria-hidden="true">${head}</span><div class="dp-col" role="listbox" aria-label="${label}">${list.map((v) =>
+    `<button class="dp-time${v === sel ? " is-sel" : ""}" data-${name}="${v}" type="button" role="option" aria-selected="${v === sel}" tabindex="${v === tab ? 0 : -1}">${v}</button>`).join("")}</div></div>`;
   return `<div class="dp-times-box">
-    <b class="dp-times-title${ask ? " is-ask" : ""}">${ask ? t("dp.askTime") : t("act.time")}</b>
-    <div class="dp-times" role="listbox" aria-label="${t("dp.times")}">${list.map((h) => `<button class="dp-time${h === cur.time ? " is-sel" : ""}" data-time="${h}" type="button" role="option" aria-selected="${h === cur.time}" tabindex="${h === tab ? 0 : -1}">${fmtHour(h)}</button>`).join("")}</div>
+    <b class="dp-times-title${cur.bad ? " is-bad" : ask ? " is-ask" : ""}" id="dp-time-title">${title}</b>
+    <input class="dp-time-input" id="dp-time-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false"
+      value="${cur.h ? esc(fmtHour(`${cur.h}:${cur.m || "00"}`)) : ""}" placeholder="${t("dp.timeHint")}" aria-label="${t("dp.typeTime")}" aria-describedby="dp-time-title"${cur.bad ? ` aria-invalid="true"` : ""}>
+    <div class="dp-cols">${col("hour", hours, cur.h, cur.h || "09", t("dp.hours"), t("dp.hShort"))}${col("min", mins, cur.m, cur.m || "00", t("dp.minutes"), t("dp.minShort"))}</div>
   </div>`;
+}
+
+// « 5 », « 5h », « 5h55 », « 05 h 55 », « 05:55 », « 17.30 », « 555 », « 1730 », « 5:55 pm » → « HH:MM » ; sinon null
+export function parseTime(s) {
+  let x = String(s || "").toLowerCase().replace(/\s+/g, "");
+  const pm = /pm$/.test(x), am = /am$/.test(x);
+  x = x.replace(/[ap]m$/, "");
+  let r = x.match(/^(\d{1,2})(?:[h:.](\d{2})?)?$/);
+  if (!r && /^\d{3,4}$/.test(x)) r = [x, x.slice(0, -2), x.slice(-2)];
+  if (!r) return null;
+  let h = +r[1];
+  const m = r[2] === undefined ? 0 : +r[2];
+  if (pm || am) { if (h < 1 || h > 12) return null; h = (h % 12) + (pm ? 12 : 0); }
+  return h < 24 && m < 60 ? `${pad(h)}:${pad(m)}` : null;
 }
 
 function onClick(e) {
@@ -172,43 +197,77 @@ function onClick(e) {
     pickDay(iso(new Date()));
   } else if (b.dataset.day) {
     pickDay(b.dataset.day);
-  } else if (b.dataset.time) {
-    pickTime(b.dataset.time);
+  } else if (b.dataset.hour) {
+    pickTime(b.dataset.hour, cur.m || "00", false);
+  } else if (b.dataset.min) {
+    pickTime(cur.h, b.dataset.min, true);
   }
 }
 
 function pickDay(day) {
   cur.date = day;
   if (cur.kind === "date") return commit(day);
-  if (cur.time) return commit(`${day}T${cur.time}`);
-  // Date et heure : il manque l'heure, on la demande sans rien inventer
+  if (cur.h) return commit(`${day}T${cur.h}:${cur.m || "00"}`);
+  // Date et heure : il manque l'heure, on la demande sans rien inventer (la case est prête à taper)
   cur.month = new Date(+day.slice(0, 4), +day.slice(5, 7) - 1, 1);
   draw();
-  (box.querySelector('.dp-time[data-time="09:00"]') || box.querySelector(".dp-time")).focus();
+  box.querySelector(".dp-time-input").focus();
 }
 
-function pickTime(time) {
-  cur.time = time;
-  if (cur.kind === "time") return commit(time);
-  if (!cur.date) { draw(); return; } // l'heure d'abord : on attend la date
-  commit(`${cur.date}T${time}`);
+// Heure ou minutes choisies : la valeur est écrite dès qu'on a la date (ou s'il n'y a pas de date à choisir) ;
+// done : les minutes, ou une heure tapée, ferment le calendrier. Sans heure, une minute attend l'heure.
+function pickTime(h, m, done) {
+  cur.bad = false;
+  cur.m = m;
+  if (!h) { draw(); focusCol("hour"); return; }
+  cur.h = h;
+  const value = cur.kind === "time" ? `${h}:${m}` : cur.date ? `${cur.date}T${h}:${m}` : "";
+  if (value && done) return commit(value);
+  if (value) write(value);
+  draw();
+  if (!done) focusCol("min");
 }
+
+const focusCol = (name) => box.querySelector(`[data-${name}][tabindex="0"]`)?.focus();
 
 // Valeur dans le champ, comme une saisie : les formulaires réagissent (nuits, durée…)
 function commit(value) {
   const input = field();
   close(true);
-  if (!input) return;
+  if (input) set(input, value);
+}
+
+// Même chose, calendrier laissé ouvert (l'heure est choisie, les minutes pas encore)
+function write(value) {
+  const input = field();
+  if (input) set(input, value);
+}
+
+function set(input, value) {
   input.value = value;
   if (!value && input.dataset.day) delete input.dataset.day;
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
-// Clavier : flèches d'un jour (ou d'une heure) à l'autre, Page ↑ / ↓ d'un mois, Entrée pour choisir
+// Clavier : flèches d'un jour (ou d'une heure) à l'autre, Page ↑ / ↓ d'un mois, Entrée pour choisir ;
+// dans la case de l'heure, Entrée valide ce qui est tapé
 function onKey(e) {
   const el = e.target;
-  if (el.classList.contains("dp-day")) {
+  if (el.classList.contains("dp-time-input")) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const time = parseTime(el.value);
+    if (!time) {
+      cur.bad = true;
+      draw();
+      box.querySelector(".dp-time-input").focus();
+      return;
+    }
+    const [h, m] = time.split(":");
+    pickTime(h, m, true);
+    if (box) box.querySelector(".dp-time-input").focus(); // pas encore de date : on reste dans la case
+  } else if (el.classList.contains("dp-day")) {
     const moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
     let d = parse(el.dataset.day);
     if (e.key in moves) d.setDate(d.getDate() + moves[e.key]);
@@ -224,5 +283,8 @@ function onKey(e) {
   } else if (el.classList.contains("dp-time") && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
     e.preventDefault();
     (e.key === "ArrowDown" ? el.nextElementSibling : el.previousElementSibling)?.focus();
+  } else if (el.classList.contains("dp-time") && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+    e.preventDefault();
+    focusCol(e.key === "ArrowRight" ? "min" : "hour");
   }
 }
