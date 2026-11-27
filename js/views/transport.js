@@ -18,6 +18,20 @@ const MODE_ICONS = {
 };
 const modeIcon = (mode) => `<svg class="leg-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MODE_ICONS[mode] || MODE_ICONS.autre}</svg>`;
 
+// Trajet d'une publication : la même ligne fine, en lecture seule (mode, lieux, durée publiée ;
+// rien d'autre n'est publié, donc rien à déplier)
+export function publicLegCard(it) {
+  return `<article class="item transport is-line is-public${it.mode === "avion" ? " is-flight" : ""}">
+    <div class="leg-summary">
+      ${modeIcon(it.mode)}
+      <div class="leg">
+        <div class="leg-places"><span><span class="sr-only">${esc(MODES[it.mode] || t("leg.generic"))}, </span>${esc(it.from || t("stop.depart"))} → ${esc(it.to || t("stop.arrive"))}</span></div>
+        ${it.duration ? `<div class="leg-times"><span class="dur">${esc(it.duration)}</span></div>` : ""}
+      </div>
+    </div>
+  </article>`;
+}
+
 export function transportCard(it, trip, idx) {
   const d = duration(it.dep, it.arr);
   const u = safeUrl(it.url);

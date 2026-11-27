@@ -67,6 +67,7 @@ export function onSocialClick(act, b) {
     case "delete-post":
       state.confirm = "post:" + b.dataset.post;
       render();
+      document.querySelector('[data-act="delete-post-yes"]')?.focus();
       return true;
     case "delete-post-yes":
       state.confirm = null;
@@ -150,6 +151,19 @@ export function onSocialClick(act, b) {
         () => toast(t("toast.linkCopied")),
         () => toast(t("toast.copyAddress"))
       );
+      render(); // choisi dans le menu « ⋯ » : il se referme, le focus revient à son bouton
+      document.getElementById("tripMoreBtn")?.focus();
+      return true;
+    // Ma publication, menu « ⋯ » : « Visible par… » ouvre le choix sous l'en-tête
+    case "post-vis-open":
+      state.postVisOpen = b.dataset.post;
+      render();
+      document.querySelector("[data-post-visibility]")?.focus();
+      return true;
+    case "post-vis-close":
+      state.postVisOpen = null;
+      render();
+      document.getElementById("tripMoreBtn")?.focus();
       return true;
   }
   return false;

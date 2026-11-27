@@ -101,6 +101,41 @@ export function programPill(stop) {
       <span class="pg-end">${left ? `<span class="pg-pending">· ${t("trips.toBook", { n: left })}</span> ` : ""}${ARROW}</span></button>`;
 }
 
+// ---------- Programme d'une publication (lecture seule) ----------
+// program : [{ day, time, text, how }] (« Jour N » du voyage) ; anciennes publications : todos, simple liste.
+// key : clé de l'état ouvert / fermé (state.programOpen, pour la session) ; panel : id du programme déplié.
+export function publicPill({ key, panel, icon = CALENDAR, title, what, label }) {
+  const open = state.programOpen.has(key);
+  return `<button class="pg-pill" data-act="program-toggle" data-stop="${esc(key)}" type="button" aria-expanded="${open}" aria-controls="${panel}" aria-label="${esc(label)}">
+      ${icon} <b>${title}</b>${what ? ` <span>· ${what}</span>` : ""}<span class="pg-end">${ARROW}</span></button>`;
+}
+
+export function publicProgramPill(stop, key, panel) {
+  const n = (stop.program || []).length || (stop.todos || []).length;
+  if (!n) return "";
+  const what = count(n, "count.activity");
+  return publicPill({ key, panel, title: t("program.title"), what, label: t("program.label", { place: stop.place || t("program.theStop"), what }) });
+}
+
+export function publicProgramPanel(stop, key, panel) {
+  if (!state.programOpen.has(key)) return `<section class="program" id="${panel}" hidden></section>`;
+  return `<section class="program" id="${panel}" aria-label="${esc(t("program.of", { place: stop.place || t("program.theStop") }))}">${publicDays(stop)}</section>`;
+}
+
+// Jours publiés : un bloc par jour, activités par heure (heure, activité, comment y aller)
+export function publicDays(stop) {
+  const program = stop.program || [];
+  if (!program.length) return (stop.todos || []).length ? `<ul class="post-todos">${stop.todos.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  const days = [...new Set(program.map((a) => a.day))].sort((a, b) => (a ?? 1e9) - (b ?? 1e9));
+  return days.map((d) => `<section class="sj-day${d ? "" : " is-loose"}">
+      <div class="sj-day-head"><h3>${d ? t("program.day", { n: +d }) : t("post.noDay")}</h3></div>
+      <ul class="sj-acts">${program.filter((a) => a.day === d).sort(byTime).map((a) => `<li class="sj-act is-public">
+        <div class="sj-act-main">${a.time ? `<time class="sj-time">${esc(fmtHour(a.time))}</time>` : ""}<span class="sj-text">${esc(a.text)}</span></div>
+        ${a.how ? `<p class="sj-how"><span><b>${t("program.getThere")}</b> ${esc(a.how)}</span></p>` : ""}
+      </li>`).join("")}</ul>
+    </section>`).join("");
+}
+
 // Programme déplié, sous le résumé de l'étape : jours et prix en une ligne discrète, puis les jours
 export function programPanel(stop, opts) {
   const id = `pg-${esc(stop.id)}`;

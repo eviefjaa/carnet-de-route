@@ -7,6 +7,7 @@ import { state, currentTrip, tripStart, tripEnd, isOwner, sync } from "../store.
 import { stopCard, stopForm } from "./stop.js";
 import { transportCard, transportForm } from "./transport.js";
 import { insertRow } from "./actions.js";
+import { moreMenu, moreItem } from "./more.js";
 import { budgetSection } from "./budget.js";
 import { computeBudget } from "../budget.js";
 import { drawMap } from "../map.js";
@@ -190,7 +191,7 @@ function hero(trip) {
     <a class="trip-back" href="#voyages">${t("trips.back")}</a>
     <div class="hero-title">
       <h1><input id="tripName" value="${esc(trip.name)}" maxlength="200" aria-label="${t("trip.nameLabel")}"></h1>
-      ${moreMenu(trip, stops.length, owner)}
+      ${tripMenu(trip, stops.length, owner)}
     </div>
     ${trip.source ? `<p class="trip-source">${t("trip.inspiredBy", { who: `<a href="#publication-${esc(trip.source.postId)}">@${esc(trip.source.ownerHandle)}</a>` })}</p>` : ""}
     <div class="stats">
@@ -211,21 +212,14 @@ function hero(trip) {
   </section>`;
 }
 
-// Menu « ⋯ » à droite du titre : publier, changer de type de voyage, supprimer ou quitter.
-// Ouvert : state.moreOpen ; clavier (flèches, Échap) et toucher ailleurs dans js/events.js
-function moreMenu(trip, nStops, owner) {
+// Menu « ⋯ » à droite du titre : publier, changer de type de voyage, supprimer ou quitter (views/more.js)
+function tripMenu(trip, nStops, owner) {
   const items = [];
-  if (isEnabled() && state.user) items.push(`<button class="more-item" role="menuitem" data-act="open-publish" type="button">${t("publish.title")}</button>`);
-  if (trip.kind === "sejour") items.push(`<button class="more-item" role="menuitem" data-act="set-kind" data-kind="road" type="button">${t("trip.menuToRoad")}</button>`);
-  else if (nStops <= 1) items.push(`<button class="more-item" role="menuitem" data-act="set-kind" data-kind="sejour" type="button">${t("trip.menuToSejour")}</button>`);
-  items.push(`<button class="more-item is-danger" role="menuitem" data-act="del-trip" type="button">${owner ? t("trip.deleteThis") : t("trip.leaveThis")}</button>`);
-  const open = !!state.moreOpen;
-  return `<div class="more">
-    <button class="more-btn" id="tripMoreBtn" data-act="more-toggle" type="button" aria-label="${t("trip.more")}" title="${t("trip.more")}" aria-haspopup="menu" aria-expanded="${open}" aria-controls="tripMore">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
-    </button>
-    <div class="more-menu" id="tripMore" role="menu" aria-labelledby="tripMoreBtn"${open ? "" : " hidden"}>${items.join("")}</div>
-  </div>`;
+  if (isEnabled() && state.user) items.push(moreItem(`data-act="open-publish"`, t("publish.title")));
+  if (trip.kind === "sejour") items.push(moreItem(`data-act="set-kind" data-kind="road"`, t("trip.menuToRoad")));
+  else if (nStops <= 1) items.push(moreItem(`data-act="set-kind" data-kind="sejour"`, t("trip.menuToSejour")));
+  items.push(moreItem(`data-act="del-trip"`, owner ? t("trip.deleteThis") : t("trip.leaveThis"), true));
+  return moreMenu(items);
 }
 
 function sejourHeroStats(trip, totalNights) {

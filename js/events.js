@@ -131,6 +131,41 @@ function moveInMoreMenu(e) {
   return true;
 }
 
+// Page d'un voyage et page d'une publication : confirmation, menu « ⋯ », budget replié ou déplié, pastilles
+// (programme d'une étape, recommandations d'une étape publiée), gardés pendant la session
+function onCommonClick(act, b) {
+  switch (act) {
+    // Confirmation annulée (supprimer un voyage, une étape, une publication…)
+    case "cancel-confirm":
+      state.confirm = null;
+      render();
+      return true;
+    case "more-toggle":
+      state.moreOpen = !b.matches('[aria-expanded="true"]');
+      renderFocus(state.moreOpen ? "#tripMore .more-item" : "#tripMoreBtn");
+      return true;
+    case "budget-toggle":
+      state.budgetOpen = !state.budgetOpen;
+      renderFocus('[data-act="budget-toggle"]');
+      return true;
+    case "budget-row": {
+      const key = b.dataset.row;
+      if (state.budgetRows.has(key)) state.budgetRows.delete(key);
+      else state.budgetRows.add(key);
+      renderFocus(`[data-act="budget-row"][data-row="${CSS.escape(key)}"]`);
+      return true;
+    }
+    case "program-toggle": {
+      const id = b.dataset.stop;
+      if (state.programOpen.has(id)) state.programOpen.delete(id);
+      else state.programOpen.add(id);
+      renderFocus(`[data-act="program-toggle"][data-stop="${CSS.escape(id)}"]`);
+      return true;
+    }
+  }
+  return false;
+}
+
 // Réaffiche la page puis place le focus (sélecteur), pour les boutons qui ouvrent ou ferment quelque chose
 function renderFocus(selector) {
   render();
@@ -147,6 +182,7 @@ function onClick(e) {
   const act = b.dataset.act;
   if (act === "new-trip") return newTrip();
   if (act === "create-trip") return createKind(b);
+  if (onCommonClick(act, b)) return;
   if (onSocialClick(act, b)) return;
   if (onAccountClick(act, b)) return;
   if (onPageClick(act, b)) return;
@@ -156,10 +192,7 @@ function onClick(e) {
   const idx = b.dataset.id ? trip.items.findIndex((i) => i.id === b.dataset.id) : -1;
 
   switch (act) {
-    // En-tête du voyage : menu « ⋯ », voyageurs ; itinéraire : « + » ; budget replié ou déplié
-    case "more-toggle":
-      state.moreOpen = !b.matches('[aria-expanded="true"]');
-      return renderFocus(state.moreOpen ? "#tripMore .more-item" : "#tripMoreBtn");
+    // En-tête du voyage : voyageurs ; itinéraire : « + »
     case "share-toggle":
       state.shareOpen = !state.shareOpen;
       if (!state.shareOpen) state.inviteOpen = false;
@@ -171,15 +204,6 @@ function onClick(e) {
     case "insert-open":
       state.insertMenu = +b.dataset.pos;
       return renderFocus(`#ins-${+b.dataset.pos} [data-act="add-stop"]`);
-    case "budget-toggle":
-      state.budgetOpen = !state.budgetOpen;
-      return renderFocus('[data-act="budget-toggle"]');
-    case "budget-row": {
-      const key = b.dataset.row;
-      if (state.budgetRows.has(key)) state.budgetRows.delete(key);
-      else state.budgetRows.add(key);
-      return renderFocus(`[data-act="budget-row"][data-row="${CSS.escape(key)}"]`);
-    }
     case "add-stop": {
       const pos = +b.dataset.pos;
       const { prev } = neighbours(trip, pos);
@@ -205,15 +229,6 @@ function onClick(e) {
       if (state.openItems.has(id)) state.openItems.delete(id);
       else state.openItems.add(id);
       break;
-    }
-    // Programme d'une étape de road trip : déplié ou replié, gardé pendant la session
-    case "program-toggle": {
-      const id = b.dataset.stop;
-      if (state.programOpen.has(id)) state.programOpen.delete(id);
-      else state.programOpen.add(id);
-      render();
-      document.querySelector(`[data-act="program-toggle"][data-stop="${CSS.escape(id)}"]`)?.focus();
-      return;
     }
     case "edit":
       state.editingId = b.dataset.id;
@@ -255,9 +270,6 @@ function onClick(e) {
         leaveTrip(state.currentId);
       }
       go("voyages");
-      break;
-    case "cancel-confirm":
-      state.confirm = null;
       break;
     case "set-kind":
       // Un séjour n'a qu'un lieu : un road trip à plusieurs étapes reste un road trip

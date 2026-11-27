@@ -1,7 +1,7 @@
 // Pages sociales : fil d'actualité, Découvrir (et recherche de personnes), profil d'une
 // personne, publication d'un itinéraire ; sections « Publier » d'un voyage et « Profil public »
 
-import { esc, MODES, safeUrl, fmtMoney } from "../utils.js";
+import { esc, safeUrl, fmtMoney } from "../utils.js";
 import { t, count, locale } from "../i18n.js";
 import { editText } from "../changes.js";
 import { computeBudget } from "../budget.js";
@@ -11,14 +11,18 @@ import { invitationsBlock } from "./share.js";
 import { selectButtons, selectAttrs, selectBox, selectBar } from "./select.js";
 import { isEnabled } from "../cloud.js";
 import * as social from "../social.js";
-import { fmtHour } from "../utils.js";
-import { stopCountry, stopCountryCode } from "../i18n-data.js";
+import { stopCountryCode } from "../i18n-data.js";
+import { publicStopCard } from "./stop.js";
+import { publicLegCard } from "./transport.js";
+import { publicPill, publicProgramPill, publicProgramPanel, publicDays } from "./program.js";
+import { publicBudgetSection } from "./budget.js";
+import { moreMenu, moreItem } from "./more.js";
 
 const me = () => (state.user ? state.user.uid : null);
 const loadingNote = () => `<p class="note">${t("common.loading")}</p>`;
 const errorNote = (text = t("social.loadError")) => `<p class="note">${text}</p>`;
 const avatar = (p, big = false) => `<span class="avatar${big ? " big" : ""}">${esc(((p && p.name) || "?")[0].toUpperCase())}</span>`;
-const fmtDate = (ms) => new Date(ms).toLocaleDateString(locale(), { day: "numeric", month: "long", year: "numeric" });
+const fmtShort = (ms) => new Date(ms).toLocaleDateString(locale(), { day: "numeric", month: "short", year: "numeric" });
 
 const signInPanel = (text) => `<div class="panel">
     <p class="note">${text}</p>
@@ -46,22 +50,39 @@ function flagsOf(trip) {
   return [...codes].filter((c) => /^[A-Z]{2}$/.test(c)).slice(0, 4).join(" · ");
 }
 
-export function postCard(p) {
+// Même gabarit que la carte d'un voyage (views/trips-list.js) : auteur et date à la place du statut,
+// pays, cœur ; titre ; route ; un point par étape ; trois chiffres (étapes ou séjour, jours, budget).
+// selectable : ma publication en mode sélection (la carte se coche, sans lien ni cœur).
+function postCardBody(p, title, selectable = false) {
   const trip = p.trip || {};
   const stops = (trip.items || []).filter((i) => i.type === "stop");
   const places = stops.map((s) => s.place).filter(Boolean);
   const route = places.length > 4 ? [...places.slice(0, 3), `+${places.length - 3}`] : places;
-  return `<article class="trip-card post-card">
-    <div class="tc-top">
-      <a class="post-author" href="#personne-${esc(p.owner)}">${avatar({ name: p.ownerName })}<span>${esc(p.ownerName)} <span class="handle">@${esc(p.ownerHandle)}</span></span></a>
+  const dots = stops.slice(0, 12).map(() => "<i></i>").join("");
+  const who = `${avatar({ name: p.ownerName })}<span class="pa-id"><span>${esc(p.ownerName)} <span class="handle">@${esc(p.ownerHandle)}</span></span>
+      <span class="pa-date">${esc(fmtShort(p.publishedAt))}</span></span>`;
+  const activities = stops.reduce((n, s) => n + ((s.program || []).length || (s.todos || []).length), 0);
+  const total = budgetTotal(trip);
+  return `<div class="tc-top">
+      ${selectable ? `<span class="post-author">${who}</span>` : `<a class="post-author" href="#personne-${esc(p.owner)}">${who}</a>`}
       <span class="tc-flags" aria-hidden="true">${flagsOf(trip)}</span>
-      ${postFavButton(p, true)}
+      ${selectable ? "" : postFavButton(p, true)}
     </div>
-    <h2><a class="tc-link" href="#publication-${esc(p.id)}">${esc(p.title)}</a></h2>
+    <h2>${title}</h2>
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
-    <p class="tc-dates">${trip.kind === "sejour" ? t("trip.kindSejour") : count(stops.length, "count.stop")}${trip.days ? ` · ${count(trip.days, "count.day")}` : ""}${budgetTotal(trip) ? ` · ${esc(budgetTotal(trip))}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
-    ${p.owner === me() ? `<span class="vis-badge is-published">${esc(t("post.published", { who: social.VISIBILITIES[p.visibility] || "" }))}</span>` : ""}
-  </article>`;
+    ${dots ? `<div class="tc-dots" aria-hidden="true">${dots}</div>` : ""}
+    <dl class="tc-stats">
+      ${trip.kind === "sejour"
+        ? `<div><dt>${t("trips.statSejour")}</dt><dd>${count(activities, "count.activity")}</dd></div>`
+        : `<div><dt>${t("trips.statStops")}</dt><dd>${stops.length}</dd></div>`}
+      <div><dt>${t("trips.statDays")}</dt><dd>${trip.days ? +trip.days : "–"}</dd></div>
+      <div><dt>${t("trips.statBudget")}</dt><dd>${total ? esc(total) : "–"}</dd></div>
+    </dl>
+    ${p.owner === me() ? `<span class="vis-badge is-published">${esc(t("post.published", { who: social.VISIBILITIES[p.visibility] || "" }))}</span>` : ""}`;
+}
+
+export function postCard(p) {
+  return `<article class="trip-card post-card">${postCardBody(p, `<a class="tc-link" href="#publication-${esc(p.id)}">${esc(p.title)}</a>`)}</article>`;
 }
 
 // Total du budget publié, formaté (vide s'il n'est pas montré ou nul)
@@ -73,18 +94,10 @@ const budgetTotal = (trip) => {
 
 // Ma publication en mode sélection : toucher la carte la coche, sans l'ouvrir
 function selectablePostCard(p) {
-  const trip = p.trip || {};
-  const stops = (trip.items || []).filter((i) => i.type === "stop");
-  const places = stops.map((s) => s.place).filter(Boolean);
-  const route = places.length > 4 ? [...places.slice(0, 3), `+${places.length - 3}`] : places;
   const on = state.selected.has(p.id);
   return `<article class="trip-card post-card is-selectable${on ? " is-selected" : ""}" ${selectAttrs(p.id)}>
     ${selectBox(p.id, p.title)}
-    <div class="tc-top"><span class="tc-flags" aria-hidden="true">${flagsOf(trip)}</span></div>
-    <h2>${esc(p.title)}</h2>
-    ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : ""}
-    <p class="tc-dates">${trip.kind === "sejour" ? t("trip.kindSejour") : count(stops.length, "count.stop")}${trip.days ? ` · ${count(trip.days, "count.day")}` : ""} · ${esc(fmtDate(p.publishedAt))}</p>
-    <span class="vis-badge is-published">${esc(t("post.published", { who: social.VISIBILITIES[p.visibility] || "" }))}</span>
+    ${postCardBody(p, esc(p.title), true)}
   </article>`;
 }
 
@@ -189,44 +202,58 @@ export function postView(id) {
   const trip = p.trip || { items: [] };
   const items = trip.items || [];
   const stops = items.filter((i) => i.type === "stop");
+  const total = budgetTotal(trip);
+  // Même ordre que la page d'un voyage : en-tête, carte, budget, itinéraire ; puis recommandations et commentaires
+  return `<section class="page post">
+    ${postHero(p, stops)}
+    ${stops.some((s) => s.geo) ? `<section class="map-box" aria-label="${t("post.mapLabel")}"><div id="mapSlot"></div></section>` : ""}
+    ${total ? publicBudgetSection(trip.budget, p.id) : ""}
+    ${trip.kind === "sejour" ? publicSejour(p, items) : `<section class="route" aria-label="${t("trip.itinerary")}">${items.map((it, i) => publicItem(p, it, i)).join("")}</section>`}
+    ${recosSection(p)}
+    ${commentsSection(p)}
+  </section>`;
+}
+
+// En-tête : retour ; auteur et date, cœur et « ⋯ » ; titre ; chiffres ; « Créer mon voyage »
+function postHero(p, stops) {
+  const trip = p.trip || {};
   const mine = p.owner === me();
+  const total = budgetTotal(trip);
+  const items = [];
+  if (p.visibility === "public") items.push(moreItem(`data-act="copy-link"`, t("post.copyLink")));
+  if (mine) {
+    items.push(moreItem(`data-act="post-vis-open" data-post="${esc(p.id)}"`, t("post.menuVisibility")));
+    items.push(moreItem(`data-act="delete-post" data-post="${esc(p.id)}"`, t("post.delete"), true));
+  }
   const options = Object.entries(social.VISIBILITIES)
     .map(([k, v]) => `<option value="${k}"${p.visibility === k ? " selected" : ""}>${esc(v)}</option>`).join("");
   const del = state.confirm === "post:" + p.id
     ? `<div class="confirm">${t("post.deleteAsk")}
         <button class="btn small danger" data-act="delete-post-yes" data-post="${esc(p.id)}" type="button">${t("common.delete")}</button>
         <button class="btn small" data-act="cancel-confirm" type="button">${t("common.cancel")}</button></div>`
-    : `<button class="btn ghost small danger" data-act="delete-post" data-post="${esc(p.id)}" type="button">${t("post.delete")}</button>`;
-
-  return `<section class="page post">
-    ${back}
-    <header class="hero">
+    : "";
+  return `<header class="hero post-hero">
+    <a class="trip-back" href="#decouvrir">${t("discover.back")}</a>
+    <div class="post-top">
       <a class="post-author" href="#personne-${esc(p.owner)}">${avatar({ name: p.ownerName })}<span>${esc(p.ownerName)} <span class="handle">@${esc(p.ownerHandle)}</span></span></a>
-      <h1>${esc(p.title)}</h1>
-      <div class="stats">
-        ${trip.kind === "sejour" ? `<span><b>${t("trip.kindSejour")}</b></span>` : `<span>${count(stops.length, "trip.statStops")}</span>`}
-        ${trip.days ? `<span><b>${count(trip.days, "count.day")}</b></span>` : ""}
-        ${trip.nights ? `<span><b>${count(trip.nights, "count.night")}</b></span>` : ""}
-        ${budgetTotal(trip) ? `<span><b>${esc(budgetTotal(trip))}</b></span>` : ""}
-      </div>
-      <p class="sync-note">${esc(t("post.publishedOn", { date: fmtDate(p.publishedAt) }))}${mine ? "" : ` · ${t("post.readOnly")}`}</p>
-      ${mine ? `<div class="post-owner">
-          <label class="currency">${t("post.visibleTo")} <select data-post-visibility="${esc(p.id)}">${options}</select></label>
-          ${del}
-        </div>` : ""}
-      <div class="row-btns post-actions">
-        ${postFavButton(p)}
-        ${stops.length && state.forkOpen !== p.id ? `<button class="btn small" data-act="fork-open" data-post="${esc(p.id)}" type="button">${t("fork.button")}</button>` : ""}
-        ${p.visibility === "public" ? `<button class="btn small" data-act="copy-link" type="button">${t("post.copyLink")}</button>` : ""}
-      </div>
-      ${stops.length && state.forkOpen === p.id ? forkForm(p) : ""}
-    </header>
-    ${stops.some((s) => s.geo) ? `<section class="map-box" aria-label="${t("post.mapLabel")}"><div id="mapSlot"></div></section>` : ""}
-    <section class="route" aria-label="${t("trip.itinerary")}">${items.map((it, i) => readOnlyItem(it, stopRecos(p, i))).join("")}</section>
-    ${budgetTotal(trip) ? publicBudgetSection(trip.budget) : ""}
-    ${recosSection(p)}
-    ${commentsSection(p)}
-  </section>`;
+      <span class="post-date">· ${esc(fmtShort(p.publishedAt))}</span>
+      <span class="post-top-end">${postFavButton(p, true)}${moreMenu(items)}</span>
+    </div>
+    <h1>${esc(p.title)}</h1>
+    <div class="stats">
+      ${trip.kind === "sejour" ? `<span><b>${t("trip.kindSejour")}</b></span>` : `<span>${count(stops.length, "trip.statStops")}</span>`}
+      ${trip.days ? `<span><b>${count(trip.days, "count.day")}</b></span>` : ""}
+      ${trip.nights ? `<span><b>${count(trip.nights, "count.night")}</b></span>` : ""}
+      ${total ? `<span><b>${esc(total)}</b></span>` : ""}
+    </div>
+    ${stops.length && state.forkOpen !== p.id ? `<div class="row-btns"><button class="btn primary" data-act="fork-open" data-post="${esc(p.id)}" type="button">${t("fork.button")}</button></div>` : ""}
+    ${stops.length && state.forkOpen === p.id ? forkForm(p) : ""}
+    ${mine && state.postVisOpen === p.id ? `<div class="post-vis">
+        <label class="currency">${t("post.visibleTo")} <select data-post-visibility="${esc(p.id)}">${options}</select></label>
+        <button class="btn small" data-act="post-vis-close" type="button">${t("common.close")}</button>
+      </div>` : ""}
+    ${del}
+  </header>`;
 }
 
 // Créer son voyage à partir de l'itinéraire : nom et date de départ, rien d'autre à remplir
@@ -246,73 +273,41 @@ function forkForm(p) {
   </form>`;
 }
 
-// Élément de l'itinéraire, en lecture seule
-// recos : recommandations rattachées à cette étape (affichées dans sa carte)
-function readOnlyItem(it, recos = []) {
-  if (it.type === "transport") {
-    return `<article class="item transport">
-      <span class="mode">${esc(MODES[it.mode] || t("leg.generic"))}</span>
-      <div class="leg">
-        <div class="leg-places">${esc(it.from || t("stop.depart"))} → ${esc(it.to || t("stop.arrive"))}</div>
-        ${it.duration ? `<div class="leg-times"><span class="dur">${esc(it.duration)}</span></div>` : ""}
-      </div>
-    </article>`;
-  }
-  const todos = it.todos || [];
-  return `<article class="item stop">
-    <div class="stop-head">
-      ${it.day ? `<span class="day">${t("stop.dayBadge", { n: +it.day })}</span>` : ""}
-      <h2>${esc(it.place || t("post.stop"))}</h2>
-      ${it.country ? `<span class="stop-country">${esc(stopCountry(it))}</span>` : ""}
-    </div>
-    ${it.nights === 0 ? `<div class="dates"><span class="nights is-halt">${t("stop.halt")}</span></div>` : it.nights ? `<div class="dates"><span class="nights">${count(+it.nights, "count.night")}</span></div>` : ""}
-    ${(it.program || []).length ? programSection(it.program)
-      : todos.length ? `<section class="checklist"><div class="cl-head"><h3>${t("post.todo")}</h3></div>
-      <ul class="post-todos">${todos.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></section>` : ""}
-    ${recos.length ? `<section class="stop-recos"><div class="cl-head"><h3>${t("reco.title")}</h3></div>
-      <ul class="reco-list">${recos.map((r) => recoCard(r, true)).join("")}</ul></section>` : ""}
-  </article>`;
+// Élément de l'itinéraire, en lecture seule (mêmes cartes que la page d'un voyage, views/stop.js et
+// views/transport.js). Étape : pastille du programme publié et pastille des recommandations de l'étape,
+// dépliées sous la carte ; ouvertes ou fermées pour la session (state.programOpen, clé « post:id:index »).
+function publicItem(p, it, i, sejour = false) {
+  if (it.type === "transport") return publicLegCard(it);
+  const key = `post:${p.id}:${i}`;
+  const recos = stopRecos(p, i);
+  const rKey = key + ":recos";
+  const what = count(recos.length, "count.reco");
+  const place = it.place || t("post.stop");
+  const pills = (sejour ? "" : publicProgramPill(it, key, `pg-post-${i}`))
+    + (recos.length ? publicPill({ key: rKey, panel: `reco-post-${i}`, icon: PIN, title: what, label: t("reco.pillLabel", { place, what }) }) : "");
+  const panels = (sejour ? "" : publicProgramPanel(it, key, `pg-post-${i}`))
+    + (recos.length ? (state.programOpen.has(rKey)
+      ? `<section class="program stop-recos" id="reco-post-${i}" aria-label="${esc(t("reco.pillLabel", { place, what }))}"><ul class="reco-list">${recos.map((r) => recoCard(r, true)).join("")}</ul></section>`
+      : `<section class="program" id="reco-post-${i}" hidden></section>`) : "");
+  return publicStopCard(it, { pills, panels, sejour });
 }
 
-// Programme d'un séjour publié : un bloc par jour, activités par heure
-function programSection(program) {
-  const days = [...new Set(program.map((a) => a.day))].sort((a, b) => (a ?? 1e9) - (b ?? 1e9));
-  const byTime = (a, b) => (a.time || "99").localeCompare(b.time || "99");
-  return `<section class="post-program"><div class="cl-head"><h3>${t("program.title")}</h3></div>
-    ${days.map((d) => `<div class="sj-day${d ? "" : " is-loose"}">
-      <div class="sj-day-head"><h3>${d ? t("program.day", { n: +d }) : t("post.noDay")}</h3></div>
-      <ul class="sj-acts">${program.filter((a) => a.day === d).sort(byTime).map((a) => `<li class="sj-act is-public">
-        <div class="sj-act-main">${a.time ? `<time class="sj-time">${esc(fmtHour(a.time))}</time>` : ""}<span class="sj-text">${esc(a.text)}</span></div>
-        ${a.how ? `<p class="sj-how"><span><b>${t("program.getThere")}</b> ${esc(a.how)}</span></p>` : ""}
-      </li>`).join("")}</ul>
-    </div>`).join("")}
-  </section>`;
-}
+const PIN = `<svg class="pg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>`;
 
-// Budget publié, en lecture seule : total, puis coût par destination
-function publicBudgetSection(b) {
-  const m = (n) => esc(fmtMoney(n, b.currency));
-  const sum = (r) => r.lodging + r.transport + r.activities;
-  const rows = b.rows.filter(sum);
-  return `<section class="budget" aria-label="${t("budget.title")}">
-    <div class="budget-head"><h2>${t("budget.title")}</h2></div>
-    <div class="budget-total">
-      <span class="b-big">${m(sum(b))}</span>
-      <span class="note">${t("budget.split", { lodging: m(b.lodging), transport: m(b.transport), activities: m(b.activities) })}</span>
-    </div>
-    ${rows.length ? `<div class="table-scroll">
-      <table class="budget-table">
-        <thead><tr><th scope="col">${t("budget.colPlace")}</th><th scope="col">${t("budget.colLodging")}</th><th scope="col">${t("budget.colTransport")}</th><th scope="col">${t("budget.colActivities")}</th><th scope="col">${t("budget.colTotal")}</th></tr></thead>
-        <tbody>${rows.map((r) => `<tr>
-          <th scope="row">${esc(r.place)}</th>
-          <td>${r.lodging ? m(r.lodging) : "–"}</td>
-          <td>${r.transport ? m(r.transport) : "–"}</td>
-          <td>${r.activities ? m(r.activities) : "–"}</td>
-          <td class="b-total">${m(sum(r))}</td>
-        </tr>`).join("")}</tbody>
-      </table>
-    </div>` : ""}
-    <p class="note">${t("post.budgetNote")}${b.missing ? ` ${count(+b.missing, "post.budgetMissing")}` : ""}</p>
+// Séjour publié : comme la vue séjour d'un voyage (aller, lieu, programme toujours déplié, retour)
+function publicSejour(p, items) {
+  const idx = items.findIndex((i) => i.type === "stop");
+  if (idx < 0) return "";
+  const stop = items[idx];
+  const legs = (list) => list.filter((it) => it.type === "transport").map(publicLegCard).join("");
+  const out = legs(items.slice(0, idx)), back = legs(items.slice(idx + 1));
+  const days = publicDays(stop);
+  return `<section class="route sejour" aria-label="${t("trip.kindSejour")}">
+    ${out ? `<h2 class="sj-title">${t("sejour.out")}</h2>${out}` : ""}
+    <h2 class="sj-title">${t("sejour.place")}</h2>
+    ${publicItem(p, stop, idx, true)}
+    ${days ? `<h2 class="sj-title">${t("program.sejourTitle")}</h2><div class="post-program">${days}</div>` : ""}
+    ${back ? `<h2 class="sj-title">${t("sejour.back")}</h2>${back}` : ""}
   </section>`;
 }
 

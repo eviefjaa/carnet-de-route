@@ -23,9 +23,20 @@
 .person-bio { max-width: 60ch; }
 .follow-btns { align-items: center; }
 
-/* Publication */
+/* Publication : même en-tête qu'un voyage. Ligne du haut : auteur · date, puis cœur et « ⋯ » à droite */
 .post .hero { gap: 10px; }
-.post-owner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.post-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.post-top .post-author > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.post-date { flex: none; font-size: 13px; color: var(--muted); }
+.post-top-end { margin-left: auto; flex: none; display: flex; align-items: center; gap: 4px; }
+.post-top-end .fav.small { position: static; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; }
+.post-top-end .more { margin-top: 0; }
+.post-vis { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+/* Lecture seule : rien à ouvrir au survol d'une étape ou d'un trajet */
+@media (hover: hover) {
+  .stop.is-public:hover { border-color: var(--line); }
+  .transport.is-line.is-public:hover { background: none; }
+}
 .post-todos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; }
 
 /* Panneau « Publier l'itinéraire » */
@@ -39,7 +50,7 @@
 .recos h2, .comments h2 { font-size: 20px; font-weight: 700; }
 .reco-kind { font-family: var(--body); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
 .reco-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
-.reco { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.reco { border-left: 3px solid var(--route); padding: 4px 0 4px 14px; display: flex; flex-direction: column; gap: 4px; }
 .reco h4 { margin: 0; font-family: var(--display); font-size: 17px; }
 .reco p { margin: 0; }
 .reco-where { font-size: 13px; color: var(--muted); }
@@ -84,6 +95,10 @@
 .post-card .tc-top { gap: 8px; }
 .post-card .tc-top .post-author { flex: 1; min-width: 0; }
 .post-card .tc-top .post-author > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Nom et @pseudo, puis la date de publication en petit gris dessous */
+.post-card .pa-id { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.post-card .pa-id > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.post-card .pa-date { font-size: 12px; font-weight: 400; color: var(--muted); }
 .post-card .tc-top .tc-flags { flex: none; }
 .post-card .tc-top .fav.small { position: relative; top: auto; right: auto; flex: none; margin: -6px -6px -6px 0; }
 .post-actions { align-items: center; }
@@ -93,7 +108,7 @@
 
 /* Recommandations dans la carte d'une étape (itinéraire publié) */
 .stop-recos { display: flex; flex-direction: column; gap: 8px; }
-.stop-recos .reco { background: var(--bg); }
+.stop-recos .reco-list { padding-top: 4px; }
 .reco-tag { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 
 /* Commentaires : j'aime, répondre, réponses en retrait */

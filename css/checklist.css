@@ -60,7 +60,8 @@
 
 /* Programme d'une étape de road trip (views/program.js) : une pastille dans le résumé de l'étape,
    toujours visible, ouvre le programme sous le résumé */
-.pg-pill-row { display: flex; position: relative; z-index: 2; } /* au-dessus de la zone qui ouvre l'étape */
+.pg-pill-row { display: flex; flex-wrap: wrap; gap: 8px; position: relative; z-index: 2; } /* au-dessus de la zone qui ouvre l'étape ; publication : programme et recommandations côte à côte, l'une sous l'autre si la place manque */
+.pg-pill-row > * { flex: none; max-width: 100%; } /* une pastille ne se tasse pas : elle passe à la ligne */
 .pg-pill {
   position: relative; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 5px; max-width: 100%;
   /* Arrondi de 18 px : une pastille sur une ligne (36 px de haut), un rectangle arrondi propre si elle passe à la ligne */

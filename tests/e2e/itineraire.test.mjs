@@ -72,7 +72,10 @@ const eve = await newPage("eve");
 await eve.goto(SITE + "#publication-" + postId);
 await eve.waitForSelector('[data-act="fork-open"]', { timeout: 15000 });
 check("bouton visible sans compte", true);
-{ const prog = await eve.$eval(".post .item.stop .post-program", (e) => e.innerText.replace(/\s+/g, " ")).catch(() => "");
+await sleep(1500); // la page se réaffiche quand les commentaires arrivent
+await eve.$eval('.post .item.stop [data-act="program-toggle"]', (b) => b.click()); // pastille « Programme »
+await eve.waitForSelector(".post .item.stop .program .sj-day", { timeout: 5000 }).catch(() => {});
+{ const prog = await eve.$eval(".post .item.stop .program", (e) => e.innerText.replace(/\s+/g, " ")).catch(() => "");
   check("road trip publié : programme de l'étape, jour et heure, sans date ni lien", prog.includes("Jour 2") && prog.includes("10 h 00") && prog.includes("Belém") && prog.includes("Tram 15") && prog.includes("Sans jour précis") && prog.includes("Tram 28")
     && !(await eve.$eval(".post", (e) => e.innerHTML)).includes("maps.app")); }
 if (process.env.SHOTS) await (await eve.$(".post .item.stop")).screenshot({ path: process.env.SHOTS + "/publication-programme.png" });

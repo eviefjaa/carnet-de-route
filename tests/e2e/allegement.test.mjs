@@ -209,7 +209,8 @@ async function newUser(email, lang, width) {
   await page.type("#auth-confirm", "motdepasse123");
   await page.click(".auth-submit");
   await page.waitForSelector('[data-act="verify-later"]', { timeout: 15000 });
-  await page.click('[data-act="verify-later"]');
+  await sleep(500); // l'écran se réaffiche une fois le compte créé : le bouton est relu au moment du clic
+  await page.$eval('[data-act="verify-later"]', (b) => b.click());
   await sleep(1500);
   return page;
 }

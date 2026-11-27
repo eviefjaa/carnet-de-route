@@ -36,6 +36,7 @@ export const state = {
   invitations: [],  // invitations à des voyages en attente de réponse [{ id, name, from }]
   publishOpen: false, // panneau « Publier l'itinéraire » ouvert
   forkOpen: false,  // formulaire « Créer mon voyage à partir de cet itinéraire » ouvert
+  postVisOpen: null, // ma publication dont le choix « Visible par » est ouvert (depuis le menu « ⋯ »)
   inviteOpen: false,  // champ « Inviter une personne » ouvert
   shareOpen: false,   // panneau des voyageurs ouvert sous l'en-tête du voyage
   moreOpen: false,    // menu « ⋯ » de l'en-tête du voyage ouvert
@@ -254,6 +255,7 @@ export function resetUi() {
   state.formTickets = { pending: [], removed: [] };
   state.publishOpen = false;
   state.forkOpen = false;
+  state.postVisOpen = null;
   state.inviteOpen = false;
   state.shareOpen = false;
   state.moreOpen = false;

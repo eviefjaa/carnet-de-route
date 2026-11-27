@@ -1,5 +1,5 @@
-// Section « Budget » : replié, une ligne (total et prix manquants) ; déplié, la devise, le total
-// et le tableau par destination. Ouvert ou fermé pour la session (state.budgetOpen).
+// Section « Budget » d'un voyage ou d'une publication : replié, une ligne (total et prix manquants) ;
+// déplié, la devise (voyage), le total et le tableau par destination. Ouvert ou fermé pour la session (state.budgetOpen).
 // Sur téléphone, le tableau n'a que Destination et Total : toucher une ligne affiche son détail.
 
 import { esc, fmtMoney, CURRENCIES } from "../utils.js";
@@ -12,26 +12,52 @@ const ARROW = `<svg class="b-arrow" viewBox="0 0 24 24" width="16" height="16" f
 export function budgetSection(trip) {
   const cur = /^[A-Z]{3}$/.test(trip.currency || "") ? trip.currency : "EUR";
   const { rows, total } = computeBudget(trip);
+  const list = CURRENCIES[cur] ? CURRENCIES : { [cur]: cur, ...CURRENCIES };
+  const options = Object.entries(list)
+    .map(([k, v]) => `<option value="${esc(k)}"${k === cur ? " selected" : ""}>${esc(v)}</option>`)
+    .join("");
+  return budgetBox({
+    cur, rows, total, rowKey: (i) => `${state.currentId}:${i}`,
+    missingShort: total.missing ? count(total.missing, "budget.missingShort") : "",
+    top: `<label class="currency">${t("budget.currency")}
+        <select id="tripCurrency">${options}</select>
+      </label>`,
+    note: `${t("budget.rule")}${total.missing ? ` ${count(total.missing, "budget.missing", { list: missingText(total.missingList) })}` : ""}`,
+  });
+}
+
+// Budget d'une publication, tel qu'il a été publié (js/publish.js, publicBudget) : totaux et coût
+// par destination ; le nombre de prix manquants seulement s'il a été publié
+export function publicBudgetSection(b, postId) {
+  const sum = (r) => r.lodging + r.transport + (r.activities || 0);
+  const rows = b.rows.filter(sum).map((r) => ({ place: r.place, lodging: r.lodging, transport: r.transport, activities: r.activities || 0, total: sum(r) }));
+  const total = { lodging: b.lodging, transport: b.transport, activities: b.activities || 0, total: sum(b) };
+  const missing = +b.missing || 0;
+  return budgetBox({
+    cur: b.currency, rows, total, rowKey: (i) => `post:${postId}:${i}`,
+    missingShort: missing ? count(missing, "budget.missingShort") : "",
+    note: `${t("post.budgetNote")}${missing ? ` ${count(missing, "post.budgetMissing")}` : ""}`,
+  });
+}
+
+// Replié : une ligne (total, prix manquants) ; déplié : top (devise), total, tableau, note.
+// Textes du dictionnaire (sûrs) : seuls les montants et les noms de lieux sont échappés ici.
+function budgetBox({ cur, rows, total, rowKey, missingShort, top = "", note }) {
   const m = (n) => esc(fmtMoney(n, cur));
   const open = state.budgetOpen;
 
   // Titre et bouton à la fois (un bouton dans le titre : bien annoncé par les lecteurs d'écran)
   const head = `<h2 class="b-head"><button class="b-toggle" data-act="budget-toggle" type="button" aria-expanded="${open}" aria-controls="budgetBody">
       <span class="b-title">${t("budget.title")}</span>
-      <span class="b-sum">· <b>${m(total.total)}</b>${total.missing ? ` <span class="b-missing">· ${count(total.missing, "budget.missingShort")}</span>` : ""}</span>
+      <span class="b-sum">· <b>${m(total.total)}</b>${missingShort ? ` <span class="b-missing">· ${missingShort}</span>` : ""}</span>
       ${ARROW}
     </button></h2>`;
   if (!open) return `<section class="budget trip-budget" aria-label="${t("budget.title")}">${head}<div id="budgetBody" hidden></div></section>`;
 
-  const list = CURRENCIES[cur] ? CURRENCIES : { [cur]: cur, ...CURRENCIES };
-  const options = Object.entries(list)
-    .map(([k, v]) => `<option value="${esc(k)}"${k === cur ? " selected" : ""}>${esc(v)}</option>`)
-    .join("");
-
   // Téléphone : le nom de la destination est un bouton qui affiche le détail de la ligne en dessous
   // (sur ordinateur, texte simple : toutes les colonnes sont visibles)
   const row = (r, i) => {
-    const key = `${state.currentId}:${i}`;
+    const key = rowKey(i);
     const shown = state.budgetRows.has(key);
     const id = `b-row-${i}`;
     return `<tr>
@@ -52,9 +78,7 @@ export function budgetSection(trip) {
   return `<section class="budget trip-budget is-open" aria-label="${t("budget.title")}">
     ${head}
     <div class="b-body" id="budgetBody">
-      <label class="currency">${t("budget.currency")}
-        <select id="tripCurrency">${options}</select>
-      </label>
+      ${top}
       <div class="budget-total">
         <span class="b-big">${m(total.total)}</span>
         <span class="note">${t("budget.split", { lodging: m(total.lodging), transport: m(total.transport), activities: m(total.activities) })}</span>
@@ -64,7 +88,7 @@ export function budgetSection(trip) {
         <tbody>${body}</tbody>
         <tfoot><tr><th scope="row">${t("budget.tripTotal")}</th><td>${m(total.lodging)}</td><td>${m(total.transport)}</td><td>${m(total.activities)}</td><td class="b-total">${m(total.total)}</td></tr></tfoot>
       </table>
-      <p class="note">${t("budget.rule")}${total.missing ? ` ${count(total.missing, "budget.missing", { list: missingText(total.missingList) })}` : ""}</p>
+      <p class="note">${note}</p>
     </div>
   </section>`;
 }

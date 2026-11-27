@@ -53,6 +53,26 @@ export function stopCard(it, trip, idx, { sejour = false } = {}) {
   </article>`;
 }
 
+// Étape d'une publication, en lecture seule : même carte, sans dates réelles (« Jour N »), sans
+// hébergement ni boutons. pills : pastilles (programme, recommandations) ; panels : leur contenu déplié.
+// sejour : le lieu d'un séjour, sans numéro de jour (son programme est affiché à part).
+export function publicStopCard(it, { pills = "", panels = "", sejour = false } = {}) {
+  const n = it.nights;
+  return `<article class="item stop is-public">
+    <div class="stop-summary">
+      <div class="stop-head">
+        ${it.day && !sejour ? `<span class="day">${t("stop.dayBadge", { n: +it.day })}</span>` : ""}
+        <h2>${esc(it.place || t("post.stop"))}</h2>
+        ${it.country ? `<span class="stop-country">${esc(stopCountry(it))}</span>` : ""}
+      </div>
+      ${n === 0 ? `<div class="dates"><span class="nights-text is-halt">${t("stop.halt")}</span></div>`
+        : n ? `<div class="dates"><span class="nights-text">${count(+n, "count.night")}</span></div>` : ""}
+      ${pills ? `<div class="pg-pill-row">${pills}</div>` : ""}
+    </div>
+    ${panels}
+  </article>`;
+}
+
 // Dates de l'étape ; celles qui manquent sont signalées en rouge
 function datesLine(it) {
   const todo = (txt) => `<span class="to-define">${txt}</span>`;

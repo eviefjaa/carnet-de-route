@@ -53,6 +53,19 @@ async function newUser(email, keepVerify = false) {
   return page;
 }
 const text = (page) => page.evaluate(() => document.getElementById("app").innerText);
+// Publication : déplie toutes les pastilles (programme, recommandations) avant de lire la page
+async function openPills(page) {
+  for (let i = 0; i < 20; i++) {
+    const done = await page.evaluate(() => {
+      const b = document.querySelector('.post [data-act="program-toggle"][aria-expanded="false"]');
+      if (b) b.click();
+      return !b;
+    });
+    if (done) return;
+    await sleep(150);
+  }
+}
+
 const goHash = async (page, hash) => { await page.evaluate((h) => (location.hash = h), hash); await sleep(1500); };
 async function makeProfile(page, name, handle, visibility = "public") {
   await goHash(page, "profil");
@@ -145,9 +158,11 @@ await alice.click(".post-card .tc-link");
 await sleep(2500);
 const postHash = await alice.evaluate(() => location.hash);
 check("publication créée", postHash.startsWith("#publication-"));
+await openPills(alice);
 const postText = await text(alice);
 check("publication : étape et activité", postText.includes("Kyoto") && postText.includes("Temple Kinkaku-ji"));
-check("publication : « Jour 1 » au lieu des dates", postText.includes("JOUR 1") && !postText.includes("nov."));
+// La date de publication est affichée près de l'auteur ; l'itinéraire, lui, n'a aucune date réelle
+check("publication : « Jour 1 » au lieu des dates", postText.includes("JOUR 1") && !(await alice.$eval(".post .route", (e) => e.innerText)).includes("nov."));
 check("recommandation affichée", postText.includes("Chez Jo") && postText.includes("Les meilleurs ramens"));
 const kyotoCard = await alice.$$eval(".route .item.stop", (l) => (l.find((c) => c.querySelector("h2").textContent.includes("Kyoto")) || {}).innerText || "");
 check("recommandation de l'étape : dans la carte de Kyoto", kyotoCard.includes("Chez Jo") && kyotoCard.includes("RESTAURANT"));
@@ -344,6 +359,7 @@ await sleep(2000);
 check("page Abonnés ouverte", (await alice.evaluate(() => location.hash)) === "#abonnes" && (await alice.title()).startsWith("Abonnés"));
 check("Alice voit Bob dans ses abonnés", (await text(alice)).includes("@bob.test"));
 await goHash(alice, postHash.slice(1));
+await clickMore(alice, '[data-act="post-vis-open"]'); // « Visible par… » dans le menu « ⋯ »
 await alice.waitForSelector("[data-post-visibility]");
 await alice.select("[data-post-visibility]", "private");
 await sleep(2500);
@@ -373,11 +389,15 @@ await alice.click('[data-publish-form] [name="budget"]');
 await alice.click('[data-publish-form] button[type="submit"]');
 await sleep(3000);
 check("deuxième publication : deux cartes dans Mes publications", (await alice.$$(".post-card")).length === 2);
-{ const cards = await alice.$$eval(".post-card", (l) => l.map((c) => c.querySelector(".tc-dates").textContent));
+{ const cards = await alice.$$eval(".post-card", (l) => l.map((c) => c.querySelector(".tc-stats").textContent));
   check("carte : total du budget seulement sur la publication qui le montre", cards.filter((c) => /999\s?€/.test(c)).length === 1); }
 { const href = await alice.$$eval(".post-card", (l) => l.find((c) => /999/.test(c.textContent)).querySelector(".tc-link").getAttribute("href"));
   await goHash(alice, href.slice(1));
   await alice.waitForSelector(".post .budget", { timeout: 10000 }).catch(() => {});
+  await sleep(1000);
+  // Budget replié en une ligne, comme sur la page d'un voyage : on le déplie
+  if (await alice.$eval(".post .budget .b-toggle", (b) => b.getAttribute("aria-expanded") === "false").catch(() => false)) await alice.$eval(".post .budget .b-toggle", (b) => b.click());
+  await alice.waitForSelector(".post .budget .budget-table", { timeout: 5000 }).catch(() => {});
   const b = await alice.$eval(".post .budget", (e) => e.innerText).catch(() => "");
   check("publication : section Budget, par destination", b.includes("999") && b.includes("Kyoto") && b.includes("d'hébergement"));
   check("publication avec budget : toujours ni notes ni adresse", !(await text(alice)).includes("4321") && !(await text(alice)).includes("secrète"));
@@ -468,7 +488,8 @@ await clickMore(alice, '[data-act="open-publish"]');
 await alice.waitForSelector("[data-publish-form]");
 await alice.click('[data-publish-form] button[type="submit"]');
 await sleep(3000);
-const sejourCard = await alice.$$eval(".post-card", (l) => (l.find((c) => c.querySelector("h2").textContent.includes("Lisbonne")) || {}).innerText || "");
+// textContent : les intitulés des chiffres sont en capitales par le CSS seulement (« SÉJOUR » à l'écran)
+const sejourCard = await alice.$$eval(".post-card", (l) => (l.find((c) => c.querySelector("h2").textContent.includes("Lisbonne")) || {}).textContent || "");
 check("séjour publié : la carte dit « Séjour »", sejourCard.includes("Séjour"));
 const sejourHref = await alice.$$eval(".post-card .tc-link", (l) => (l.find((a) => a.textContent.includes("Lisbonne")) || {}).getAttribute?.("href") || "");
 await anon.goto(SITE + sejourHref);
