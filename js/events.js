@@ -2,6 +2,7 @@
 
 import { state, currentTrip, save, flush, createTrip, deleteTrip, neighbours, isOwner, resetUi } from "./store.js";
 import { render } from "./views/trip.js";
+import { refreshToBook } from "./views/to-book.js";
 import { linkRow, todoRow, newStop, readStopForm } from "./views/stop.js";
 import { readActivityForm } from "./views/program.js";
 import { newTransport, readTransportForm } from "./views/transport.js";
@@ -162,6 +163,11 @@ function onCommonClick(act, b) {
       renderFocus(`[data-act="program-toggle"][data-stop="${CSS.escape(id)}"]`);
       return true;
     }
+    // Page « À réserver » : « Voir » ouvre le voyage (le lien), programme de l'étape déplié, sur l'activité
+    case "to-book-see":
+      state.programOpen.add(b.dataset.stop);
+      state.focusTodo = b.dataset.todo;
+      return true;
   }
   return false;
 }
@@ -517,7 +523,9 @@ function onSettingChange(el) {
     if (todo) {
       todo.done = el.checked;
       save();
-      render();
+      // Page « À réserver » : la ligne reste, « Réservé » ; le compteur change sur place
+      if (state.view === "toBook") refreshToBook(currentTrip());
+      else render();
       if (el.checked) toast(t("toast.markedBooked"));
     }
     return true;

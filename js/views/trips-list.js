@@ -12,6 +12,7 @@ import { isEnabled } from "../cloud.js";
 import { invitationsBlock } from "./share.js";
 import { sejourStats } from "./sejour.js";
 import { selectButtons, selectAttrs, selectBox, selectBar } from "./select.js";
+import { toBookLink } from "./to-book.js";
 import { stopCountryCode } from "../i18n-data.js";
 
 // Premier écran d'un nouveau visiteur : ce que fait le site, et de quoi commencer tout de suite
@@ -134,7 +135,9 @@ function cardBody(s, title) {
     <h2>${title}</h2>
     <p class="tc-dates">${s.start ? esc(fmtRange(s.start, s.end)) : t("trips.noDates")}</p>
     ${route.length ? `<p class="tc-route">${route.map(esc).join(" <span>→</span> ")}</p>` : `<p class="tc-route empty-route">${t("trips.noStops")}</p>`}
-    ${tripPending(trip) ? `<span class="todo-alert">${esc(t("trips.toBook", { n: tripPending(trip) }))}</span>` : ""}
+    ${tripPending(trip) ? (state.selecting
+      ? `<span class="todo-alert">${esc(t("trips.toBook", { n: tripPending(trip) }))}</span>`
+      : toBookLink(s.id, tripPending(trip), t("trips.toBook", { n: tripPending(trip) }))) : ""}
     ${dots ? `<div class="tc-dots" aria-hidden="true">${dots}</div>` : ""}
     <dl class="tc-stats">
       ${trip.kind === "sejour"

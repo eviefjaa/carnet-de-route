@@ -8,6 +8,7 @@ import { stopCard, stopForm } from "./stop.js";
 import { transportCard, transportForm } from "./transport.js";
 import { insertRow } from "./actions.js";
 import { moreMenu, moreItem } from "./more.js";
+import { toBookView, toBookLink } from "./to-book.js";
 import { budgetSection } from "./budget.js";
 import { computeBudget } from "../budget.js";
 import { drawMap } from "../map.js";
@@ -40,6 +41,7 @@ function setMeta() {
     state.authOpen ? [t("meta.auth.title"), t("meta.auth")]
     : state.verifyOpen && state.user && !state.user.emailVerified ? [t("meta.verify.title"), t("meta.verify")]
     : trip ? [trip.name || t("meta.trip.title"), t("meta.trips")]
+    : state.view === "toBook" ? [t("toBook.title"), t("meta.trips")]
     : country ? [countryName(country.code), localCountry(country).tagline]
     : ["person", "post"].includes(state.view) ? socialTitle()
     : state.view === "network" ? [NETWORK_PAGES[state.networkTab] || t("page.profile"), t("meta.profile")]
@@ -135,21 +137,19 @@ export function render() {
     case "settings":
       app.innerHTML = settingsView();
       return;
+    case "toBook": {
+      const tb = state.trips[state.tripId];
+      if (tb) state.currentId = state.tripId; // la case « réservé » modifie ce voyage (comme dans son programme)
+      app.innerHTML = tb ? toBookView(state.tripId, tb) : tripNotFound();
+      return;
+    }
   }
 
   // Page d'un voyage (#voyage-<id>)
   if (state.tripId) state.currentId = state.tripId;
   const trip = currentTrip();
   if (!trip) {
-    app.innerHTML = `<div class="empty">
-      <h2>${t("trip.notFound")}</h2>
-      <p class="note">${!state.user && isEnabled() ? t("trip.notFoundSignIn")
-        : state.user && !state.user.emailVerified ? t("trip.notFoundVerify")
-          : t("trip.notFoundGone")}</p>
-      ${!state.user && isEnabled()
-        ? `<button class="btn primary" data-act="open-auth" data-mode="signin" type="button">${t("auth.signIn")}</button>`
-        : `<a class="btn primary" href="#voyages">${t("trip.seeMyTrips")}</a>`}
-    </div>`;
+    app.innerHTML = tripNotFound();
     return;
   }
 
@@ -158,11 +158,41 @@ export function render() {
   app.innerHTML = hero(trip) + (stops.length ? mapSection() : "") + (trip.items.length ? budgetSection(trip) : "") + (trip.kind === "sejour" ? sejourView(trip) : itinerary(trip));
   drawMap();
   scheduleGeo();
+  if (state.focusTodo) showTodo();
   if (state.focusName) {
     state.focusName = false;
     const input = document.getElementById("tripName");
     if (input) { input.focus(); input.select(); }
   }
+}
+
+// Voyage introuvable (supprimé, quitté, ou dans un autre compte)
+function tripNotFound() {
+  return `<div class="empty">
+      <h2>${t("trip.notFound")}</h2>
+      <p class="note">${!state.user && isEnabled() ? t("trip.notFoundSignIn")
+        : state.user && !state.user.emailVerified ? t("trip.notFoundVerify")
+          : t("trip.notFoundGone")}</p>
+      ${!state.user && isEnabled()
+        ? `<button class="btn primary" data-act="open-auth" data-mode="signin" type="button">${t("auth.signIn")}</button>`
+        : `<a class="btn primary" href="#voyages">${t("trip.seeMyTrips")}</a>`}
+    </div>`;
+}
+
+// « Voir » depuis la page « À réserver » : l'activité (programme déplié) défile au milieu de l'écran,
+// brièvement mise en évidence, et reçoit le focus. Après le défilement en haut de la nouvelle page.
+function showTodo() {
+  const id = state.focusTodo;
+  state.focusTodo = null;
+  setTimeout(() => {
+    const box = document.getElementById("todo-" + id);
+    const li = box && box.closest("li");
+    if (!li) return;
+    li.scrollIntoView({ block: "center" });
+    li.classList.add("is-flash");
+    box.focus({ preventScroll: true });
+    setTimeout(() => li.classList.remove("is-flash"), 2200);
+  }, 0);
 }
 
 function hero(trip) {
@@ -203,7 +233,7 @@ function hero(trip) {
       ${isEnabled() ? `<span class="sync-note${sync.status === "error" ? " is-error" : ""}" id="syncNote" role="status">${esc(syncNote(travellers(trip)))}</span>` : ""}
     </div>
     ${pending || isEnabled() ? `<div class="hero-row">
-      ${pending ? `<span class="todo-alert">${count(pending, "trip.toBook")}</span>` : ""}
+      ${pending ? toBookLink(state.currentId, pending, count(pending, "trip.toBook")) : ""}
       ${travellersRow(trip)}
     </div>` : ""}
     ${shareSection(trip)}

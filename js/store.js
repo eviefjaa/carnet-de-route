@@ -37,6 +37,8 @@ export const state = {
   publishOpen: false, // panneau « Publier l'itinéraire » ouvert
   forkOpen: false,  // formulaire « Créer mon voyage à partir de cet itinéraire » ouvert
   postVisOpen: null, // ma publication dont le choix « Visible par » est ouvert (depuis le menu « ⋯ »)
+  toBookShown: null, // page « À réserver » : { trip, ids } des activités affichées depuis son ouverture
+  focusTodo: null,   // activité à montrer en arrivant sur le voyage (« Voir » depuis la page « À réserver »)
   inviteOpen: false,  // champ « Inviter une personne » ouvert
   shareOpen: false,   // panneau des voyageurs ouvert sous l'en-tête du voyage
   moreOpen: false,    // menu « ⋯ » de l'en-tête du voyage ouvert
@@ -256,6 +258,7 @@ export function resetUi() {
   state.publishOpen = false;
   state.forkOpen = false;
   state.postVisOpen = null;
+  state.toBookShown = null;
   state.inviteOpen = false;
   state.shareOpen = false;
   state.moreOpen = false;

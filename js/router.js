@@ -32,6 +32,12 @@ export function readHash() {
     state.newCountry = h.slice("nouveau-voyage-".length).toUpperCase() || null;
     return;
   }
+  // Ce qui reste à réserver dans un voyage (#a-reserver-<id>)
+  if (h.startsWith("a-reserver-")) {
+    state.view = "toBook";
+    state.tripId = h.slice("a-reserver-".length);
+    return;
+  }
   if (h.startsWith("voyage-")) {
     state.view = "trip";
     state.tripId = h.slice("voyage-".length);
